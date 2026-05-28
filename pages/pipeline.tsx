@@ -590,6 +590,53 @@ function ExpandedRow({
   return (
     <tr className="fade-in">
       <td colSpan={12} className="bg-dark-surface/40 border-b border-dark-border px-0">
+
+        {/* ── Notes / Next Steps / Activity ── */}
+        <div className="border-b border-dark-border">
+          <div className="flex border-b border-dark-border">
+            {([
+              { key: 'notes', label: 'Notes', count: (property.noteLog ?? []).length },
+              { key: 'steps', label: 'Next Steps', count: (property.nextSteps ?? []).filter(s => !s.completedAt).length },
+              { key: 'activity', label: 'Activity', count: (property.activityLog ?? []).length },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-5 py-2.5 text-xs uppercase tracking-widest font-sans border-b-2 -mb-px transition-colors ${
+                  activeTab === tab.key
+                    ? 'border-gold text-gold'
+                    : 'border-transparent text-dark-muted hover:text-[#1a1a18]'
+                }`}
+              >
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className="ml-1.5 text-[0.55rem] font-mono opacity-60">{tab.count}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="p-5">
+            {activeTab === 'notes' && (
+              <NotesPanel
+                noteLog={property.noteLog ?? []}
+                onAddNote={onAddNote}
+              />
+            )}
+            {activeTab === 'steps' && (
+              <NextStepsPanel
+                steps={property.nextSteps ?? []}
+                onAddStep={onAddStep}
+                onToggleStep={onToggleStep}
+                onUpdateStepDue={onUpdateStepDue}
+              />
+            )}
+            {activeTab === 'activity' && (
+              <ActivityPanel property={property} />
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-dark-border">
 
           {/* ── Column 1: Owner Trace ── */}
@@ -952,52 +999,6 @@ function ExpandedRow({
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* ── Notes / Next Steps / Activity ── */}
-        <div className="border-t border-dark-border">
-          <div className="flex border-b border-dark-border">
-            {([
-              { key: 'notes', label: 'Notes', count: (property.noteLog ?? []).length },
-              { key: 'steps', label: 'Next Steps', count: (property.nextSteps ?? []).filter(s => !s.completedAt).length },
-              { key: 'activity', label: 'Activity', count: (property.activityLog ?? []).length },
-            ] as const).map(tab => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-5 py-2.5 text-xs uppercase tracking-widest font-sans border-b-2 -mb-px transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-gold text-gold'
-                    : 'border-transparent text-dark-muted hover:text-[#1a1a18]'
-                }`}
-              >
-                {tab.label}
-                {tab.count > 0 && (
-                  <span className="ml-1.5 text-[0.55rem] font-mono opacity-60">{tab.count}</span>
-                )}
-              </button>
-            ))}
-          </div>
-          <div className="p-5">
-            {activeTab === 'notes' && (
-              <NotesPanel
-                noteLog={property.noteLog ?? []}
-                onAddNote={onAddNote}
-              />
-            )}
-            {activeTab === 'steps' && (
-              <NextStepsPanel
-                steps={property.nextSteps ?? []}
-                onAddStep={onAddStep}
-                onToggleStep={onToggleStep}
-                onUpdateStepDue={onUpdateStepDue}
-              />
-            )}
-            {activeTab === 'activity' && (
-              <ActivityPanel property={property} />
-            )}
           </div>
         </div>
 
