@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { useState, useEffect } from 'react'
 import type { PipelineProperty } from '@/lib/pipelineData'
 import { FileDropZone, type UploadFile } from '@/components/FileChips'
+import AuthGate from '@/components/AuthGate'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -322,6 +323,7 @@ export default function Underwrite() {
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
+    <AuthGate>
     <>
       <Head>
         <title>Underwrite — YEM Acquisitions</title>
@@ -565,5 +567,6 @@ export default function Underwrite() {
         </div>
       </section>
     </>
+    </AuthGate>
   )
 }

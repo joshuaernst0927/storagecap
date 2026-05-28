@@ -1,6 +1,7 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { isAuthenticated } from '@/lib/auth'
 
 const tickerItems = [
   '8 Properties in Pipeline',
@@ -16,7 +17,25 @@ type NavItem =
   | { href: string; label: string; dot?: boolean; dropdown?: never }
   | { label: string; dropdown: { href: string; label: string }[]; href?: never; dot?: never }
 
-const navItems: NavItem[] = [
+const publicNavItems: NavItem[] = [
+  { href: '/about', label: 'About' },
+  {
+    label: 'Acquisitions',
+    dropdown: [
+      { href: '/acquisitions', label: 'Our Criteria' },
+      { href: '/submit-deal', label: 'Sell Your Facility' },
+    ],
+  },
+  {
+    label: 'Investors',
+    dropdown: [
+      { href: '/invest', label: 'Invest With Us' },
+      { href: '/investor-deal-access', label: 'Deal Access Request' },
+    ],
+  },
+]
+
+const authNavItems: NavItem[] = [
   { href: '/about', label: 'About' },
   {
     label: 'Acquisitions',
@@ -29,7 +48,6 @@ const navItems: NavItem[] = [
   { href: '/pipeline', label: 'Pipeline', dot: true },
   { href: '/deals', label: 'Deals' },
   { href: '/portfolio', label: 'Portfolio' },
-  { href: '/education', label: 'Education' },
   {
     label: 'Investors',
     dropdown: [
@@ -89,8 +107,15 @@ function DropdownMenu({ item }: { item: Extract<NavItem, { dropdown: unknown }> 
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [authed, setAuthed] = useState(false)
   const router = useRouter()
   const isPipeline = router.pathname === '/pipeline'
+
+  useEffect(() => {
+    setAuthed(isAuthenticated())
+  }, [router.pathname])
+
+  const navItems = authed ? authNavItems : publicNavItems
 
   return (
     <div className="min-h-screen bg-dark-bg text-[#1a1a18] font-sans">

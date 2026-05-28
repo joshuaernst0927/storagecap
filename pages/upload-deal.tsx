@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import type { PipelineProperty, DistressSignals } from '@/lib/pipelineData'
 import { FileDropZone, type UploadFile } from '@/components/FileChips'
+import AuthGate from '@/components/AuthGate'
 
 type FormState = {
   facilityName: string
@@ -191,6 +192,7 @@ export default function UploadDeal() {
   }
 
   return (
+    <AuthGate>
     <>
       <Head>
         <title>Import Deal — YEM Acquisitions</title>
@@ -431,5 +433,6 @@ export default function UploadDeal() {
         </div>
       </section>
     </>
+    </AuthGate>
   )
 }

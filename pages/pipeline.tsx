@@ -1,7 +1,8 @@
 import Head from 'next/head'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, FormEvent } from 'react'
 import {
   PipelineProperty,
+  PortfolioEntry,
   ScoreBreakdown,
   ScoreHistoryEntry,
   NoteEntry,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/pipelineData'
 import { scoreProperty } from '@/lib/scorer'
 import { loadSavedProperties, saveProperty } from '@/lib/pipelineStore'
+import AuthGate from '@/components/AuthGate'
 
 // ─── Scoring helpers ─────────────────────────────────────────────────────────
 
@@ -1399,6 +1401,94 @@ function AddPropertyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: 
   )
 }
 
+// ─── Close Deal Modal ─────────────────────────────────────────────────────────
+
+interface CloseFormState {
+  finalPurchasePrice: string
+  closeDate: string
+  initialEquity: string
+  debtAmount: string
+  lenderName: string
+}
+
+function CloseModal({ property, onClose, onConfirm }: {
+  property: PipelineProperty
+  onClose: () => void
+  onConfirm: (entry: PortfolioEntry) => void
+}) {
+  const [form, setForm] = useState<CloseFormState>({
+    finalPurchasePrice: String(property.offerPrice ?? property.askingPrice ?? ''),
+    closeDate: new Date().toISOString().slice(0, 10),
+    initialEquity: '',
+    debtAmount: '',
+    lenderName: '',
+  })
+  const set = (k: keyof CloseFormState, v: string) => setForm(p => ({ ...p, [k]: v }))
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    onConfirm({
+      finalPurchasePrice: parseFloat(form.finalPurchasePrice) || 0,
+      closeDate: form.closeDate,
+      initialEquity: parseFloat(form.initialEquity) || 0,
+      debtAmount: parseFloat(form.debtAmount) || 0,
+      lenderName: form.lenderName,
+      acquiredAt: new Date().toISOString(),
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4" onClick={onClose}>
+      <div className="w-full max-w-lg bg-dark-bg border border-dark-border" onClick={e => e.stopPropagation()}>
+        <div className="border-b border-dark-border px-7 py-5 flex items-center justify-between">
+          <div>
+            <div className="section-label-sm mb-0.5">Mark as Closed</div>
+            <h3 className="font-serif text-2xl font-light text-[#1B2B5E]">{property.facilityName}</h3>
+          </div>
+          <button onClick={onClose} className="text-dark-muted hover:text-[#1a1a18] transition-colors">✕</button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-7 space-y-4">
+          <p className="text-dark-muted text-sm leading-relaxed">
+            This deal will move to your portfolio. Enter final acquisition details to complete the close.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-text">Final Purchase Price</label>
+              <input className="input-field" type="number" value={form.finalPurchasePrice} onChange={e => set('finalPurchasePrice', e.target.value)} placeholder="5000000" required />
+            </div>
+            <div>
+              <label className="label-text">Close Date</label>
+              <input className="input-field" type="date" value={form.closeDate} onChange={e => set('closeDate', e.target.value)} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-text">Initial Equity Invested</label>
+              <input className="input-field" type="number" value={form.initialEquity} onChange={e => set('initialEquity', e.target.value)} placeholder="1500000" required />
+            </div>
+            <div>
+              <label className="label-text">Debt / Loan Amount</label>
+              <input className="input-field" type="number" value={form.debtAmount} onChange={e => set('debtAmount', e.target.value)} placeholder="3500000" />
+            </div>
+          </div>
+          <div>
+            <label className="label-text">Lender Name</label>
+            <input className="input-field" value={form.lenderName} onChange={e => set('lenderName', e.target.value)} placeholder="First National Bank" />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-dark-border text-dark-muted text-xs uppercase tracking-widest hover:border-gold/40 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" className="btn-gold flex-1">
+              Close Deal → Portfolio
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Pipeline Page ───────────────────────────────────────────────────────
 
 export default function Pipeline() {
@@ -1409,6 +1499,7 @@ export default function Pipeline() {
   const [sortBy, setSortBy] = useState<'score' | 'name' | 'stage'>('score')
   const [showAdd, setShowAdd] = useState(false)
   const [sourcesLoaded, setSourcesLoaded] = useState(0)
+  const [pendingClose, setPendingClose] = useState<string | null>(null)
 
   const mergeProperties = (incoming: PipelineProperty[]) => {
     if (incoming.length === 0) return
@@ -1585,12 +1676,16 @@ export default function Pipeline() {
   }
 
   const updateStage = (id: string, stage: PipelineProperty['stage']) => {
+    if (stage === 'closed') {
+      setPendingClose(id)
+      return
+    }
     setProperties(prev => prev.map(p => {
       if (p.id !== id) return p
       const stageLabel = STAGES.find(s => s.key === stage)?.label ?? stage
       const event = mkActivityEvent('stage_changed', `Stage → ${stageLabel}`)
       const updated = { ...p, stage, activityLog: [...(p.activityLog ?? []), event] }
-      if (stage !== 'closed' && stage !== 'dead') {
+      if (stage !== 'dead') {
         const scored = rescoreProperty(updated)
         saveProperty(scored)
         return scored
@@ -1598,6 +1693,22 @@ export default function Pipeline() {
       saveProperty(updated)
       return updated
     }))
+  }
+
+  const confirmClose = (id: string, entry: PortfolioEntry) => {
+    setProperties(prev => prev.map(p => {
+      if (p.id !== id) return p
+      const event = mkActivityEvent('stage_changed', 'Stage → Closed · Moved to portfolio')
+      const updated: PipelineProperty = {
+        ...p,
+        stage: 'closed',
+        portfolioEntry: entry,
+        activityLog: [...(p.activityLog ?? []), event],
+      }
+      saveProperty(updated)
+      return updated
+    }))
+    setPendingClose(null)
   }
 
   const updateNotes = (id: string, notes: string) => {
@@ -1611,7 +1722,10 @@ export default function Pipeline() {
     setProperties(prev => [withActivity, ...prev])
   }
 
-  const filtered = properties
+  const activeProperties = properties.filter(p => p.stage !== 'closed')
+  const closedProperties = properties.filter(p => p.stage === 'closed')
+
+  const filtered = activeProperties
     .filter(p => stageFilter === 'all' || p.stage === stageFilter)
     .sort((a, b) => {
       if (sortBy === 'score') return b.motivationScore - a.motivationScore
@@ -1642,13 +1756,23 @@ export default function Pipeline() {
     return opt && p.offerPrice && p.offerPrice >= opt.low && p.offerPrice <= opt.high
   }).length
 
+  const pendingCloseProperty = pendingClose ? properties.find(p => p.id === pendingClose) ?? null : null
+
   return (
-    <>
+    <AuthGate>
+      <>
       <Head>
         <title>Acquisition Pipeline — YEM Acquisitions</title>
       </Head>
 
       {showAdd && <AddPropertyModal onClose={() => setShowAdd(false)} onAdd={addProperty} />}
+      {pendingCloseProperty && (
+        <CloseModal
+          property={pendingCloseProperty}
+          onClose={() => setPendingClose(null)}
+          onConfirm={(entry) => confirmClose(pendingClose!, entry)}
+        />
+      )}
 
       <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-10">
 
@@ -1706,7 +1830,7 @@ export default function Pipeline() {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="flex flex-wrap gap-1.5">
-            {[{ key: 'all', label: 'All' }, ...STAGES].map(s => (
+            {[{ key: 'all', label: 'All' }, ...STAGES.filter(s => s.key !== 'closed')].map(s => (
               <button
                 key={s.key}
                 onClick={() => setStageFilter(s.key)}
@@ -1890,9 +2014,64 @@ export default function Pipeline() {
         </div>
 
         <p className="text-dark-muted text-xs mt-4">
-          {filtered.length} of {properties.length} properties shown · Avg motivation score: {totalScore}
+          {filtered.length} of {activeProperties.length} active properties shown · Avg motivation score: {totalScore}
         </p>
+
+        {/* Closed Deals Section */}
+        {closedProperties.length > 0 && (
+          <div className="mt-12">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="section-label">Closed Deals</div>
+              <span className="text-dark-muted text-xs">({closedProperties.length} {closedProperties.length === 1 ? 'property' : 'properties'} — moved to portfolio)</span>
+            </div>
+            <div className="border border-dark-border overflow-x-auto">
+              <table className="w-full min-w-[900px]">
+                <thead className="bg-dark-surface/80">
+                  <tr>
+                    <th className="pipeline-th">Property</th>
+                    <th className="pipeline-th">Units</th>
+                    <th className="pipeline-th">Final Price</th>
+                    <th className="pipeline-th">Close Date</th>
+                    <th className="pipeline-th">Equity In</th>
+                    <th className="pipeline-th">Lender</th>
+                    <th className="pipeline-th">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {closedProperties.map(p => {
+                    const pe = p.portfolioEntry
+                    return (
+                      <tr key={p.id} className="pipeline-row opacity-70">
+                        <td className="pipeline-td">
+                          <div className="text-sm font-medium text-[#1a1a18]">{p.facilityName}</div>
+                          <div className="text-dark-muted text-xs">{p.city}, {p.state}</div>
+                        </td>
+                        <td className="pipeline-td text-sm">{p.unitCount}</td>
+                        <td className="pipeline-td font-mono text-sm">
+                          {pe ? `$${(pe.finalPurchasePrice / 1000000).toFixed(2)}M` : '—'}
+                        </td>
+                        <td className="pipeline-td text-sm">
+                          {pe?.closeDate ?? '—'}
+                        </td>
+                        <td className="pipeline-td font-mono text-sm">
+                          {pe ? `$${(pe.initialEquity / 1000).toFixed(0)}K` : '—'}
+                        </td>
+                        <td className="pipeline-td text-sm text-dark-muted">
+                          {pe?.lenderName || '—'}
+                        </td>
+                        <td className="pipeline-td">
+                          <span className="font-mono text-sm">{p.motivationScore}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
-    </>
+      </>
+    </AuthGate>
   )
 }

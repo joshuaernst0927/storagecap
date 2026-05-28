@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
+import AuthGate from '@/components/AuthGate'
 
 interface Deal {
   id: string
@@ -101,6 +102,7 @@ export default function Deals() {
   const [requesting, setRequesting] = useState<Deal | null>(null)
 
   return (
+    <AuthGate>
     <>
       <Head>
         <title>Available Deals — YEM Acquisitions</title>
@@ -239,5 +241,6 @@ export default function Deals() {
         </div>
       </section>
     </>
+    </AuthGate>
   )
 }

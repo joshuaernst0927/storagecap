@@ -22,6 +22,15 @@ export interface ActivityEvent {
   createdAt: string
 }
 
+export interface PortfolioEntry {
+  finalPurchasePrice: number
+  closeDate: string         // YYYY-MM-DD
+  initialEquity: number
+  debtAmount: number
+  lenderName: string
+  acquiredAt: string        // ISO timestamp
+}
+
 export interface ScoreBreakdown {
   motivation: number      // 0–70
   ownerProfile: number    // 0–25
@@ -133,6 +142,7 @@ export interface PipelineProperty {
   noteLog?: NoteEntry[]
   nextSteps?: NextStep[]
   activityLog?: ActivityEvent[]
+  portfolioEntry?: PortfolioEntry
 }
 
 export const mockProperties: PipelineProperty[] = []
