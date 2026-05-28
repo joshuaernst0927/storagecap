@@ -7,6 +7,11 @@ export interface ScoreBreakdown {
   override: number        // 0–5
 }
 
+export interface ScoreHistoryEntry {
+  score: number
+  date: string  // ISO timestamp
+}
+
 export interface DistressSignals {
   taxDelinquency: boolean
   taxDelinquencyAmount?: number
@@ -75,6 +80,8 @@ export interface PipelineProperty {
   motivationScore: number
   scoreBreakdown?: ScoreBreakdown
   scoreExplanation?: string
+  scoreHistory?: ScoreHistoryEntry[]
+  lastScored?: string  // ISO timestamp
   stage: 'identified' | 'researching' | 'outreach' | 'conversation' | 'loi' | 'dd' | 'closed' | 'dead'
   currentStatus: DealStatus
   priority: 'high' | 'medium' | 'low'

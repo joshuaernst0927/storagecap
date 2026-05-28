@@ -38,11 +38,15 @@ function writeStored(properties: PipelineProperty[]) {
 
 function applyScore(prop: PipelineProperty): PipelineProperty {
   const result = scoreProperty(prop)
+  const now = new Date().toISOString()
+  const entry = { score: result.total, date: now }
   return {
     ...prop,
     motivationScore: result.total,
     scoreBreakdown: result.breakdown,
     scoreExplanation: result.explanation,
+    lastScored: now,
+    scoreHistory: [...(prop.scoreHistory ?? []).slice(-19), entry],
   }
 }
 
