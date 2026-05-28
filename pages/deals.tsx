@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import { useState } from 'react'
 
 interface Deal {
@@ -22,108 +23,7 @@ interface Deal {
   pricePerUnit: number
 }
 
-const deals: Deal[] = [
-  {
-    id: 'd1',
-    name: 'Eastfield Self Storage',
-    address: '14820 SW 8th St',
-    city: 'Miami',
-    state: 'FL',
-    zipCode: '33184',
-    unitCount: 480,
-    yearBuilt: 2002,
-    askingPrice: 5200000,
-    noi: 322400,
-    capRate: 6.2,
-    occupancy: 77,
-    landAcres: 4.1,
-    climatePercent: 0,
-    pricePerUnit: 10833,
-    highlights: [
-      'Rents 38% below comparable properties in the Miami metro — clear path to immediate rate optimization',
-      'Adjacent vacant parcel (1.2 acres) included in asking price — expansion to 180+ additional units',
-      'Strong Cuban-American demographic demand driver; low supply pipeline within 3-mile radius',
-      'Owner has operated since 2002 and is motivated by estate settlement — seller financing considered',
-    ],
-    status: 'available',
-    addedDate: '2024-11-05',
-  },
-  {
-    id: 'd2',
-    name: 'Mockingbird Lane Storage',
-    address: '5540 Mockingbird Ln',
-    city: 'Dallas',
-    state: 'TX',
-    zipCode: '75206',
-    unitCount: 320,
-    yearBuilt: 2006,
-    askingPrice: 3650000,
-    noi: 215350,
-    capRate: 5.9,
-    occupancy: 95,
-    landAcres: 2.8,
-    climatePercent: 55,
-    pricePerUnit: 11406,
-    highlights: [
-      'Near-stabilized at 95% occupancy — strong existing cash flow with minimal operational lift required',
-      '55% climate-controlled unit mix supports premium rate per square foot above market average',
-      'Recent institutional-quality construction (2006) — minimal near-term capex requirements',
-      'Located within one mile of three major apartment complexes generating consistent move-in/move-out demand',
-    ],
-    status: 'available',
-    addedDate: '2024-11-01',
-  },
-  {
-    id: 'd3',
-    name: 'Piedmont Self Storage',
-    address: '4400 Monroe Rd',
-    city: 'Charlotte',
-    state: 'NC',
-    zipCode: '28205',
-    unitCount: 265,
-    yearBuilt: 2004,
-    askingPrice: 2780000,
-    noi: 177920,
-    capRate: 6.4,
-    occupancy: 84,
-    landAcres: 2.3,
-    climatePercent: 70,
-    pricePerUnit: 10491,
-    highlights: [
-      '70% climate-controlled mix in one of the fastest-growing metros in the Southeast',
-      'Estate settlement driving seller motivation — willing to consider structured close timeline',
-      'Rates 22% below street rate for comparable Charlotte-area climate-controlled product',
-      'Proximity to SouthPark and affluent South Charlotte neighborhoods — high-value tenant base',
-    ],
-    status: 'under-review',
-    addedDate: '2024-10-22',
-  },
-  {
-    id: 'd4',
-    name: 'Harvest Moon Storage',
-    address: '3700 Summer Ave',
-    city: 'Memphis',
-    state: 'TN',
-    zipCode: '38122',
-    unitCount: 390,
-    yearBuilt: 1999,
-    askingPrice: 3190000,
-    noi: 216920,
-    capRate: 6.8,
-    occupancy: 80,
-    landAcres: 3.4,
-    climatePercent: 15,
-    pricePerUnit: 8179,
-    highlights: [
-      'Third-generation family owner with 25+ years of operation — minimal digital marketing, significant upside',
-      'Priced to reflect deferred maintenance — structural issues are cosmetic and quantified in due diligence',
-      'Memphis submarket shows consistent 7%+ annual self-storage rent growth over last 4 years',
-      'Price per unit at $8,179 represents a 24% discount to replacement cost for this vintage',
-    ],
-    status: 'available',
-    addedDate: '2024-10-14',
-  },
-]
+const deals: Deal[] = []
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   available: { label: 'Available', cls: 'text-green-600 border-green-600/40' },
@@ -225,95 +125,105 @@ export default function Deals() {
       {/* Deals Grid */}
       <section className="py-20">
         <div className="section-container">
-          <div className="grid grid-cols-1 gap-8">
-            {deals.map((deal, i) => {
-              const statusInfo = STATUS_LABELS[deal.status]
-              return (
-                <div key={deal.id} className="border border-dark-border bg-dark-surface hover:border-gold/30 transition-colors duration-300">
-                  <div className="grid grid-cols-1 lg:grid-cols-3">
+          {deals.length === 0 ? (
+            <div className="py-24 text-center text-dark-muted border border-dark-border bg-dark-surface">
+              <p className="font-serif text-3xl font-light mb-3 text-[#1B2B5E]">No deals yet.</p>
+              <p className="text-sm mb-8 max-w-sm mx-auto leading-relaxed">
+                Run the pipeline or upload a deal to get started.
+              </p>
+              <Link href="/upload-deal" className="btn-gold">Upload a Deal</Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-8">
+              {deals.map((deal, i) => {
+                const statusInfo = STATUS_LABELS[deal.status]
+                return (
+                  <div key={deal.id} className="border border-dark-border bg-dark-surface hover:border-gold/30 transition-colors duration-300">
+                    <div className="grid grid-cols-1 lg:grid-cols-3">
 
-                    {/* Photo placeholder */}
-                    <div className="bg-dark-bg border-b lg:border-b-0 lg:border-r border-dark-border flex flex-col items-center justify-center p-10 min-h-[220px] lg:min-h-0">
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-center">
-                        <div className="w-12 h-12 border border-dark-border flex items-center justify-center text-dark-muted">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <path d="M21 15l-5-5L5 21" />
-                          </svg>
-                        </div>
-                        <p className="text-dark-muted text-xs uppercase tracking-widest">Photo Available<br />Upon Request</p>
-                        <div className="mt-2 font-serif text-4xl font-light text-dark-border/60 leading-none">{String(i + 1).padStart(2, '0')}</div>
-                      </div>
-                    </div>
-
-                    {/* Details */}
-                    <div className="p-8 lg:p-10 col-span-2">
-                      <div className="flex items-start justify-between gap-4 mb-5">
-                        <div>
-                          <h2 className="font-serif text-3xl font-light text-[#1B2B5E] mb-1">{deal.name}</h2>
-                          <p className="text-dark-muted text-sm">{deal.address}, {deal.city}, {deal.state} {deal.zipCode}</p>
-                        </div>
-                        <span className={`tag border flex-shrink-0 ${statusInfo.cls}`}>
-                          {statusInfo.label}
-                        </span>
-                      </div>
-
-                      {/* Metrics */}
-                      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-7">
-                        {[
-                          { label: 'Asking', value: `$${(deal.askingPrice / 1000000).toFixed(1)}M` },
-                          { label: 'NOI', value: `$${Math.round(deal.noi / 1000)}K` },
-                          { label: 'Cap Rate', value: `${deal.capRate}%` },
-                          { label: 'Units', value: deal.unitCount.toLocaleString() },
-                          { label: 'Occupancy', value: `${deal.occupancy}%` },
-                          { label: 'Built', value: deal.yearBuilt.toString() },
-                        ].map(m => (
-                          <div key={m.label} className="border border-dark-border bg-dark-bg p-3 text-center">
-                            <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">{m.label}</div>
-                            <div className="font-serif text-xl font-light text-gold">{m.value}</div>
+                      {/* Photo placeholder */}
+                      <div className="bg-dark-bg border-b lg:border-b-0 lg:border-r border-dark-border flex flex-col items-center justify-center p-10 min-h-[220px] lg:min-h-0">
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-center">
+                          <div className="w-12 h-12 border border-dark-border flex items-center justify-center text-dark-muted">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                              <rect x="3" y="3" width="18" height="18" rx="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <path d="M21 15l-5-5L5 21" />
+                            </svg>
                           </div>
-                        ))}
+                          <p className="text-dark-muted text-xs uppercase tracking-widest">Photo Available<br />Upon Request</p>
+                          <div className="mt-2 font-serif text-4xl font-light text-dark-border/60 leading-none">{String(i + 1).padStart(2, '0')}</div>
+                        </div>
                       </div>
 
-                      {/* Additional details */}
-                      <div className="flex gap-4 mb-6 flex-wrap">
-                        <span className="tag tag-muted">{deal.unitCount} units · ${deal.pricePerUnit.toLocaleString()}/unit</span>
-                        {deal.climatePercent > 0 && <span className="tag tag-muted">{deal.climatePercent}% climate controlled</span>}
-                        <span className="tag tag-muted">{deal.landAcres} acres</span>
-                      </div>
+                      {/* Details */}
+                      <div className="p-8 lg:p-10 col-span-2">
+                        <div className="flex items-start justify-between gap-4 mb-5">
+                          <div>
+                            <h2 className="font-serif text-3xl font-light text-[#1B2B5E] mb-1">{deal.name}</h2>
+                            <p className="text-dark-muted text-sm">{deal.address}, {deal.city}, {deal.state} {deal.zipCode}</p>
+                          </div>
+                          <span className={`tag border flex-shrink-0 ${statusInfo.cls}`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
 
-                      {/* Highlights */}
-                      <div className="mb-8">
-                        <div className="section-label-sm mb-3">Deal Highlights</div>
-                        <ul className="space-y-2">
-                          {deal.highlights.map((h, j) => (
-                            <li key={j} className="flex gap-3 text-sm text-dark-muted leading-relaxed">
-                              <span className="text-gold flex-shrink-0 mt-0.5">·</span>
-                              {h}
-                            </li>
+                        {/* Metrics */}
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-7">
+                          {[
+                            { label: 'Asking', value: `$${(deal.askingPrice / 1000000).toFixed(1)}M` },
+                            { label: 'NOI', value: `$${Math.round(deal.noi / 1000)}K` },
+                            { label: 'Cap Rate', value: `${deal.capRate}%` },
+                            { label: 'Units', value: deal.unitCount.toLocaleString() },
+                            { label: 'Occupancy', value: `${deal.occupancy}%` },
+                            { label: 'Built', value: deal.yearBuilt.toString() },
+                          ].map(m => (
+                            <div key={m.label} className="border border-dark-border bg-dark-bg p-3 text-center">
+                              <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">{m.label}</div>
+                              <div className="font-serif text-xl font-light text-gold">{m.value}</div>
+                            </div>
                           ))}
-                        </ul>
-                      </div>
+                        </div>
 
-                      <div className="flex items-center gap-4">
-                        <button
-                          onClick={() => setRequesting(deal)}
-                          disabled={deal.status === 'pending'}
-                          className="btn-gold disabled:opacity-50"
-                        >
-                          Request Deal Package
-                        </button>
-                        <span className="text-dark-muted text-xs">
-                          Added {deal.addedDate}
-                        </span>
+                        {/* Additional details */}
+                        <div className="flex gap-4 mb-6 flex-wrap">
+                          <span className="tag tag-muted">{deal.unitCount} units · ${deal.pricePerUnit.toLocaleString()}/unit</span>
+                          {deal.climatePercent > 0 && <span className="tag tag-muted">{deal.climatePercent}% climate controlled</span>}
+                          <span className="tag tag-muted">{deal.landAcres} acres</span>
+                        </div>
+
+                        {/* Highlights */}
+                        <div className="mb-8">
+                          <div className="section-label-sm mb-3">Deal Highlights</div>
+                          <ul className="space-y-2">
+                            {deal.highlights.map((h, j) => (
+                              <li key={j} className="flex gap-3 text-sm text-dark-muted leading-relaxed">
+                                <span className="text-gold flex-shrink-0 mt-0.5">·</span>
+                                {h}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => setRequesting(deal)}
+                            disabled={deal.status === 'pending'}
+                            className="btn-gold disabled:opacity-50"
+                          >
+                            Request Deal Package
+                          </button>
+                          <span className="text-dark-muted text-xs">
+                            Added {deal.addedDate}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 

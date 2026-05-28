@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import { useState, useEffect } from 'react'
 import {
-  mockProperties,
   PipelineProperty,
   DealStatus,
   STAGES,
@@ -619,15 +618,9 @@ function AddPropertyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: 
 // ─── Main Pipeline Page ───────────────────────────────────────────────────────
 
 export default function Pipeline() {
-  const [properties, setProperties] = useState<PipelineProperty[]>(mockProperties)
+  const [properties, setProperties] = useState<PipelineProperty[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [letters, setLetters] = useState<Record<string, { loading: boolean; text: string }>>(() => {
-    const init: Record<string, { loading: boolean; text: string }> = {}
-    mockProperties.forEach(p => {
-      if (p.outreachLetter) init[p.id] = { loading: false, text: p.outreachLetter }
-    })
-    return init
-  })
+  const [letters, setLetters] = useState<Record<string, { loading: boolean; text: string }>>({})
   const [stageFilter, setStageFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'score' | 'name' | 'stage'>('score')
   const [showAdd, setShowAdd] = useState(false)
@@ -854,7 +847,14 @@ export default function Pipeline() {
             </tbody>
           </table>
 
-          {filtered.length === 0 && (
+          {filtered.length === 0 && properties.length === 0 && (
+            <div className="py-24 text-center text-dark-muted">
+              <p className="font-serif text-2xl font-light mb-3">No deals yet.</p>
+              <p className="text-sm mb-6">Run the pipeline or upload a deal to get started.</p>
+              <a href="/upload-deal" className="btn-gold-sm">Upload a Deal</a>
+            </div>
+          )}
+          {filtered.length === 0 && properties.length > 0 && (
             <div className="py-20 text-center text-dark-muted">
               <p className="font-serif text-2xl font-light mb-2">No properties match this filter.</p>
               <button onClick={() => setStageFilter('all')} className="text-gold text-xs uppercase tracking-widest mt-2">

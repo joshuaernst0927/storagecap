@@ -24,6 +24,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     { href: '/acquisitions', label: 'Acquisitions', dot: false },
     { href: '/invest', label: 'Investors', dot: false },
     { href: '/analyze', label: 'Analyzer', dot: false },
+    { href: '/upload-deal', label: 'Upload Deal', dot: false },
   ]
 
   const isPipeline = router.pathname === '/pipeline'
