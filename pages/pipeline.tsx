@@ -71,6 +71,122 @@ function rescoreProperty(p: PipelineProperty): PipelineProperty {
   }
 }
 
+// ─── Offer / Optimal pricing helpers ─────────────────────────────────────────
+
+const TARGET_CAP = 0.07
+
+function calcOptimalOffer(p: PipelineProperty): {
+  low: number; high: number; stabilizedNOI: number; discount: number
+} | null {
+  const rawNOI =
+    p.projectedStabilizedNOI ??
+    (p.noi && p.noiUpsidePct ? Math.round(p.noi * (1 + p.noiUpsidePct / 100)) : null) ??
+    p.noi ?? null
+  if (!rawNOI || rawNOI <= 0) return null
+  const optimalHigh = Math.round(rawNOI / TARGET_CAP)
+  const occ = p.occupancy > 1 ? p.occupancy : p.occupancy * 100
+  let discount = 0.10
+  if (occ < 80) discount += 0.05
+  if (p.distressSignals.deferredMaintenance) discount += 0.05
+  if (p.valueAddPotential) discount += 0.03
+  discount = Math.min(0.25, discount)
+  return { low: Math.round(optimalHigh * (1 - discount)), high: optimalHigh, stabilizedNOI: Math.round(rawNOI), discount }
+}
+
+function fmtM(n: number): string {
+  return `$${(n / 1_000_000).toFixed(2)}M`
+}
+
+function InlinePriceCell({ value, onSave }: { value?: number; onSave: (n: number) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDraft(value ? String(value) : '')
+    setEditing(true)
+  }
+  const commit = () => {
+    const n = parseInt(draft.replace(/[^0-9]/g, ''), 10)
+    if (n > 0) onSave(n)
+    setEditing(false)
+  }
+
+  if (editing) return (
+    <input
+      autoFocus
+      className="w-24 font-mono text-xs border border-gold bg-dark-bg text-[#1a1a18] px-1 py-0.5 outline-none"
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
+      onBlur={commit}
+      onClick={e => e.stopPropagation()}
+    />
+  )
+  return (
+    <button type="button" onClick={startEdit} title="Click to edit"
+      className="text-xs font-mono text-[#1a1a18] text-left hover:text-gold transition-colors group">
+      {value ? fmtM(value) : <span className="text-dark-muted">—</span>}
+      <span className="opacity-0 group-hover:opacity-60 text-[0.55rem] text-gold ml-1 align-middle">✎</span>
+    </button>
+  )
+}
+
+function OptimalOfferCell({ property }: { property: PipelineProperty }) {
+  const opt = calcOptimalOffer(property)
+  if (!opt) return <span className="text-dark-muted text-xs">—</span>
+
+  const offer = property.offerPrice
+  let statusEl: React.ReactNode = null
+  if (offer) {
+    if (offer >= opt.low && offer <= opt.high) {
+      statusEl = <span className="text-[0.6rem] uppercase tracking-widest text-emerald-600 font-semibold">✓ In range</span>
+    } else if (offer > opt.high) {
+      statusEl = <span className="text-[0.6rem] uppercase tracking-widest text-red-500 font-semibold">↑ Above</span>
+    } else {
+      statusEl = <span className="text-[0.6rem] uppercase tracking-widest text-blue-500 font-semibold">↓ Room up</span>
+    }
+  }
+
+  const tooltip = [
+    'Optimal Offer Calculation',
+    `Stabilized NOI: $${opt.stabilizedNOI.toLocaleString()}`,
+    `Target Cap Rate: ${(TARGET_CAP * 100).toFixed(1)}%`,
+    `Gross Value (NOI ÷ Cap): ${fmtM(opt.high)}`,
+    `CapEx + Lease-up Discount: ${(opt.discount * 100).toFixed(0)}%`,
+    `Range: ${fmtM(opt.low)} – ${fmtM(opt.high)}`,
+  ].join('\n')
+
+  return (
+    <div className="space-y-0.5" title={tooltip}>
+      <div className="cursor-help">
+        <span className="font-mono text-xs text-[#1a1a18]">{fmtM(opt.low)}</span>
+        <span className="text-dark-muted text-xs mx-0.5">–</span>
+        <span className="font-mono text-xs text-[#1a1a18]">{fmtM(opt.high)}</span>
+      </div>
+      <div className="text-[0.6rem] text-dark-muted uppercase tracking-widest">@{(TARGET_CAP * 100).toFixed(0)}% cap</div>
+      {statusEl}
+    </div>
+  )
+}
+
+function SpreadCell({ askingPrice, optHigh }: { askingPrice?: number; optHigh: number | null }) {
+  if (!askingPrice || !optHigh) return <span className="text-dark-muted text-xs">—</span>
+  const spread = askingPrice - optHigh
+  const spreadPct = ((spread / askingPrice) * 100).toFixed(1)
+  const positive = spread > 0
+  return (
+    <div className="space-y-0.5">
+      <div className={`font-mono text-xs font-semibold ${positive ? 'text-red-500' : 'text-emerald-600'}`}>
+        {positive ? '+' : ''}{fmtM(spread)}
+      </div>
+      <div className={`text-[0.6rem] uppercase tracking-widest ${positive ? 'text-red-400' : 'text-emerald-500'}`}>
+        {positive ? `${spreadPct}% above opt` : `${Math.abs(Number(spreadPct))}% below opt`}
+      </div>
+    </div>
+  )
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function MotivationBadge({
@@ -249,7 +365,7 @@ function ExpandedRow({
 
   return (
     <tr className="fade-in">
-      <td colSpan={8} className="bg-dark-surface/40 border-b border-dark-border px-0">
+      <td colSpan={12} className="bg-dark-surface/40 border-b border-dark-border px-0">
         <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-dark-border">
 
           {/* ── Column 1: Owner Trace ── */}
@@ -1097,6 +1213,16 @@ export default function Pipeline() {
     }))
   }
 
+  const updateProperty = (id: string, updates: Partial<PipelineProperty>) => {
+    setProperties(prev => prev.map(p => {
+      if (p.id !== id) return p
+      const updated = { ...p, ...updates }
+      const scored = rescoreProperty(updated)
+      saveProperty(scored)
+      return scored
+    }))
+  }
+
   const toggleExpand = (id: string) => {
     setExpandedId(prev => prev === id ? null : id)
   }
@@ -1149,9 +1275,26 @@ export default function Pipeline() {
     })
 
   const totalScore = Math.round(properties.reduce((sum, p) => sum + p.motivationScore, 0) / (properties.length || 1))
-  const highMot = properties.filter(p => p.motivationScore >= 85).length
+  const highMot = properties.filter(p => p.motivationScore >= 110).length
   const activeConvos = properties.filter(p => ['conversation', 'loi', 'dd'].includes(p.stage)).length
   const inOutreach = properties.filter(p => p.stage === 'outreach').length
+
+  // Offer summary bar — computed across all active (non-closed/dead) deals
+  const activeDeals = properties.filter(p => p.stage !== 'closed' && p.stage !== 'dead')
+  const totalAsk = activeDeals.reduce((s, p) => s + (p.askingPrice ?? 0), 0)
+  const totalOptMid = activeDeals.reduce((s, p) => {
+    const opt = calcOptimalOffer(p)
+    return s + (opt ? (opt.low + opt.high) / 2 : 0)
+  }, 0)
+  const spreadPcts = activeDeals
+    .filter(p => p.askingPrice)
+    .map(p => { const opt = calcOptimalOffer(p); return opt ? ((p.askingPrice! - opt.high) / p.askingPrice!) * 100 : null })
+    .filter((v): v is number => v !== null)
+  const avgSpreadPct = spreadPcts.length ? spreadPcts.reduce((a, b) => a + b) / spreadPcts.length : 0
+  const dealsInRange = activeDeals.filter(p => {
+    const opt = calcOptimalOffer(p)
+    return opt && p.offerPrice && p.offerPrice >= opt.low && p.offerPrice <= opt.high
+  }).length
 
   return (
     <>
@@ -1193,6 +1336,27 @@ export default function Pipeline() {
           ))}
         </div>
 
+        {/* Offer Summary Bar */}
+        {(totalAsk > 0 || totalOptMid > 0) && (
+          <div className="border border-dark-border bg-dark-surface/60 p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Ask', value: fmtM(totalAsk), color: '' },
+              { label: 'Total Optimal (Mid)', value: fmtM(totalOptMid), color: 'text-emerald-600' },
+              {
+                label: 'Avg Ask Spread',
+                value: spreadPcts.length ? `${avgSpreadPct > 0 ? '+' : ''}${avgSpreadPct.toFixed(1)}%` : '—',
+                color: avgSpreadPct > 5 ? 'text-red-500' : avgSpreadPct < -5 ? 'text-emerald-600' : 'text-amber-600',
+              },
+              { label: 'Offers in Range', value: String(dealsInRange), color: dealsInRange > 0 ? 'text-emerald-600' : '' },
+            ].map(({ label, value, color }) => (
+              <div key={label}>
+                <div className="text-dark-muted text-xs uppercase tracking-widest mb-1">{label}</div>
+                <div className={`font-mono text-sm font-semibold ${color || 'text-[#1a1a18]'}`}>{value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="flex flex-wrap gap-1.5">
@@ -1224,7 +1388,7 @@ export default function Pipeline() {
 
         {/* Table */}
         <div className="border border-dark-border overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[1300px]">
             <thead className="bg-dark-surface/80">
               <tr>
                 <th className="pipeline-th pl-4 w-8" />
@@ -1234,6 +1398,10 @@ export default function Pipeline() {
                 <th className="pipeline-th">Distress Signals</th>
                 <th className="pipeline-th">Owner Entity</th>
                 <th className="pipeline-th">Est. Value</th>
+                <th className="pipeline-th">Ask Price</th>
+                <th className="pipeline-th">Our Offer</th>
+                <th className="pipeline-th">Optimal Offer</th>
+                <th className="pipeline-th">Spread</th>
                 <th className="pipeline-th">Status</th>
               </tr>
             </thead>
@@ -1287,6 +1455,27 @@ export default function Pipeline() {
                       {property.noi && (
                         <div className="text-dark-muted text-xs">${(property.noi / 1000).toFixed(0)}K NOI</div>
                       )}
+                    </td>
+                    <td className="pipeline-td" onClick={e => e.stopPropagation()}>
+                      <InlinePriceCell
+                        value={property.askingPrice}
+                        onSave={n => updateProperty(property.id, { askingPrice: n })}
+                      />
+                    </td>
+                    <td className="pipeline-td" onClick={e => e.stopPropagation()}>
+                      <InlinePriceCell
+                        value={property.offerPrice}
+                        onSave={n => updateProperty(property.id, { offerPrice: n })}
+                      />
+                    </td>
+                    <td className="pipeline-td min-w-[150px]">
+                      <OptimalOfferCell property={property} />
+                    </td>
+                    <td className="pipeline-td">
+                      <SpreadCell
+                        askingPrice={property.askingPrice}
+                        optHigh={calcOptimalOffer(property)?.high ?? null}
+                      />
                     </td>
                     <td className="pipeline-td pr-6">
                       <StatusBadge status={property.currentStatus} />
