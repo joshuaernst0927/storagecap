@@ -1,6 +1,8 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect, FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { isAuthenticated, clearAuth } from '@/lib/auth'
+import { ChangePasswordForm } from '@/components/AuthGate'
 
 const tickerItems = [
   '8 Properties in Pipeline',
@@ -86,13 +88,54 @@ function DropdownMenu({ item }: { item: Extract<NavItem, { dropdown: unknown }> 
   )
 }
 
+// ─── Change Password Modal (for when already logged in) ───────────────────────
+
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm bg-dark-surface border border-dark-border p-8"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="section-label">Change Password</div>
+            <p className="text-dark-muted text-xs mt-1">Set a new platform password.</p>
+          </div>
+          <button onClick={onClose} className="text-dark-muted hover:text-[#1a1a18] transition-colors text-lg leading-none">✕</button>
+        </div>
+        <ChangePasswordForm onSuccess={onClose} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
 export default function Layout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [authed, setAuthed] = useState(false)
+  const [showChangePw, setShowChangePw] = useState(false)
   const router = useRouter()
   const isPipeline = router.pathname === '/pipeline'
 
+  useEffect(() => {
+    setAuthed(isAuthenticated())
+  }, [router.pathname])
+
+  const handleLogout = () => {
+    clearAuth()
+    setAuthed(false)
+    router.push('/')
+  }
+
   return (
     <div className="min-h-screen bg-dark-bg text-[#1a1a18] font-sans">
+      {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
+
       {/* Ticker bar */}
       <div className="overflow-hidden border-b border-dark-border bg-dark-surface h-8 flex items-center">
         <div className="ticker-track">
@@ -120,7 +163,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
             {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-7">
-              {navItems.map((item, i) =>
+              {navItems.map((item) =>
                 item.dropdown ? (
                   <DropdownMenu key={item.label} item={item} />
                 ) : (
@@ -135,6 +178,30 @@ export default function Layout({ children }: { children: ReactNode }) {
                     )}
                   </Link>
                 )
+              )}
+
+              {/* Auth controls — only visible when logged in */}
+              {authed && (
+                <div className="flex items-center gap-3 pl-5 ml-2 border-l border-dark-border">
+                  <button
+                    onClick={() => setShowChangePw(true)}
+                    className="text-dark-muted text-[0.65rem] uppercase tracking-widest hover:text-[#1a1a18] transition-colors"
+                    title="Change Password"
+                  >
+                    Password
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-1.5 text-dark-muted text-[0.65rem] uppercase tracking-widest hover:text-[#1a1a18] transition-colors"
+                    title="Log out"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="13" height="10" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                    </svg>
+                    Logout
+                  </button>
+                </div>
               )}
             </div>
 
@@ -182,6 +249,22 @@ export default function Layout({ children }: { children: ReactNode }) {
                     {item.dot && <span className="ml-1.5 inline-block w-2 h-2 bg-gold rounded-full align-middle" />}
                   </Link>
                 )
+              )}
+              {authed && (
+                <div className="flex gap-4 pt-2 border-t border-dark-border mt-1">
+                  <button
+                    onClick={() => { setMobileOpen(false); setShowChangePw(true) }}
+                    className="text-dark-muted text-xs uppercase tracking-widest"
+                  >
+                    Change Password
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="text-dark-muted text-xs uppercase tracking-widest"
+                  >
+                    Logout
+                  </button>
+                </div>
               )}
             </div>
           </div>
