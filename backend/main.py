@@ -39,7 +39,7 @@ if hasattr(sys.stderr, "buffer"):
 
 from config import Config
 from models import Deal
-from scorer import score as compute_score, needs_letter
+from scorer import score_full, needs_letter
 from output import load_existing, save_deals, deduplicate, push_to_pipeline, save_public_deals
 from letter_writer import draft_letters_for_batch
 from emailer import send_summary
@@ -164,7 +164,10 @@ def run(
 
     # ── Score ─────────────────────────────────────────────────────────────────
     for deal in all_raw:
-        deal.motivation_score = compute_score(deal)
+        result = score_full(deal)
+        deal.motivation_score = result["total"]
+        deal.score_breakdown = result["breakdown"]
+        deal.score_explanation = result["explanation"]
         deal.needs_outreach_letter = needs_letter(deal)
 
     # ── Deduplicate ───────────────────────────────────────────────────────────

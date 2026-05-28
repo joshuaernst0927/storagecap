@@ -1,17 +1,18 @@
 /**
- * Pipeline ingest API — receives PipelineProperty objects from the Python backend.
+ * Pipeline ingest API — receives PipelineProperty objects.
  *
- * POST /api/pipeline-ingest  — accepts an array of PipelineProperty objects
+ * POST /api/pipeline-ingest  — accepts array of PipelineProperty objects
  * GET  /api/pipeline-ingest  — returns all ingested properties
  *
- * Data is persisted to data/pipeline-ingest.json on the server.
- * The pipeline page reads from this endpoint on load (in addition to localStorage).
+ * Runs the scorer on every incoming deal to ensure breakdown + explanation
+ * are always populated regardless of source.
  */
 
 import fs from 'fs'
 import path from 'path'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import type { PipelineProperty } from '@/lib/pipelineData'
+import { scoreProperty } from '@/lib/scorer'
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'pipeline-ingest.json')
 
@@ -35,8 +36,17 @@ function writeStored(properties: PipelineProperty[]) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(properties, null, 2), 'utf-8')
 }
 
+function applyScore(prop: PipelineProperty): PipelineProperty {
+  const result = scoreProperty(prop)
+  return {
+    ...prop,
+    motivationScore: result.total,
+    scoreBreakdown: result.breakdown,
+    scoreExplanation: result.explanation,
+  }
+}
+
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Optional secret header check
   const secret = process.env.NEXTJS_API_SECRET
   if (secret && req.headers['x-api-secret'] !== secret) {
     return res.status(401).json({ error: 'Unauthorized' })
@@ -62,7 +72,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     for (const prop of incoming) {
       if (!prop.id || !prop.facilityName) continue
       if (!existingIds.has(prop.id)) {
-        merged.push(prop)
+        merged.push(applyScore(prop))
         added++
       }
     }

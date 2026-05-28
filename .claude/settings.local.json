@@ -23,7 +23,8 @@
       "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/upload-deal\" -UseBasicParsing -TimeoutSec 10; Write-Host \"HTTP $\\($r.StatusCode\\) — $\\($r.Content.Length\\) bytes\" } catch { Write-Host \"Error: $_\" })",
       "Bash(find . -name \"*.xlsx\")",
       "Bash(ls backend/)",
-      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/underwrite\" -UseBasicParsing -TimeoutSec 15; Write-Host \"HTTP $\\($r.StatusCode\\) — $\\($r.Content.Length\\) bytes\" } catch { Write-Host \"Error: $_\" })"
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/underwrite\" -UseBasicParsing -TimeoutSec 15; Write-Host \"HTTP $\\($r.StatusCode\\) — $\\($r.Content.Length\\) bytes\" } catch { Write-Host \"Error: $_\" })",
+      "Bash(python -c \"from scorer import score_full, needs_letter; print\\('scorer OK'\\)\")"
     ]
   }
 }

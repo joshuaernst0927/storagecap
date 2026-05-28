@@ -2,31 +2,65 @@ import Head from 'next/head'
 import { useState, useEffect } from 'react'
 import {
   PipelineProperty,
+  ScoreBreakdown,
   DealStatus,
   STAGES,
   scoreColor,
-  scoreLabel,
+  vaScoreColor,
   stageBadgeColor,
   tier,
   tierColor,
   statusLabel,
   statusColor,
 } from '@/lib/pipelineData'
+import { scoreProperty } from '@/lib/scorer'
 import { loadSavedProperties } from '@/lib/pipelineStore'
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function MotivationBadge({ score }: { score: number }) {
+function MotivationBadge({ score, breakdown }: { score: number; breakdown?: ScoreBreakdown }) {
   const t = tier(score)
+  const va = breakdown?.valueAdd ?? 0
+  const bars: [string, number, number, string][] = [
+    ['Mot',  breakdown?.motivation ?? 0,   70, '#F87171'],
+    ['Own',  breakdown?.ownerProfile ?? 0, 25, '#FBBF24'],
+    ['Deal', breakdown?.dealQuality ?? 0,  15, '#60A5FA'],
+    ['VA',   va,                            20, '#34D399'],
+  ]
   return (
-    <div className="flex flex-col items-start gap-2">
-      <div className={`border-2 font-mono font-bold w-14 h-14 flex flex-col items-center justify-center flex-shrink-0 leading-none ${scoreColor(score)}`}>
-        <span className="text-2xl">{score}</span>
-        <span className="text-[0.65rem] tracking-wide uppercase mt-0.5 font-sans">{scoreLabel(score)}</span>
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <div className={`border-2 font-mono font-bold w-12 h-12 flex flex-col items-center justify-center flex-shrink-0 leading-none ${scoreColor(score)}`}>
+          <span className="text-xl leading-none">{score}</span>
+          <span className="text-[0.5rem] tracking-wide uppercase mt-0.5 font-sans opacity-60">/130</span>
+        </div>
+        <div className="space-y-1">
+          <div className={`border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold ${tierColor(t)}`}>{t}</div>
+          <div className={`border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold ${vaScoreColor(va)}`}>VA {va}</div>
+        </div>
       </div>
-      <span className={`border text-[0.75rem] uppercase tracking-widest px-2.5 py-1 font-sans font-bold ${tierColor(t)}`}>
-        {t}
-      </span>
+      {breakdown && (
+        <div className="space-y-0.5 w-28">
+          {bars.map(([label, val, max, color]) => (
+            <div key={label} className="flex items-center gap-1">
+              <span className="text-[0.5rem] uppercase text-dark-muted w-5 flex-shrink-0 font-mono">{label}</span>
+              <div className="flex-1 h-1 bg-dark-border">
+                <div style={{ width: `${Math.max(0, (val / max) * 100)}%`, backgroundColor: color, height: '100%' }} />
+              </div>
+              <span className="text-[0.5rem] font-mono text-dark-muted w-4 text-right">{val}</span>
+            </div>
+          ))}
+          {(breakdown.negatives !== 0 || breakdown.override !== 0) && (
+            <div className="flex items-center gap-1 pt-0.5">
+              <span className="text-[0.5rem] uppercase text-dark-muted w-5 flex-shrink-0 font-mono">adj</span>
+              <span className="text-[0.5rem] font-mono text-dark-muted flex-1 text-right">
+                {breakdown.negatives !== 0 && <span className="text-red-500">{breakdown.negatives}</span>}
+                {breakdown.override > 0 && <span className="text-emerald-600 ml-1">+{breakdown.override}</span>}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -393,17 +427,52 @@ const emptyForm: NewPropForm = {
   stage: 'identified', priority: 'medium', source: 'county-records', notes: '',
 }
 
-function calcScore(f: NewPropForm): number {
-  let s = 0
-  if (f.taxDelinquency) { s += 25; if (parseInt(f.taxDelinquencyYears) >= 3) s += 10 }
-  if (f.fireCodeViolations) s += 15
-  if (f.lisPendens) s += 20
-  if (f.decliningOccupancy) s += 10
-  if (f.deferredMaintenance) s += 5
-  if (f.outOfStateOwner) s += 5
-  if (parseInt(f.ownerAge) >= 65) s += 10
-  if (parseInt(f.yearsOwned) >= 20) s += 10
-  return Math.min(s, 100)
+function formToPartialProperty(f: NewPropForm): PipelineProperty {
+  return {
+    id: 'preview',
+    facilityName: f.facilityName || '',
+    address: f.address,
+    city: f.city,
+    state: f.state,
+    zipCode: f.zipCode,
+    unitCount: parseInt(f.unitCount) || 0,
+    unitMix: '',
+    yearBuilt: parseInt(f.yearBuilt) || 2000,
+    landAcres: 0,
+    climatePercent: 0,
+    estimatedValue: parseInt(f.estimatedValue.replace(/[^0-9]/g, '')) || 0,
+    noi: parseInt(f.noi.replace(/[^0-9]/g, '')) || undefined,
+    occupancy: parseInt(f.occupancy) || 0,
+    ownerName: f.ownerName,
+    ownerEntity: f.ownerEntity,
+    ownerEntityState: f.ownerEntityState,
+    ownerMailingAddress: f.ownerMailingAddress,
+    ownerPhone: f.ownerPhone,
+    distressSignals: {
+      taxDelinquency: f.taxDelinquency,
+      taxDelinquencyAmount: parseInt(f.taxDelinquencyAmount.replace(/[^0-9]/g, '')) || 0,
+      taxDelinquencyYears: parseInt(f.taxDelinquencyYears) || 0,
+      fireCodeViolations: f.fireCodeViolations,
+      fireCodeCount: parseInt(f.fireCodeCount) || 0,
+      fireCodeDetails: [],
+      codeViolations: [],
+      lisPendens: f.lisPendens,
+      lisPendensAmount: parseInt(f.lisPendensAmount.replace(/[^0-9]/g, '')) || 0,
+      decliningOccupancy: f.decliningOccupancy,
+      occupancyTrend: parseInt(f.occupancyTrend) || 0,
+      deferredMaintenance: f.deferredMaintenance,
+      outOfStateOwner: f.outOfStateOwner,
+      ownerAge: parseInt(f.ownerAge) || undefined,
+      yearsOwned: parseInt(f.yearsOwned) || undefined,
+    },
+    motivationScore: 0,
+    stage: f.stage,
+    currentStatus: 'outreach-sent',
+    priority: f.priority,
+    source: f.source,
+    addedDate: new Date().toISOString().split('T')[0],
+    notes: f.notes,
+  }
 }
 
 function AddPropertyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: PipelineProperty) => void }) {
@@ -413,51 +482,14 @@ function AddPropertyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: 
 
   const handleSubmit = () => {
     if (!form.facilityName || !form.city || !form.state) return
-    const score = calcScore(form)
+    const base = formToPartialProperty(form)
+    const result = scoreProperty(base)
     const property: PipelineProperty = {
+      ...base,
       id: `new-${Date.now()}`,
-      facilityName: form.facilityName,
-      address: form.address,
-      city: form.city,
-      state: form.state,
-      zipCode: form.zipCode,
-      unitCount: parseInt(form.unitCount) || 0,
-      unitMix: '',
-      yearBuilt: parseInt(form.yearBuilt) || 2000,
-      landAcres: 0,
-      climatePercent: 0,
-      estimatedValue: parseInt(form.estimatedValue.replace(/[^0-9]/g, '')) || 0,
-      noi: parseInt(form.noi.replace(/[^0-9]/g, '')) || undefined,
-      occupancy: parseInt(form.occupancy) || 0,
-      ownerName: form.ownerName,
-      ownerEntity: form.ownerEntity,
-      ownerEntityState: form.ownerEntityState,
-      ownerMailingAddress: form.ownerMailingAddress,
-      ownerPhone: form.ownerPhone,
-      distressSignals: {
-        taxDelinquency: form.taxDelinquency,
-        taxDelinquencyAmount: parseInt(form.taxDelinquencyAmount.replace(/[^0-9]/g, '')) || 0,
-        taxDelinquencyYears: parseInt(form.taxDelinquencyYears) || 0,
-        fireCodeViolations: form.fireCodeViolations,
-        fireCodeCount: parseInt(form.fireCodeCount) || 0,
-        fireCodeDetails: [],
-        codeViolations: [],
-        lisPendens: form.lisPendens,
-        lisPendensAmount: parseInt(form.lisPendensAmount.replace(/[^0-9]/g, '')) || 0,
-        decliningOccupancy: form.decliningOccupancy,
-        occupancyTrend: parseInt(form.occupancyTrend) || 0,
-        deferredMaintenance: form.deferredMaintenance,
-        outOfStateOwner: form.outOfStateOwner,
-        ownerAge: parseInt(form.ownerAge) || undefined,
-        yearsOwned: parseInt(form.yearsOwned) || undefined,
-      },
-      motivationScore: score,
-      stage: form.stage,
-      currentStatus: 'outreach-sent',
-      priority: form.priority,
-      source: form.source,
-      addedDate: new Date().toISOString().split('T')[0],
-      notes: form.notes,
+      motivationScore: result.total,
+      scoreBreakdown: result.breakdown,
+      scoreExplanation: result.explanation,
     }
     onAdd(property)
     onClose()
@@ -567,14 +599,47 @@ function AddPropertyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: 
               )}
             </div>
 
-            <div className="mt-4 border border-dark-border p-4 bg-dark-surface">
-              <div className="flex items-center justify-between">
-                <span className="text-dark-muted text-xs uppercase tracking-widest">Calculated Motivation Score</span>
-                <span className={`font-mono text-lg font-bold border px-3 py-1 ${scoreColor(calcScore(form))}`}>
-                  {calcScore(form)}
-                </span>
-              </div>
-            </div>
+            {(() => {
+              const preview = scoreProperty(formToPartialProperty(form))
+              return (
+                <div className="mt-4 border border-dark-border p-4 bg-dark-surface space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-dark-muted text-xs uppercase tracking-widest">Calculated Score</span>
+                    <span className={`font-mono text-lg font-bold border px-3 py-1 ${scoreColor(preview.total)}`}>
+                      {preview.total} / 130
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {([
+                      ['Motivation', preview.breakdown.motivation, 70],
+                      ['Owner Profile', preview.breakdown.ownerProfile, 25],
+                      ['Deal Quality', preview.breakdown.dealQuality, 15],
+                      ['Value-Add', preview.breakdown.valueAdd, 20],
+                    ] as [string, number, number][]).map(([label, val, max]) => (
+                      <div key={label} className="flex items-center gap-2 text-xs text-dark-muted">
+                        <span className="w-24 flex-shrink-0">{label}</span>
+                        <div className="flex-1 h-1.5 bg-dark-border">
+                          <div className="h-full bg-gold" style={{ width: `${(val / max) * 100}%` }} />
+                        </div>
+                        <span className="font-mono w-8 text-right">{val}/{max}</span>
+                      </div>
+                    ))}
+                    {(preview.breakdown.negatives !== 0 || preview.breakdown.override !== 0) && (
+                      <div className="flex items-center gap-2 text-xs text-dark-muted pt-1 border-t border-dark-border">
+                        <span className="w-24 flex-shrink-0">Adjustments</span>
+                        <span className="flex-1 font-mono text-xs">
+                          {preview.breakdown.negatives !== 0 && <span className="text-red-500">{preview.breakdown.negatives}</span>}
+                          {preview.breakdown.override > 0 && <span className="text-emerald-600 ml-2">+{preview.breakdown.override} override</span>}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {preview.explanation && (
+                    <p className="text-dark-muted text-xs italic leading-relaxed border-t border-dark-border pt-3">{preview.explanation}</p>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           <div>
@@ -704,8 +769,8 @@ export default function Pipeline() {
       return 0
     })
 
-  const totalScore = Math.round(properties.reduce((sum, p) => sum + p.motivationScore, 0) / properties.length)
-  const highMot = properties.filter(p => p.motivationScore >= 75).length
+  const totalScore = Math.round(properties.reduce((sum, p) => sum + p.motivationScore, 0) / (properties.length || 1))
+  const highMot = properties.filter(p => p.motivationScore >= 85).length
   const activeConvos = properties.filter(p => ['conversation', 'loi', 'dd'].includes(p.stage)).length
   const inOutreach = properties.filter(p => p.stage === 'outreach').length
 
@@ -737,7 +802,7 @@ export default function Pipeline() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
             { label: 'Total Pipeline', value: properties.length, sub: 'properties tracked' },
-            { label: 'High Motivation', value: highMot, sub: 'score ≥ 75' },
+            { label: 'High Motivation', value: highMot, sub: 'score ≥ 85' },
             { label: 'Active Outreach', value: inOutreach, sub: 'letters sent' },
             { label: 'In Conversation', value: activeConvos, sub: 'loi / dd / convo' },
           ].map(s => (
@@ -809,17 +874,20 @@ export default function Pipeline() {
                         ›
                       </span>
                     </td>
-                    <td className="pipeline-td">
+                    <td className="pipeline-td max-w-[260px]">
                       <div className="text-[#1a1a18] text-sm font-medium">{property.facilityName}</div>
                       <div className="text-dark-muted text-xs mt-0.5">{property.address}</div>
                       <div className="text-dark-muted text-xs">{property.city}, {property.state} {property.zipCode}</div>
+                      {property.scoreExplanation && (
+                        <div className="text-dark-muted text-[0.68rem] mt-1.5 leading-relaxed italic">{property.scoreExplanation}</div>
+                      )}
                     </td>
                     <td className="pipeline-td">
                       <div className="text-[#1a1a18] text-sm">{property.unitCount.toLocaleString()}</div>
                       <div className="text-dark-muted text-xs">{property.yearBuilt}</div>
                     </td>
                     <td className="pipeline-td">
-                      <MotivationBadge score={property.motivationScore} />
+                      <MotivationBadge score={property.motivationScore} breakdown={property.scoreBreakdown} />
                     </td>
                     <td className="pipeline-td max-w-[220px]">
                       <DistressTagRow signals={property.distressSignals} />

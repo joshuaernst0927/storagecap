@@ -48,6 +48,18 @@ class Deal:
     years_owned: Optional[int] = None
     single_asset_owner: bool = False
     below_market_rents: bool = False
+    no_web_presence: bool = False
+    # Value-add / deal quality
+    street_rates_below_market_pct: Optional[float] = None  # % below market street rate
+    value_add_potential: bool = False
+    rents_below_market_pct: Optional[float] = None         # % rents below market
+    rents_above_market_pct: Optional[float] = None         # % rents above market
+    excess_land: Optional[bool] = None                     # True = has expansion land, False = confirmed none
+    self_managed: bool = False
+    institutional_owner: bool = False
+    broker_listed: bool = False
+    mechanics_lien: bool = False
+    expired_permit: bool = False
 
     # ── Distress signals ────────────────────────────────────────────────────
     tax_delinquency: bool = False
@@ -71,6 +83,8 @@ class Deal:
 
     # ── Scoring + output ────────────────────────────────────────────────────
     motivation_score: int = 0
+    score_breakdown: dict = field(default_factory=dict)
+    score_explanation: str = ""
     needs_outreach_letter: bool = False
     letter_draft: str = ""
     url: str = ""
@@ -94,9 +108,9 @@ class Deal:
             "marketed": "broker",
         }
         priority_map = {
-            range(75, 101): "high",
-            range(50, 75): "medium",
-            range(0, 50): "low",
+            range(85, 131): "high",
+            range(55, 85): "medium",
+            range(0, 55): "low",
         }
         priority = "medium"
         for r, p in priority_map.items():
@@ -139,6 +153,11 @@ class Deal:
                 "codeViolations": self.code_violations,
                 "lisPendens": self.lis_pendens,
                 "lisPendensAmount": self.lis_pendens_amount,
+                "mechanicsLien": self.mechanics_lien,
+                "expiredPermit": self.expired_permit,
+                "uccLien": self.ucc_lien,
+                "civilJudgment": self.court_judgment,
+                "civilJudgmentAmount": self.court_judgment_amount,
                 "decliningOccupancy": self.declining_occupancy,
                 "occupancyTrend": self.occupancy_trend,
                 "deferredMaintenance": self.deferred_maintenance,
@@ -146,8 +165,20 @@ class Deal:
                 "outOfStateOwner": self.out_of_state_owner,
                 "ownerAge": self.owner_age_estimate,
                 "yearsOwned": self.years_owned,
+                "singleAssetOwner": self.single_asset_owner,
             },
+            "noWebPresence": self.no_web_presence,
+            "streetRatesBelowMarketPct": self.street_rates_below_market_pct,
+            "valueAddPotential": self.value_add_potential,
+            "rentsBelowMarketPct": self.rents_below_market_pct,
+            "rentsAboveMarketPct": self.rents_above_market_pct,
+            "excessLand": self.excess_land,
+            "selfManaged": self.self_managed,
+            "institutionalOwner": self.institutional_owner,
+            "brokerListed": self.broker_listed,
             "motivationScore": self.motivation_score,
+            "scoreBreakdown": self.score_breakdown or None,
+            "scoreExplanation": self.score_explanation or None,
             "stage": "identified",
             "currentStatus": "outreach-sent",
             "priority": priority,
