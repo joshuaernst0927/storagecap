@@ -193,13 +193,13 @@ export default function UploadDeal() {
   return (
     <>
       <Head>
-        <title>Upload Deal — YEM Acquisitions</title>
+        <title>Import Deal — YEM Acquisitions</title>
         <meta name="description" content="Upload deal documents and extract property details with Claude AI." />
       </Head>
 
       {/* Hero */}
       <section className="page-hero border-b border-dark-border">
-        <div className="section-label">Upload Deal</div>
+        <div className="section-label">Import Deal</div>
         <h1 className="display-heading text-5xl md:text-7xl max-w-3xl mb-6">
           Drop your docs.<br />
           <em className="text-gold">Claude extracts the deal.</em>
