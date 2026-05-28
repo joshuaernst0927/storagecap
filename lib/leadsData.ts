@@ -28,6 +28,20 @@ export interface LeadDistressSignals {
   ownerAge?: number
 }
 
+export interface ContactInfo {
+  mailingAddress?: string
+  phone?: string
+  email?: string
+  linkedIn?: string
+  enrichedAt?: string
+  enrichedBy?: 'apollo' | 'manual'
+}
+
+export interface EmailRecord {
+  sentAt: string
+  subject: string
+}
+
 export interface Lead {
   id: string
   facilityName?: string
@@ -44,12 +58,16 @@ export interface Lead {
   distressSignals: LeadDistressSignals
   score: number
   status: LeadStatus
-  foundAt: string       // ISO timestamp
-  lastUpdated: string   // ISO timestamp
+  foundAt: string
+  lastUpdated: string
   contactedAt?: string
   notes?: string
   outreachLetter?: string
   pipelineId?: string
+  contactInfo?: ContactInfo
+  emailSubject?: string
+  emailBody?: string
+  emailHistory?: EmailRecord[]
 }
 
 export const SOURCE_LABELS: Record<LeadSource, string> = {
