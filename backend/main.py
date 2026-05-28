@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 StorageCap Pipeline — finds self-storage facilities for sale across all channels.
 
@@ -24,10 +25,17 @@ Individual scraper flags (use instead of source type):
 
 from __future__ import annotations
 import argparse
+import io
 import logging
 import sys
 from datetime import date
 from typing import Optional
+
+# Force UTF-8 output on Windows so Unicode log characters don't crash
+if hasattr(sys.stdout, "buffer"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "buffer"):
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 from config import Config
 from models import Deal
@@ -147,7 +155,7 @@ def run(
         log.info("Running: %s", scraper.name)
         try:
             found = scraper.scrape(states=target_states)
-            log.info("  → %d deals", len(found))
+            log.info("  -> %d deals", len(found))
             all_raw.extend(found)
         except Exception as exc:
             log.error("Scraper %s crashed: %s", scraper.name, exc)
@@ -180,7 +188,7 @@ def run(
     log.info("=" * 60)
     log.info("SUMMARY")
     log.info("  New deals found:    %d", len(new_deals))
-    log.info("  Hot (≥%d score):    %d", cfg.hot_deal_threshold, len(hot_deals))
+    log.info("  Hot (>=%d score):   %d", cfg.hot_deal_threshold, len(hot_deals))
     log.info("  Letters drafted:    %d", letters_drafted)
     log.info("  Pushed to pipeline: %d", pushed)
 
