@@ -23,19 +23,10 @@ export function setCustomPassword(pw: string): void {
   if (typeof window !== 'undefined') localStorage.setItem(CUSTOM_PW_KEY, pw)
 }
 
-// Check against localStorage custom password first, then fall back to API
-// (API checks ADMIN_PASSWORD env var, defaults to "YEM2025")
+// Check against localStorage custom password first, then hardcoded default.
+// Fully client-side — no API call, works identically on localhost and Vercel.
 export async function verifyPassword(password: string): Promise<boolean> {
   const custom = getCustomPassword()
   if (custom !== null) return password === custom
-  try {
-    const res = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    })
-    return res.ok
-  } catch {
-    return false
-  }
+  return password === 'YEM2025'
 }
