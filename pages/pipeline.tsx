@@ -648,7 +648,15 @@ export default function Pipeline() {
     mergeProperties(loadSavedProperties())
   }, [])
 
-  // Load from Python pipeline ingest API
+  // Load from public/data/deals.json (written directly by Python pipeline)
+  useEffect(() => {
+    fetch('/data/deals.json')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: PipelineProperty[]) => mergeProperties(data))
+      .catch(() => {})
+  }, [])
+
+  // Load from pipeline-ingest API (deals added via Upload Deal or manual push)
   useEffect(() => {
     fetch('/api/pipeline-ingest')
       .then(r => r.ok ? r.json() : [])

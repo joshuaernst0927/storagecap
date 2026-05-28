@@ -13,6 +13,9 @@ from models import Deal
 
 log = logging.getLogger(__name__)
 
+# public/data/deals.json lives one directory above backend/
+_PUBLIC_DEALS = Path(__file__).parent.parent / "public" / "data" / "deals.json"
+
 
 # ── deals.json ────────────────────────────────────────────────────────────────
 
@@ -48,6 +51,40 @@ def deduplicate(new: list[Deal], existing: dict[str, dict]) -> list[Deal]:
             log.debug("Dedup skip: %s", d.dedup_key)
     log.info("%d new / %d duplicate deals", len(fresh), len(new) - len(fresh))
     return fresh
+
+
+# ── public/data/deals.json (static file read directly by Next.js) ─────────────
+
+def save_public_deals(new_deals: list[Deal], dry_run: bool = False) -> int:
+    """Merge new deals into public/data/deals.json as PipelineProperty objects.
+
+    The file is served by Next.js as a static asset at /data/deals.json and
+    read on page load by pipeline.tsx — no API call or server required.
+    """
+    if dry_run:
+        log.info("[DRY RUN] Would write %d deals to %s", len(new_deals), _PUBLIC_DEALS)
+        return 0
+
+    _PUBLIC_DEALS.parent.mkdir(parents=True, exist_ok=True)
+
+    existing: list[dict] = []
+    if _PUBLIC_DEALS.exists():
+        try:
+            existing = json.loads(_PUBLIC_DEALS.read_text(encoding="utf-8"))
+        except Exception as exc:
+            log.warning("Could not load %s: %s", _PUBLIC_DEALS, exc)
+
+    existing_ids = {d.get("id") for d in existing}
+    fresh = [d.to_pipeline_property() for d in new_deals if f"py-{d.id}" not in existing_ids]
+
+    if not fresh:
+        log.info("public/data/deals.json — no new deals to append")
+        return 0
+
+    merged = existing + fresh
+    _PUBLIC_DEALS.write_text(json.dumps(merged, indent=2, default=str), encoding="utf-8")
+    log.info("public/data/deals.json — wrote %d total (%d new)", len(merged), len(fresh))
+    return len(fresh)
 
 
 # ── Next.js pipeline push ─────────────────────────────────────────────────────

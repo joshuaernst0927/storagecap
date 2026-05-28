@@ -40,7 +40,7 @@ if hasattr(sys.stderr, "buffer"):
 from config import Config
 from models import Deal
 from scorer import score as compute_score, needs_letter
-from output import load_existing, save_deals, deduplicate, push_to_pipeline
+from output import load_existing, save_deals, deduplicate, push_to_pipeline, save_public_deals
 from letter_writer import draft_letters_for_batch
 from emailer import send_summary
 
@@ -174,9 +174,12 @@ def run(
     draft_letters_for_batch(new_deals, cfg.anthropic_api_key, dry_run=dry_run)
     letters_drafted = sum(1 for d in new_deals if d.letter_draft)
 
-    # ── Save to deals.json ────────────────────────────────────────────────────
+    # ── Save to deals.json (backend archive) ──────────────────────────────────
     all_deals = list(existing.values()) + [d.to_dict() for d in new_deals]
     save_deals(new_deals, cfg.deals_json_path, dry_run=dry_run)
+
+    # ── Save to public/data/deals.json (read by Next.js pipeline page) ────────
+    save_public_deals(new_deals, dry_run=dry_run)
 
     # ── Push hot deals to Next.js pipeline ───────────────────────────────────
     hot_deals = [d for d in new_deals if d.motivation_score >= cfg.hot_deal_threshold]

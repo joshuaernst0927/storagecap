@@ -23,6 +23,7 @@ backend/fb_cookies.json
 
 # Pipeline data (server-side, not committed)
 data/pipeline-ingest.json
+public/data/deals.json
 
 # Underwriting model outputs
 backend/models/outputs/
