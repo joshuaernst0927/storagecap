@@ -632,24 +632,35 @@ export default function Pipeline() {
   const [sortBy, setSortBy] = useState<'score' | 'name' | 'stage'>('score')
   const [showAdd, setShowAdd] = useState(false)
 
-  useEffect(() => {
-    const saved = loadSavedProperties()
-    if (saved.length === 0) return
+  const mergeProperties = (incoming: PipelineProperty[]) => {
+    if (incoming.length === 0) return
     setProperties(prev => {
       const existingIds = new Set(prev.map(p => p.id))
-      const newOnes = saved.filter(p => !existingIds.has(p.id))
-      if (newOnes.length === 0) return prev
-      return [...newOnes, ...prev]
+      const newOnes = incoming.filter(p => !existingIds.has(p.id))
+      return newOnes.length ? [...newOnes, ...prev] : prev
     })
     setLetters(prev => {
       const additions: Record<string, { loading: boolean; text: string }> = {}
-      saved.forEach(p => {
+      incoming.forEach(p => {
         if (p.outreachLetter && !prev[p.id]) {
           additions[p.id] = { loading: false, text: p.outreachLetter }
         }
       })
       return Object.keys(additions).length ? { ...prev, ...additions } : prev
     })
+  }
+
+  // Load from localStorage
+  useEffect(() => {
+    mergeProperties(loadSavedProperties())
+  }, [])
+
+  // Load from Python pipeline ingest API
+  useEffect(() => {
+    fetch('/api/pipeline-ingest')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: PipelineProperty[]) => mergeProperties(data))
+      .catch(() => {})
   }, [])
 
   const toggleExpand = (id: string) => {

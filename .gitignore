@@ -12,6 +12,18 @@ out/
 .env.test.local
 .env.production.local
 
+# Python backend
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/venv/
+backend/deals.json
+backend/fb_cookies.json
+
+# Pipeline data (server-side, not committed)
+data/pipeline-ingest.json
+
 # misc
 .DS_Store
 *.pem
