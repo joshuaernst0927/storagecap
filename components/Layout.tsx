@@ -34,7 +34,7 @@ const navItems: NavItem[] = [
     label: 'Investors',
     dropdown: [
       { href: '/invest', label: 'Invest With Us' },
-      { href: '/submit-deal', label: 'Investor Deal Submission' },
+      { href: '/investor-deal-access', label: 'Deal Access Request' },
     ],
   },
   { href: '/underwrite', label: 'Underwrite' },
