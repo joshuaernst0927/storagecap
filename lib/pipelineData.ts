@@ -1,3 +1,27 @@
+export interface NoteEntry {
+  id: string
+  text: string
+  createdAt: string
+}
+
+export interface NextStep {
+  id: string
+  text: string
+  dueDate?: string       // YYYY-MM-DD
+  completedAt?: string   // ISO timestamp
+}
+
+export type ActivityEventType =
+  | 'deal_added' | 'stage_changed' | 'status_changed'
+  | 'score_changed' | 'letter_sent' | 'note_added' | 'step_completed'
+
+export interface ActivityEvent {
+  id: string
+  type: ActivityEventType
+  description: string
+  createdAt: string
+}
+
 export interface ScoreBreakdown {
   motivation: number      // 0–70
   ownerProfile: number    // 0–25
@@ -106,6 +130,9 @@ export interface PipelineProperty {
   lastActivity?: string
   notes?: string
   outreachLetter?: string
+  noteLog?: NoteEntry[]
+  nextSteps?: NextStep[]
+  activityLog?: ActivityEvent[]
 }
 
 export const mockProperties: PipelineProperty[] = []

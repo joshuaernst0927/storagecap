@@ -35,7 +35,8 @@
       "Bash(npm run *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://[::1]:3000/pipeline)",
       "Bash(timeout 8)",
-      "PowerShell(Start-Process \"http://localhost:3005/pipeline\")"
+      "PowerShell(Start-Process \"http://localhost:3005/pipeline\")",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }

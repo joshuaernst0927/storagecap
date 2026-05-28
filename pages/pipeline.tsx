@@ -4,6 +4,10 @@ import {
   PipelineProperty,
   ScoreBreakdown,
   ScoreHistoryEntry,
+  NoteEntry,
+  NextStep,
+  ActivityEvent,
+  ActivityEventType,
   DealStatus,
   STAGES,
   scoreColor,
@@ -69,6 +73,30 @@ function rescoreProperty(p: PipelineProperty): PipelineProperty {
     lastScored: now,
     scoreHistory: [...(p.scoreHistory ?? []).slice(-19), entry],
   }
+}
+
+// ─── Notes / Activity helpers ─────────────────────────────────────────────────
+
+function mkId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+}
+
+function fmtDateTime(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+function fmtDateShort(yyyymmdd: string): string {
+  return new Date(yyyymmdd + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function isOverdue(dueDate: string): boolean {
+  return dueDate < new Date().toISOString().slice(0, 10)
+}
+
+function mkActivityEvent(type: ActivityEventType, description: string): ActivityEvent {
+  return { id: mkId(), type, description, createdAt: new Date().toISOString() }
 }
 
 // ─── Offer / Optimal pricing helpers ─────────────────────────────────────────
@@ -336,6 +364,193 @@ function StageBadge({ stage }: { stage: PipelineProperty['stage'] }) {
   )
 }
 
+// ─── Notes / Next Steps / Activity panels ────────────────────────────────────
+
+function NotesPanel({
+  noteLog,
+  onAddNote,
+}: {
+  noteLog: NoteEntry[]
+  onAddNote: (text: string) => void
+}) {
+  const [draft, setDraft] = useState('')
+  const submit = () => {
+    const t = draft.trim()
+    if (!t) return
+    onAddNote(t)
+    setDraft('')
+  }
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <input
+          className="flex-1 input-field-sm text-xs"
+          placeholder="Add a note… (Enter to save)"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submit() }}
+        />
+        <button onClick={submit} className="btn-gold-sm px-4 flex-shrink-0">+</button>
+      </div>
+      <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+        {[...noteLog].reverse().map(n => (
+          <div key={n.id} className="border-l-2 border-dark-border pl-3">
+            <div className="text-[0.6rem] text-dark-muted uppercase tracking-widest mb-0.5">
+              {fmtDateTime(n.createdAt)}
+            </div>
+            <div className="text-xs text-[#1a1a18] leading-relaxed">{n.text}</div>
+          </div>
+        ))}
+        {noteLog.length === 0 && (
+          <p className="text-dark-muted text-xs text-center py-6">No notes yet. Add one above.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function NextStepsPanel({
+  steps,
+  onAddStep,
+  onToggleStep,
+  onUpdateStepDue,
+}: {
+  steps: NextStep[]
+  onAddStep: (text: string, dueDate?: string) => void
+  onToggleStep: (id: string) => void
+  onUpdateStepDue: (id: string, dueDate: string) => void
+}) {
+  const [draft, setDraft] = useState('')
+  const [draftDue, setDraftDue] = useState('')
+
+  const submit = () => {
+    const t = draft.trim()
+    if (!t) return
+    onAddStep(t, draftDue || undefined)
+    setDraft('')
+    setDraftDue('')
+  }
+
+  const pending = [...steps.filter(s => !s.completedAt)].sort((a, b) =>
+    (a.dueDate ?? '9999') < (b.dueDate ?? '9999') ? -1 : 1
+  )
+  const done = steps.filter(s => !!s.completedAt)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 items-center">
+        <input
+          className="flex-1 input-field-sm text-xs"
+          placeholder="Add next step… (Enter to save)"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submit() }}
+        />
+        <input
+          type="date"
+          className="input-field-sm text-xs w-32 flex-shrink-0"
+          value={draftDue}
+          onChange={e => setDraftDue(e.target.value)}
+        />
+        <button onClick={submit} className="btn-gold-sm px-4 flex-shrink-0">+</button>
+      </div>
+
+      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+        {pending.map(step => {
+          const overdue = step.dueDate ? isOverdue(step.dueDate) : false
+          return (
+            <div key={step.id} className="flex items-center gap-2 group">
+              <button
+                type="button"
+                onClick={() => onToggleStep(step.id)}
+                className="w-4 h-4 flex-shrink-0 border border-dark-border hover:border-gold transition-colors"
+              />
+              <span className="flex-1 text-xs text-[#1a1a18] min-w-0 truncate">{step.text}</span>
+              {step.dueDate && (
+                <span className={`text-[0.6rem] uppercase tracking-widest flex-shrink-0 ${overdue ? 'text-red-500 font-semibold' : 'text-dark-muted'}`}>
+                  {overdue ? '⚠ ' : ''}{fmtDateShort(step.dueDate)}
+                </span>
+              )}
+              <input
+                type="date"
+                title="Set due date"
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-[0.6rem] border border-dark-border bg-dark-bg text-dark-muted px-1 w-28 flex-shrink-0"
+                value={step.dueDate ?? ''}
+                onChange={e => onUpdateStepDue(step.id, e.target.value)}
+              />
+            </div>
+          )
+        })}
+
+        {done.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-dark-border space-y-1.5">
+            {done.map(step => (
+              <div key={step.id} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onToggleStep(step.id)}
+                  className="w-4 h-4 flex-shrink-0 border border-emerald-400 bg-emerald-50 flex items-center justify-center text-emerald-600 text-[0.5rem] font-bold"
+                >✓</button>
+                <span className="flex-1 text-xs text-dark-muted line-through min-w-0 truncate">{step.text}</span>
+                {step.completedAt && (
+                  <span className="text-[0.6rem] text-dark-muted flex-shrink-0">{fmtDateShort(step.completedAt.slice(0, 10))}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {steps.length === 0 && (
+          <p className="text-dark-muted text-xs text-center py-6">No next steps yet. Add one above.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const ACTIVITY_ICON: Record<ActivityEventType, string> = {
+  deal_added: '★', stage_changed: '→', status_changed: '⟳',
+  score_changed: '△', letter_sent: '✉', note_added: '✎', step_completed: '✓',
+}
+const ACTIVITY_COLOR: Record<ActivityEventType, string> = {
+  deal_added: 'text-gold border-gold/60',
+  stage_changed: 'text-blue-600 border-blue-400/60',
+  status_changed: 'text-purple-600 border-purple-400/60',
+  score_changed: 'text-amber-600 border-amber-400/60',
+  letter_sent: 'text-emerald-600 border-emerald-400/60',
+  note_added: 'text-[#5A5A55] border-[#E0DDD4]',
+  step_completed: 'text-emerald-600 border-emerald-400/60',
+}
+
+function ActivityPanel({ property }: { property: PipelineProperty }) {
+  const events: ActivityEvent[] = [
+    ...(property.activityLog ?? []),
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+  if (events.length === 0) {
+    return <p className="text-dark-muted text-xs text-center py-6">No activity logged yet.</p>
+  }
+
+  return (
+    <div className="space-y-0 max-h-64 overflow-y-auto pr-1">
+      {events.map((ev, i) => (
+        <div key={ev.id} className="flex gap-3 relative">
+          {i < events.length - 1 && (
+            <div className="absolute left-3 top-7 bottom-0 w-px bg-dark-border" />
+          )}
+          <div className={`w-6 h-6 flex-shrink-0 border flex items-center justify-center text-[0.55rem] font-bold bg-dark-bg relative z-10 mt-0.5 ${ACTIVITY_COLOR[ev.type]}`}>
+            {ACTIVITY_ICON[ev.type]}
+          </div>
+          <div className="flex-1 pb-4 min-w-0">
+            <div className="text-[0.6rem] text-dark-muted uppercase tracking-widest">{fmtDateTime(ev.createdAt)}</div>
+            <div className="text-xs text-[#1a1a18] mt-0.5 leading-relaxed">{ev.description}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Expanded Row ─────────────────────────────────────────────────────────────
 
 function ExpandedRow({
@@ -345,6 +560,10 @@ function ExpandedRow({
   onGenerateLetter,
   onStageChange,
   onNotesChange,
+  onAddNote,
+  onAddStep,
+  onToggleStep,
+  onUpdateStepDue,
 }: {
   property: PipelineProperty
   letter: string
@@ -352,8 +571,13 @@ function ExpandedRow({
   onGenerateLetter: () => void
   onStageChange: (stage: PipelineProperty['stage']) => void
   onNotesChange: (notes: string) => void
+  onAddNote: (text: string) => void
+  onAddStep: (text: string, dueDate?: string) => void
+  onToggleStep: (stepId: string) => void
+  onUpdateStepDue: (stepId: string, dueDate: string) => void
 }) {
   const [copied, setCopied] = useState(false)
+  const [activeTab, setActiveTab] = useState<'notes' | 'steps' | 'activity'>('notes')
 
   const copyLetter = () => {
     navigator.clipboard.writeText(letter)
@@ -730,6 +954,53 @@ function ExpandedRow({
             </div>
           </div>
         </div>
+
+        {/* ── Notes / Next Steps / Activity ── */}
+        <div className="border-t border-dark-border">
+          <div className="flex border-b border-dark-border">
+            {([
+              { key: 'notes', label: 'Notes', count: (property.noteLog ?? []).length },
+              { key: 'steps', label: 'Next Steps', count: (property.nextSteps ?? []).filter(s => !s.completedAt).length },
+              { key: 'activity', label: 'Activity', count: (property.activityLog ?? []).length },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-5 py-2.5 text-xs uppercase tracking-widest font-sans border-b-2 -mb-px transition-colors ${
+                  activeTab === tab.key
+                    ? 'border-gold text-gold'
+                    : 'border-transparent text-dark-muted hover:text-[#1a1a18]'
+                }`}
+              >
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className="ml-1.5 text-[0.55rem] font-mono opacity-60">{tab.count}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="p-5">
+            {activeTab === 'notes' && (
+              <NotesPanel
+                noteLog={property.noteLog ?? []}
+                onAddNote={onAddNote}
+              />
+            )}
+            {activeTab === 'steps' && (
+              <NextStepsPanel
+                steps={property.nextSteps ?? []}
+                onAddStep={onAddStep}
+                onToggleStep={onToggleStep}
+                onUpdateStepDue={onUpdateStepDue}
+              />
+            )}
+            {activeTab === 'activity' && (
+              <ActivityPanel property={property} />
+            )}
+          </div>
+        </div>
+
       </td>
     </tr>
   )
@@ -1207,9 +1478,70 @@ export default function Pipeline() {
   const rescore = (id: string) => {
     setProperties(prev => prev.map(p => {
       if (p.id !== id) return p
+      const oldScore = p.motivationScore
       const scored = rescoreProperty(p)
+      if (Math.abs(scored.motivationScore - oldScore) >= 2) {
+        const event = mkActivityEvent('score_changed', `Score changed ${oldScore} → ${scored.motivationScore}`)
+        const withActivity = { ...scored, activityLog: [...(scored.activityLog ?? []), event] }
+        saveProperty(withActivity)
+        return withActivity
+      }
       saveProperty(scored)
       return scored
+    }))
+  }
+
+  const addNote = (id: string, text: string) => {
+    setProperties(prev => prev.map(p => {
+      if (p.id !== id) return p
+      const entry: NoteEntry = { id: mkId(), text, createdAt: new Date().toISOString() }
+      const event = mkActivityEvent('note_added', `Note: "${text.slice(0, 80)}${text.length > 80 ? '…' : ''}"`)
+      const updated = {
+        ...p,
+        noteLog: [...(p.noteLog ?? []), entry],
+        activityLog: [...(p.activityLog ?? []), event],
+      }
+      saveProperty(updated)
+      return updated
+    }))
+  }
+
+  const addNextStep = (id: string, text: string, dueDate?: string) => {
+    setProperties(prev => prev.map(p => {
+      if (p.id !== id) return p
+      const step: NextStep = { id: mkId(), text, dueDate }
+      const updated = { ...p, nextSteps: [...(p.nextSteps ?? []), step] }
+      saveProperty(updated)
+      return updated
+    }))
+  }
+
+  const toggleNextStep = (propertyId: string, stepId: string) => {
+    setProperties(prev => prev.map(p => {
+      if (p.id !== propertyId) return p
+      const now = new Date().toISOString()
+      const steps = (p.nextSteps ?? []).map(s => {
+        if (s.id !== stepId) return s
+        return s.completedAt ? { ...s, completedAt: undefined } : { ...s, completedAt: now }
+      })
+      const toggled = steps.find(s => s.id === stepId)
+      let updated: PipelineProperty = { ...p, nextSteps: steps }
+      if (toggled?.completedAt) {
+        const event = mkActivityEvent('step_completed', `Step completed: "${toggled.text}"`)
+        updated = { ...updated, activityLog: [...(p.activityLog ?? []), event] }
+      }
+      saveProperty(updated)
+      return updated
+    }))
+  }
+
+  const updateStepDue = (propertyId: string, stepId: string, dueDate: string) => {
+    setProperties(prev => prev.map(p => {
+      if (p.id !== propertyId) return p
+      const steps = (p.nextSteps ?? []).map(s => s.id === stepId ? { ...s, dueDate } : s)
+      const updated = { ...p, nextSteps: steps }
+      saveProperty(updated)
+      return updated
     }))
   }
 
@@ -1237,6 +1569,15 @@ export default function Pipeline() {
       })
       const data = await res.json()
       setLetters(prev => ({ ...prev, [property.id]: { loading: false, text: data.letter || data.error || 'Error generating letter.' } }))
+      if (data.letter) {
+        setProperties(prev => prev.map(p => {
+          if (p.id !== property.id) return p
+          const event = mkActivityEvent('letter_sent', 'Outreach letter generated')
+          const updated = { ...p, activityLog: [...(p.activityLog ?? []), event] }
+          saveProperty(updated)
+          return updated
+        }))
+      }
     } catch {
       setLetters(prev => ({ ...prev, [property.id]: { loading: false, text: 'Failed to generate letter. Check your ANTHROPIC_API_KEY.' } }))
     }
@@ -1245,7 +1586,9 @@ export default function Pipeline() {
   const updateStage = (id: string, stage: PipelineProperty['stage']) => {
     setProperties(prev => prev.map(p => {
       if (p.id !== id) return p
-      const updated = { ...p, stage }
+      const stageLabel = STAGES.find(s => s.key === stage)?.label ?? stage
+      const event = mkActivityEvent('stage_changed', `Stage → ${stageLabel}`)
+      const updated = { ...p, stage, activityLog: [...(p.activityLog ?? []), event] }
       if (stage !== 'closed' && stage !== 'dead') {
         const scored = rescoreProperty(updated)
         saveProperty(scored)
@@ -1261,8 +1604,10 @@ export default function Pipeline() {
   }
 
   const addProperty = (p: PipelineProperty) => {
-    saveProperty(p)
-    setProperties(prev => [p, ...prev])
+    const event = mkActivityEvent('deal_added', `Deal added to pipeline`)
+    const withActivity = { ...p, activityLog: [event] }
+    saveProperty(withActivity)
+    setProperties(prev => [withActivity, ...prev])
   }
 
   const filtered = properties
@@ -1422,9 +1767,33 @@ export default function Pipeline() {
                       </span>
                     </td>
                     <td className="pipeline-td max-w-[260px]">
-                      <div className="text-[#1a1a18] text-sm font-medium">{property.facilityName}</div>
+                      <div className="flex items-start gap-1.5">
+                        <div className="text-[#1a1a18] text-sm font-medium leading-snug">{property.facilityName}</div>
+                        {(() => {
+                          const overdue = (property.nextSteps ?? []).filter(s => !s.completedAt && s.dueDate && isOverdue(s.dueDate)).length
+                          return overdue > 0 ? (
+                            <span className="flex-shrink-0 mt-0.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] bg-red-500 text-white text-[0.5rem] font-bold rounded-full px-0.5">
+                              {overdue}
+                            </span>
+                          ) : null
+                        })()}
+                      </div>
                       <div className="text-dark-muted text-xs mt-0.5">{property.address}</div>
                       <div className="text-dark-muted text-xs">{property.city}, {property.state} {property.zipCode}</div>
+                      {(() => {
+                        const pending = (property.nextSteps ?? []).filter(s => !s.completedAt)
+                          .sort((a, b) => (a.dueDate ?? '9999') < (b.dueDate ?? '9999') ? -1 : 1)
+                        const next = pending[0]
+                        if (!next) return null
+                        const overdue = next.dueDate ? isOverdue(next.dueDate) : false
+                        return (
+                          <div className={`flex items-center gap-1 mt-1 text-[0.6rem] uppercase tracking-widest ${overdue ? 'text-red-500 font-semibold' : 'text-amber-600'}`}>
+                            <span>{overdue ? '⚠' : '→'}</span>
+                            <span className="truncate">{next.text}</span>
+                            {next.dueDate && <span className="flex-shrink-0 opacity-80">· {fmtDateShort(next.dueDate)}</span>}
+                          </div>
+                        )
+                      })()}
                       {property.scoreExplanation && (
                         <div className="text-dark-muted text-[0.68rem] mt-1.5 leading-relaxed italic">{property.scoreExplanation}</div>
                       )}
@@ -1491,6 +1860,10 @@ export default function Pipeline() {
                       onGenerateLetter={() => generateLetter(property)}
                       onStageChange={(stage) => updateStage(property.id, stage)}
                       onNotesChange={(notes) => updateNotes(property.id, notes)}
+                      onAddNote={(text) => addNote(property.id, text)}
+                      onAddStep={(text, due) => addNextStep(property.id, text, due)}
+                      onToggleStep={(stepId) => toggleNextStep(property.id, stepId)}
+                      onUpdateStepDue={(stepId, due) => updateStepDue(property.id, stepId, due)}
                     />
                   ),
                 ]
