@@ -26,16 +26,22 @@ export default function Acquisitions() {
         <title>Acquisitions — YEM Acquisitions</title>
       </Head>
 
-      <section className="page-hero border-b border-dark-border">
-        <div className="section-label">Acquisitions</div>
-        <h1 className="display-heading text-6xl md:text-8xl max-w-3xl mb-8">
-          Off-market.<br />
-          <em className="text-gold">Every time.</em>
-        </h1>
-        <p className="text-dark-muted text-lg max-w-xl leading-relaxed">
-          We source exclusively through systematic distress intelligence — county records,
-          tax rolls, code enforcement, and court filings. We don&apos;t wait for listings.
-        </p>
+      <section className="relative overflow-hidden border-b border-dark-border" style={{ backgroundColor: '#1B2B5E' }}>
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200)', opacity: 0.18 }}
+        />
+        <div className="relative z-10 page-hero">
+          <div className="section-label" style={{ color: '#D4A843' }}>Acquisitions</div>
+          <h1 className="font-serif font-light text-white leading-[1.05] max-w-3xl mb-6" style={{ fontSize: 'clamp(3rem, 6vw, 5.5rem)' }}>
+            Off-market.<br />
+            <em style={{ color: '#D4A843' }}>Every time.</em>
+          </h1>
+          <p className="text-lg max-w-xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            We source exclusively through systematic distress intelligence — county records,
+            tax rolls, code enforcement, and court filings. We don&apos;t wait for listings.
+          </p>
+        </div>
       </section>
 
       <section className="py-24">

@@ -1774,14 +1774,17 @@ export default function Pipeline() {
         />
       )}
 
-      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-10">
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+      {/* Pipeline header bar */}
+      <div className="relative overflow-hidden" style={{ backgroundColor: '#1B2B5E' }}>
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200)', opacity: 0.15 }}
+        />
+        <div className="relative z-10 mx-auto px-6 lg:px-10 py-8 flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ maxWidth: '1440px' }}>
           <div>
-            <div className="section-label">Internal Platform</div>
-            <h1 className="display-heading text-5xl">Acquisition Pipeline</h1>
-            <p className="text-dark-muted text-sm mt-2">
+            <div className="font-sans text-xs uppercase tracking-[0.14em] font-semibold mb-1" style={{ color: '#D4A843' }}>Internal Platform</div>
+            <h1 className="font-serif font-light text-white" style={{ fontSize: '2.2rem', lineHeight: '1.1' }}>Acquisition Pipeline</h1>
+            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
               {properties.length} properties · {highMot} high motivation · {activeConvos} active conversations
             </p>
           </div>
@@ -1789,6 +1792,11 @@ export default function Pipeline() {
             + Add Property
           </button>
         </div>
+      </div>
+
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-10 py-8">
+
+        {/* Stats */}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">

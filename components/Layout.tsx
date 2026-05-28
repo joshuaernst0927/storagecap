@@ -153,8 +153,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         className="sticky top-0 z-50 bg-white border-b border-dark-border"
         style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="flex items-center justify-between" style={{ height: '154px' }}>
+        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
+          <div className="flex items-center justify-between" style={{ height: '72px' }}>
 
             <Link href="/" className="flex-shrink-0 hover:opacity-80 transition-opacity duration-200" style={{ padding: '8px' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -275,7 +275,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       {!isPipeline && (
         <footer style={{ backgroundColor: '#1B2B5E' }} className="mt-24 py-16">
-          <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
               <div className="md:col-span-2">
                 <div className="mb-5">
@@ -310,7 +310,9 @@ export default function Layout({ children }: { children: ReactNode }) {
               </div>
             </div>
             <div className="mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4" style={{ borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>© 2024 YEM Acquisitions LLC. All rights reserved.</p>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+                © 2025 YEM Acquisitions LLC · Woodmere, New York · <a href="mailto:joshuaernst@gmail.com" className="hover:text-gold transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>joshuaernst@gmail.com</a> · 516.305.2484
+              </p>
               <p className="tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>Private &amp; Confidential</p>
             </div>
           </div>

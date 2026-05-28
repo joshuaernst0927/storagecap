@@ -69,16 +69,22 @@ export default function Education() {
         <meta name="description" content="Self-storage valuation, exit strategy, and market intelligence for owners, operators, and investors." />
       </Head>
 
-      <section className="page-hero border-b border-dark-border">
-        <div className="section-label">Education</div>
-        <h1 className="display-heading text-6xl md:text-8xl max-w-3xl mb-8">
-          Know your asset.<br />
-          <em className="text-gold">Know your options.</em>
-        </h1>
-        <p className="text-dark-muted text-lg max-w-xl leading-relaxed">
-          Practical resources for self-storage owners and operators on valuation,
-          exit planning, tax strategy, and market dynamics.
-        </p>
+      <section className="relative overflow-hidden border-b border-dark-border" style={{ backgroundColor: '#1B2B5E' }}>
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1200)', opacity: 0.18 }}
+        />
+        <div className="relative z-10 page-hero">
+          <div className="section-label" style={{ color: '#D4A843' }}>Education</div>
+          <h1 className="font-serif font-light text-white leading-[1.05] max-w-3xl mb-6" style={{ fontSize: 'clamp(3rem, 6vw, 5.5rem)' }}>
+            Know your asset.<br />
+            <em style={{ color: '#D4A843' }}>Know your options.</em>
+          </h1>
+          <p className="text-lg max-w-xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            Practical resources for self-storage owners and operators on valuation,
+            exit planning, tax strategy, and market dynamics.
+          </p>
+        </div>
       </section>
 
       <section className="py-24">

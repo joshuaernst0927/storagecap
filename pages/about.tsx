@@ -180,17 +180,34 @@ export default function About() {
       </Head>
 
       {/* Hero */}
-      <section className="page-hero border-b border-dark-border">
-        <div className="section-label">About YEM Acquisitions</div>
-        <h1 className="font-serif font-light text-[#1B2B5E] leading-[1.05] text-6xl md:text-8xl max-w-4xl mb-6">
-          Self-Storage Investment<br />&amp; Acquisition Platform
-        </h1>
-        <p className="font-serif text-2xl font-light text-[#1B2B5E] mb-6 italic">
-          Building Value. Unit By Unit.
-        </p>
-        <p className="text-dark-muted text-lg max-w-2xl leading-relaxed">
-          We acquire and operate self-storage facilities in growth and supply-constrained markets across the United States. Through disciplined underwriting, operational excellence, and strategic improvements, we create stable cash flow and long-term value for our investors.
-        </p>
+      <section
+        className="relative overflow-hidden border-b border-dark-border"
+        style={{ backgroundColor: '#1B2B5E' }}
+      >
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?w=1200)',
+            opacity: 0.15,
+          }}
+        />
+        <div className="relative z-10 page-hero">
+          <div className="section-label" style={{ color: '#D4A843' }}>About YEM Acquisitions</div>
+          <h1
+            className="font-serif font-light text-white leading-[1.05] max-w-4xl mb-5"
+            style={{ fontSize: 'clamp(3rem, 6vw, 5.5rem)' }}
+          >
+            Self-Storage Investment<br />&amp; Acquisition Platform
+          </h1>
+          <p className="font-serif text-2xl font-light italic mb-5" style={{ color: '#D4A843' }}>
+            Building Value. Unit By Unit.
+          </p>
+          <p className="text-lg max-w-2xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            We acquire and operate self-storage facilities in growth and supply-constrained markets
+            across the United States. Through disciplined underwriting, operational excellence,
+            and strategic improvements, we create stable cash flow and long-term value for our investors.
+          </p>
+        </div>
       </section>
 
       {/* Four Pillars */}
