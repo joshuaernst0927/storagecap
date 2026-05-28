@@ -1,6 +1,7 @@
 import Head from 'next/head'
-import { useState, useEffect, useRef, DragEvent, ChangeEvent } from 'react'
+import { useState, useEffect } from 'react'
 import type { PipelineProperty } from '@/lib/pipelineData'
+import { FileDropZone, type UploadFile } from '@/components/FileChips'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,18 +157,6 @@ function buildPayload(inputs: UWInputs, unitMix: UnitMixRow[]) {
   }
 }
 
-function mimeForFile(file: File): string {
-  if (file.type) return file.type
-  const ext = file.name.split('.').pop()?.toLowerCase()
-  const map: Record<string, string> = {
-    pdf: 'application/pdf',
-    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
-  }
-  return map[ext ?? ''] ?? ''
-}
-
 // ─── Small UI Helpers ─────────────────────────────────────────────────────────
 
 function Field({ label, value, onChange, type = 'number', suffix, step, min }: {
@@ -208,9 +197,7 @@ export default function Underwrite() {
   const [selectedDealId, setSelectedDealId] = useState('')
 
   // File upload
-  const fileRef = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<UploadFile[]>([])
 
   // State machine
   const [step, setStep] = useState<'source' | 'form'>('source')
@@ -262,34 +249,27 @@ export default function Underwrite() {
     setStep('form')
   }
 
-  function acceptFile(f: File) {
-    setFile(f)
-    setExtractError('')
-  }
-
-  function handleDrop(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    setDragging(false)
-    if (e.dataTransfer.files[0]) acceptFile(e.dataTransfer.files[0])
-  }
-
   async function handleExtract() {
-    if (!file) return
+    if (files.length === 0) return
     setExtracting(true)
     setExtractError('')
     try {
-      const mime = mimeForFile(file)
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve((reader.result as string).split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
+      const filePayloads = await Promise.all(
+        files.map(async ({ file, mime }) => {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve((reader.result as string).split(',')[1])
+            reader.onerror = reject
+            reader.readAsDataURL(file)
+          })
+          return { fileName: file.name, mimeType: mime, data: base64 }
+        })
+      )
 
       const res = await fetch('/api/underwrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'extract', fileName: file.name, mimeType: mime, data: base64 }),
+        body: JSON.stringify({ action: 'extract', files: filePayloads }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -386,45 +366,17 @@ export default function Underwrite() {
               {/* Upload */}
               {source === 'upload' && (
                 <div>
-                  <div
-                    onDragOver={e => { e.preventDefault(); setDragging(true) }}
-                    onDragLeave={() => setDragging(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileRef.current?.click()}
-                    className={`border-2 border-dashed cursor-pointer transition-colors p-12 text-center mb-5
-                      ${dragging ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/50 bg-dark-surface'}`}
-                  >
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept=".pdf,.xlsx,.docx,.png,.jpg,.jpeg"
-                      className="hidden"
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => { if (e.target.files?.[0]) acceptFile(e.target.files[0]) }}
-                    />
-                    {file ? (
-                      <>
-                        <p className="font-serif text-xl font-light text-[#1B2B5E] mb-1">{file.name}</p>
-                        <p className="text-dark-muted text-sm">{(file.size / 1024).toFixed(0)} KB · Click to change</p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-10 h-10 border border-dark-border flex items-center justify-center mx-auto mb-4 text-dark-muted">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
-                          </svg>
-                        </div>
-                        <p className="font-serif text-xl font-light text-[#1B2B5E] mb-1">Drop file or click to browse</p>
-                        <p className="text-dark-muted text-sm">Rent roll, T12, OM — PDF, Excel, Word, or image</p>
-                      </>
-                    )}
-                  </div>
+                  <FileDropZone files={files} onChange={setFiles} disabled={extracting} />
                   {extractError && (
-                    <div className="mb-4 p-3 border border-red-400/40 bg-red-50 text-red-700 text-sm">{extractError}</div>
+                    <div className="mt-4 mb-2 p-3 border border-red-400/40 bg-red-50 text-red-700 text-sm">{extractError}</div>
                   )}
-                  <button onClick={handleExtract} disabled={!file || extracting} className="btn-gold disabled:opacity-60">
-                    {extracting ? 'Extracting with Claude...' : 'Extract & Populate'}
-                  </button>
+                  <div className="mt-5">
+                    <button onClick={handleExtract} disabled={files.length === 0 || extracting} className="btn-gold disabled:opacity-60">
+                      {extracting
+                        ? `Extracting ${files.length} file${files.length !== 1 ? 's' : ''} with Claude...`
+                        : 'Extract & Populate'}
+                    </button>
+                  </div>
                 </div>
               )}
 

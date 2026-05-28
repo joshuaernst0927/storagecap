@@ -1,32 +1,8 @@
 import Head from 'next/head'
-import { useState, useRef, DragEvent, ChangeEvent } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/router'
 import type { PipelineProperty, DistressSignals } from '@/lib/pipelineData'
-
-const ACCEPTED = '.pdf,.xlsx,.docx,.pptx,.png,.jpg,.jpeg'
-const ACCEPT_MIME = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'image/png',
-  'image/jpeg',
-]
-
-function mimeForFile(file: File): string {
-  if (file.type) return file.type
-  const ext = file.name.split('.').pop()?.toLowerCase()
-  const map: Record<string, string> = {
-    pdf: 'application/pdf',
-    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-  }
-  return map[ext ?? ''] ?? file.type
-}
+import { FileDropZone, type UploadFile } from '@/components/FileChips'
 
 type FormState = {
   facilityName: string
@@ -82,9 +58,7 @@ function emptyDistress(): DistressSignals {
 
 export default function UploadDeal() {
   const router = useRouter()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<UploadFile[]>([])
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState('')
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
@@ -95,49 +69,27 @@ export default function UploadDeal() {
 
   const set = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  function handleDrop(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    setDragging(false)
-    const f = e.dataTransfer.files[0]
-    if (f) acceptFile(f)
-  }
-
-  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
-    if (f) acceptFile(f)
-  }
-
-  function acceptFile(f: File) {
-    const mime = mimeForFile(f)
-    if (!ACCEPT_MIME.includes(mime)) {
-      setExtractError(`Unsupported file type: ${f.name}. Upload PDF, Excel, Word, PowerPoint, or image.`)
-      return
-    }
-    setFile(f)
-    setExtractError('')
-    setExtracted(false)
-  }
-
   async function handleExtract() {
-    if (!file) return
+    if (files.length === 0) return
     setExtracting(true)
     setExtractError('')
     try {
-      const mime = mimeForFile(file)
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-          const result = reader.result as string
-          resolve(result.split(',')[1])
-        }
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
+      const filePayloads = await Promise.all(
+        files.map(async ({ file, mime }) => {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve((reader.result as string).split(',')[1])
+            reader.onerror = reject
+            reader.readAsDataURL(file)
+          })
+          return { fileName: file.name, mimeType: mime, data: base64 }
+        })
+      )
 
       const res = await fetch('/api/upload-deal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, mimeType: mime, data: base64 }),
+        body: JSON.stringify({ files: filePayloads }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -212,7 +164,6 @@ export default function UploadDeal() {
       }
 
       if (capRateNum) {
-        // Store cap rate in notes if no dedicated field
         const capNote = `Cap Rate: ${(capRateNum * 100).toFixed(2)}%`
         property.notes = property.notes ? `${property.notes}\n${capNote}` : capNote
       }
@@ -231,83 +182,62 @@ export default function UploadDeal() {
     }
   }
 
-  const hasFile = file !== null
+  function handleStartOver() {
+    setExtracted(false)
+    setFiles([])
+    setForm(EMPTY_FORM)
+    setHighlights([])
+    setExtractError('')
+  }
 
   return (
     <>
       <Head>
         <title>Upload Deal — YEM Acquisitions</title>
-        <meta name="description" content="Upload a deal document and extract property details with Claude AI." />
+        <meta name="description" content="Upload deal documents and extract property details with Claude AI." />
       </Head>
 
       {/* Hero */}
       <section className="page-hero border-b border-dark-border">
         <div className="section-label">Upload Deal</div>
         <h1 className="display-heading text-5xl md:text-7xl max-w-3xl mb-6">
-          Drop a doc.<br />
+          Drop your docs.<br />
           <em className="text-gold">Claude extracts the deal.</em>
         </h1>
         <p className="text-dark-muted text-lg max-w-xl leading-relaxed">
-          Upload any deal document — PDF, Excel, Word, PowerPoint, or image — and Claude will
-          extract the key metrics automatically. Review, edit, and save to your pipeline.
+          Upload any combination of documents — offering memo, rent roll, T12, photos, broker package.
+          Claude reads all files together and merges the extracted data into one complete deal profile.
         </p>
       </section>
 
       <section className="py-16">
         <div className="section-container max-w-3xl">
 
-          {/* Drop Zone */}
-          <div
-            onDragOver={e => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed cursor-pointer transition-colors duration-200 p-12 text-center mb-6
-              ${dragging ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/50 bg-dark-surface'}`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPTED}
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            {file ? (
-              <div>
-                <div className="font-serif text-xl font-light text-[#1B2B5E] mb-1">{file.name}</div>
-                <div className="text-dark-muted text-sm">{(file.size / 1024).toFixed(0)} KB · Click to change</div>
-              </div>
-            ) : (
-              <div>
-                <div className="w-10 h-10 border border-dark-border flex items-center justify-center mx-auto mb-4 text-dark-muted">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
+          {/* File drop zone */}
+          {!extracted && (
+            <>
+              <FileDropZone files={files} onChange={setFiles} disabled={extracting} />
+
+              {extractError && (
+                <div className="mt-4 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">
+                  {extractError}
                 </div>
-                <p className="font-serif text-xl font-light text-[#1B2B5E] mb-1">Drop a file here or click to browse</p>
-                <p className="text-dark-muted text-sm">PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx), PNG, JPG</p>
-              </div>
-            )}
-          </div>
+              )}
 
-          {extractError && (
-            <div className="mb-6 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">
-              {extractError}
-            </div>
-          )}
-
-          {hasFile && !extracted && (
-            <div className="mb-8 text-center">
-              <button
-                onClick={handleExtract}
-                disabled={extracting}
-                className="btn-gold disabled:opacity-60"
-              >
-                {extracting ? 'Extracting with Claude...' : 'Extract with Claude'}
-              </button>
-            </div>
+              {files.length > 0 && (
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={handleExtract}
+                    disabled={extracting}
+                    className="btn-gold disabled:opacity-60"
+                  >
+                    {extracting
+                      ? `Extracting ${files.length} file${files.length !== 1 ? 's' : ''} with Claude...`
+                      : `Extract with Claude`}
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           {/* Editable Form */}
@@ -315,7 +245,9 @@ export default function UploadDeal() {
             <div className="border border-dark-border bg-dark-surface">
               <div className="border-b border-dark-border px-7 py-5">
                 <div className="section-label-sm mb-0.5">Extracted Data</div>
-                <p className="text-dark-muted text-sm">Review and edit before saving to your pipeline.</p>
+                <p className="text-dark-muted text-sm">
+                  Merged from {files.length} file{files.length !== 1 ? 's' : ''}. Review and edit before saving.
+                </p>
               </div>
 
               <div className="p-7 space-y-6">
@@ -486,7 +418,7 @@ export default function UploadDeal() {
                     {saving ? 'Saving...' : 'Save to Pipeline'}
                   </button>
                   <button
-                    onClick={() => { setExtracted(false); setFile(null); setForm(EMPTY_FORM); setHighlights([]) }}
+                    onClick={handleStartOver}
                     className="text-dark-muted text-sm hover:text-[#1a1a18] transition-colors"
                   >
                     Start over
