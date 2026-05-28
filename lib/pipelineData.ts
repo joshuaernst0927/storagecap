@@ -3,6 +3,8 @@ export interface ScoreBreakdown {
   ownerProfile: number    // 0–25
   dealQuality: number     // 0–15
   valueAdd: number        // 0–20
+  offerDeal: number       // 0–20
+  businessPlan: number    // 0–25
   negatives: number       // ≤ 0
   override: number        // 0–5
 }
@@ -76,6 +78,20 @@ export interface PipelineProperty {
   selfManaged?: boolean
   institutionalOwner?: boolean
   brokerListed?: boolean
+  // Offer & deal structure
+  offerPrice?: number
+  daysOnMarket?: number
+  offerStatus?: 'pending' | 'countered' | 'accepted' | 'rejected'
+  dealStructure?: 'standard' | 'seller-carry' | 'leaseback' | 'installment' | 'all-cash'
+  // Business plan upside
+  projectedYear1NOI?: number
+  projectedStabilizedNOI?: number
+  noiUpsidePct?: number
+  rentIncreasePotentialPct?: number
+  occupancyUpsidePct?: number
+  climateConversionPossible?: boolean
+  exitStrategy?: 'sell' | 'refi' | 'hold'
+  projectedExitCapRate?: number
   // Score
   motivationScore: number
   scoreBreakdown?: ScoreBreakdown
@@ -106,8 +122,8 @@ export const STAGES = [
 ] as const
 
 export function tier(score: number): 'HOT' | 'WARM' | 'COLD' {
-  if (score >= 85) return 'HOT'
-  if (score >= 55) return 'WARM'
+  if (score >= 110) return 'HOT'
+  if (score >= 70) return 'WARM'
   return 'COLD'
 }
 
@@ -137,11 +153,11 @@ export function statusColor(s: DealStatus): string {
   return map[s]
 }
 
-// Score out of 130 points
+// Score out of 175 points
 export function scoreColor(score: number): string {
-  if (score >= 85) return 'text-red-700 border-red-400/50 bg-red-50'
-  if (score >= 65) return 'text-amber-700 border-amber-500/50 bg-amber-50'
-  if (score >= 40) return 'text-yellow-700 border-yellow-500/50 bg-yellow-50'
+  if (score >= 110) return 'text-red-700 border-red-400/50 bg-red-50'
+  if (score >= 85) return 'text-amber-700 border-amber-500/50 bg-amber-50'
+  if (score >= 55) return 'text-yellow-700 border-yellow-500/50 bg-yellow-50'
   return 'text-[#5A5A55] border-[#E0DDD4] bg-[#F5F5F0]'
 }
 
@@ -152,9 +168,9 @@ export function vaScoreColor(va: number): string {
 }
 
 export function scoreLabel(score: number): string {
-  if (score >= 85) return 'HOT'
-  if (score >= 65) return 'WARM+'
-  if (score >= 40) return 'WARM'
+  if (score >= 110) return 'HOT'
+  if (score >= 85) return 'WARM+'
+  if (score >= 55) return 'WARM'
   return 'COLD'
 }
 

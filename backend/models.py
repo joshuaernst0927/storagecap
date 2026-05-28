@@ -60,6 +60,20 @@ class Deal:
     broker_listed: bool = False
     mechanics_lien: bool = False
     expired_permit: bool = False
+    # Offer & deal structure
+    offer_price: Optional[float] = None
+    days_on_market: Optional[int] = None
+    offer_status: Optional[str] = None          # pending | countered | accepted | rejected
+    deal_structure: Optional[str] = None        # standard | seller-carry | leaseback | installment | all-cash
+    # Business plan upside
+    projected_year1_noi: Optional[float] = None
+    projected_stabilized_noi: Optional[float] = None
+    noi_upside_pct: Optional[float] = None
+    rent_increase_potential_pct: Optional[float] = None
+    occupancy_upside_pct: Optional[float] = None
+    climate_conversion_possible: bool = False
+    exit_strategy: Optional[str] = None        # sell | refi | hold
+    projected_exit_cap_rate: Optional[float] = None
 
     # ── Distress signals ────────────────────────────────────────────────────
     tax_delinquency: bool = False
@@ -108,9 +122,9 @@ class Deal:
             "marketed": "broker",
         }
         priority_map = {
-            range(85, 131): "high",
-            range(55, 85): "medium",
-            range(0, 55): "low",
+            range(110, 176): "high",
+            range(70, 110): "medium",
+            range(0, 70): "low",
         }
         priority = "medium"
         for r, p in priority_map.items():
@@ -176,6 +190,18 @@ class Deal:
             "selfManaged": self.self_managed,
             "institutionalOwner": self.institutional_owner,
             "brokerListed": self.broker_listed,
+            "offerPrice": int(self.offer_price) if self.offer_price else None,
+            "daysOnMarket": self.days_on_market,
+            "offerStatus": self.offer_status,
+            "dealStructure": self.deal_structure,
+            "projectedYear1NOI": int(self.projected_year1_noi) if self.projected_year1_noi else None,
+            "projectedStabilizedNOI": int(self.projected_stabilized_noi) if self.projected_stabilized_noi else None,
+            "noiUpsidePct": self.noi_upside_pct,
+            "rentIncreasePotentialPct": self.rent_increase_potential_pct,
+            "occupancyUpsidePct": self.occupancy_upside_pct,
+            "climateConversionPossible": self.climate_conversion_possible or None,
+            "exitStrategy": self.exit_strategy,
+            "projectedExitCapRate": self.projected_exit_cap_rate,
             "motivationScore": self.motivation_score,
             "scoreBreakdown": self.score_breakdown or None,
             "scoreExplanation": self.score_explanation or None,

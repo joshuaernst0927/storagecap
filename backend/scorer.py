@@ -1,18 +1,20 @@
 """
-StorageCap scoring model — 130-point system.
+StorageCap scoring model — 175-point system.
 
 Categories:
-  Motivation signals  0–70
-  Owner profile       0–25
-  Deal quality        0–15
-  Value-add           0–20
-  Negatives           deductions
-  Override            +5 if cap rate > 7.5% on stabilized asset
+  Motivation signals       0–70
+  Owner profile            0–25
+  Deal quality             0–15
+  Value-add                0–20
+  Offer & deal structure   0–20
+  Business plan upside     0–25
+  Negatives                deductions
+  Override                 +5 if cap rate > 7.5% on stabilized asset
 
 Tier thresholds:
-  85+  = HOT
-  55-84 = WARM
-  <55  = COLD
+  110+ = HOT
+  70-109 = WARM
+  <70   = COLD
 """
 
 from __future__ import annotations
@@ -25,7 +27,6 @@ if TYPE_CHECKING:
 
 
 def _ucc_months_remaining(deal: "Deal") -> Optional[int]:
-    """Return months until UCC lien maturity, or None if unknown."""
     if not deal.ucc_lien_maturity_date:
         return None
     try:
@@ -37,24 +38,6 @@ def _ucc_months_remaining(deal: "Deal") -> Optional[int]:
 
 
 def score_full(deal: "Deal") -> dict:
-    """
-    Return scoring result with breakdown dict and plain-English explanation.
-
-    Shape:
-        {
-            "total": int,
-            "breakdown": {
-                "motivation": int,
-                "ownerProfile": int,
-                "dealQuality": int,
-                "valueAdd": int,
-                "negatives": int,
-                "override": int,
-            },
-            "explanation": str,
-        }
-    """
-    # Normalize occupancy (some sources provide 0-1, others 0-100)
     occ_raw = deal.occupancy or 0
     occ = occ_raw if occ_raw > 1 else occ_raw * 100
 
@@ -93,7 +76,7 @@ def score_full(deal: "Deal") -> dict:
         active_count += 1
 
     if active_count >= 2:
-        motivation += 10  # multi-signal bonus
+        motivation += 10
 
     motivation = min(70, motivation)
 
@@ -167,10 +150,10 @@ def score_full(deal: "Deal") -> dict:
         value_add += 7
 
     if deal.climate_percent == 0 and unit_count > 0:
-        value_add += 5  # conversion opportunity
+        value_add += 5
 
     if occ < 80 and rents_below >= 5:
-        value_add += 5  # both low occupancy AND below-market rents
+        value_add += 5
 
     if getattr(deal, "self_managed", False):
         value_add += 4
@@ -179,9 +162,96 @@ def score_full(deal: "Deal") -> dict:
         value_add += 3
 
     if getattr(deal, "no_web_presence", False):
-        value_add += 2  # old technology / no online leasing proxy
+        value_add += 2
 
     value_add = min(20, value_add)
+
+    # ── OFFER & DEAL STRUCTURE (0–20) ─────────────────────────────────────
+    offer_deal = 0
+
+    offer_price = getattr(deal, "offer_price", None)
+    asking_price = deal.asking_price
+
+    if offer_price and asking_price and asking_price > 0:
+        discount_pct = ((asking_price - offer_price) / asking_price) * 100
+        if discount_pct >= 15:
+            offer_deal += 10
+        elif discount_pct >= 10:
+            offer_deal += 7
+        elif discount_pct >= 5:
+            offer_deal += 4
+
+    offer_status = getattr(deal, "offer_status", None)
+    if offer_status in ("accepted", "countered"):
+        offer_deal += 8
+
+    deal_structure = getattr(deal, "deal_structure", None)
+    if deal_structure in ("seller-carry", "leaseback", "installment"):
+        offer_deal += 5
+    elif deal_structure == "all-cash":
+        offer_deal += 3
+
+    days_on_market = getattr(deal, "days_on_market", None) or 0
+    if days_on_market >= 90:
+        offer_deal += 6
+
+    estimated_value = deal.estimated_value or 0
+    if offer_price and estimated_value > 0:
+        ppu_discount = ((estimated_value - offer_price) / estimated_value) * 100
+        if ppu_discount >= 20:
+            offer_deal += 8
+        elif ppu_discount >= 10:
+            offer_deal += 5
+
+    offer_deal = min(20, offer_deal)
+
+    # ── BUSINESS PLAN UPSIDE (0–25) ───────────────────────────────────────
+    business_plan = 0
+
+    noi_upside_pct = getattr(deal, "noi_upside_pct", None) or 0
+    if noi_upside_pct >= 50:
+        business_plan += 12
+    elif noi_upside_pct >= 25:
+        business_plan += 8
+    elif noi_upside_pct >= 10:
+        business_plan += 5
+
+    if excess_land is True:
+        business_plan += 8
+
+    rent_increase_pct = getattr(deal, "rent_increase_potential_pct", None) or 0
+    if rent_increase_pct >= 20:
+        business_plan += 7
+    elif rent_increase_pct >= 10:
+        business_plan += 4
+
+    occ_upside_pct = getattr(deal, "occupancy_upside_pct", None) or 0
+    if occ_upside_pct >= 20:
+        business_plan += 7
+    elif occ_upside_pct >= 10:
+        business_plan += 4
+
+    if getattr(deal, "climate_conversion_possible", False):
+        business_plan += 5
+
+    if getattr(deal, "self_managed", False):
+        business_plan += 4
+
+    if getattr(deal, "no_web_presence", False):
+        business_plan += 3  # technology / online leasing upside
+
+    if excess_land is True or getattr(deal, "value_add_potential", False):
+        business_plan += 3  # ancillary income upside
+
+    exit_strategy = getattr(deal, "exit_strategy", None)
+    if excess_land is True and exit_strategy == "sell":
+        business_plan += 6  # land repositioning / rezoning
+
+    projected_exit_cap = getattr(deal, "projected_exit_cap_rate", None)
+    if projected_exit_cap is not None and cap_rate is not None and projected_exit_cap < cap_rate - 0.005:
+        business_plan += 4  # exit cap rate compression
+
+    business_plan = min(25, business_plan)
 
     # ── NEGATIVES ─────────────────────────────────────────────────────────
     negatives = 0
@@ -195,7 +265,7 @@ def score_full(deal: "Deal") -> dict:
     if rents_above >= 10:
         negatives -= 8
     if rents_above == 0 and occ >= 95:
-        negatives -= 6  # at-market rents with full occupancy
+        negatives -= 6
 
     year_built = deal.year_built or 0
     if year_built >= 2020:
@@ -208,7 +278,7 @@ def score_full(deal: "Deal") -> dict:
         negatives -= 5
 
     if excess_land is False:
-        negatives -= 3  # confirmed no expansion land
+        negatives -= 3
 
     if deal.climate_percent == 100:
         negatives -= 2
@@ -218,13 +288,15 @@ def score_full(deal: "Deal") -> dict:
     if cap_rate is not None and cap_rate > 0.075 and occ >= 85:
         override += 5
 
-    total = max(0, min(130, motivation + owner_profile + deal_quality + value_add + negatives + override))
+    total = max(0, min(175, motivation + owner_profile + deal_quality + value_add + offer_deal + business_plan + negatives + override))
 
     breakdown = {
         "motivation": motivation,
         "ownerProfile": owner_profile,
         "dealQuality": deal_quality,
         "valueAdd": value_add,
+        "offerDeal": offer_deal,
+        "businessPlan": business_plan,
         "negatives": negatives,
         "override": override,
     }
@@ -235,18 +307,20 @@ def score_full(deal: "Deal") -> dict:
 
 
 def score(deal: "Deal") -> int:
-    """Return the total motivation score (0–130)."""
     return score_full(deal)["total"]
 
 
 def needs_letter(deal: "Deal") -> bool:
-    return deal.source_type in ("distressed", "off_market") and deal.motivation_score >= 55
+    return deal.source_type in ("distressed", "off_market") and deal.motivation_score >= 70
 
-
-# ── Explanation ───────────────────────────────────────────────────────────────
 
 def _build_explanation(deal: "Deal", b: dict, total: int, occ: float, cap_rate) -> str:
-    # Sentence 1: lead with strongest positive driver
+    rents_below = getattr(deal, "rents_below_market_pct", None) or 0
+    rents_above = getattr(deal, "rents_above_market_pct", None) or 0
+    excess_land = getattr(deal, "excess_land", None)
+    offer_price = getattr(deal, "offer_price", None)
+    asking_price = deal.asking_price
+
     if b["motivation"] >= 30:
         signals = []
         if deal.tax_delinquency:
@@ -274,6 +348,14 @@ def _build_explanation(deal: "Deal", b: dict, total: int, occ: float, cap_rate) 
         if deal.court_judgment:
             signals.append("civil judgment")
         s1 = f"Early distress indicators — {', '.join(signals)}."
+    elif b["offerDeal"] >= 12:
+        if offer_price and asking_price and asking_price > 0:
+            pct = round(((asking_price - offer_price) / asking_price) * 100)
+            s1 = f"Strong deal structure with offer {pct}% below ask."
+        else:
+            s1 = "Favorable deal structure with meaningful discount to ask."
+    elif b["businessPlan"] >= 15:
+        s1 = "High-upside business plan with multiple value creation levers."
     elif b["ownerProfile"] >= 15:
         details = []
         age = deal.owner_age_estimate or 0
@@ -286,15 +368,10 @@ def _build_explanation(deal: "Deal", b: dict, total: int, occ: float, cap_rate) 
         s1 = "Strong value-add profile with multiple improvement levers."
     elif cap_rate is not None and cap_rate > 0.075:
         s1 = f"Above-market {cap_rate * 100:.1f}% cap rate on a stabilized asset."
-    elif total >= 55:
+    elif total >= 70:
         s1 = "Moderate opportunity with financial upside and a manageable entry point."
     else:
         s1 = "Limited distress and value-add signals — primarily a financial-quality play."
-
-    # Sentence 2: key opportunity or concern
-    rents_above = getattr(deal, "rents_above_market_pct", None) or 0
-    rents_below = getattr(deal, "rents_below_market_pct", None) or 0
-    excess_land = getattr(deal, "excess_land", None)
 
     if getattr(deal, "institutional_owner", False):
         s2 = "Institutional or REIT ownership limits off-market negotiation potential."
@@ -302,6 +379,20 @@ def _build_explanation(deal: "Deal", b: dict, total: int, occ: float, cap_rate) 
         s2 = "Fully stabilized at above-market rents — limited upside, better suited for a core buyer."
     elif (deal.year_built or 0) >= 2020:
         s2 = "Recently built facility — limited value-add runway, pricing should reflect stabilized yield."
+    elif b["businessPlan"] >= 15:
+        upsides = []
+        noi_upside = getattr(deal, "noi_upside_pct", None) or 0
+        if noi_upside >= 25:
+            upsides.append(f"{noi_upside:.0f}% NOI upside")
+        rent_inc = getattr(deal, "rent_increase_potential_pct", None) or 0
+        if rent_inc >= 10:
+            upsides.append(f"{rent_inc:.0f}% rent increase potential")
+        occ_up = getattr(deal, "occupancy_upside_pct", None) or 0
+        if occ_up >= 10:
+            upsides.append(f"{occ_up:.0f}% occupancy upside")
+        if excess_land is True:
+            upsides.append("expansion land")
+        s2 = f"Business plan upside through {', '.join(upsides)}." if upsides else "Strong business plan with multiple upside drivers."
     elif b["valueAdd"] >= 15:
         upsides = []
         if occ < 80:
@@ -317,7 +408,7 @@ def _build_explanation(deal: "Deal", b: dict, total: int, occ: float, cap_rate) 
         s2 = "Motivated seller combined with operational upside makes this a priority outreach target."
     elif occ < 75:
         s2 = "Below-average occupancy and deferred maintenance create a clear basis-play opportunity."
-    elif total < 35:
+    elif total < 40:
         s2 = "Monitor for further distress development before committing outreach resources."
     else:
         s2 = "Outreach warranted to explore seller motivation and pricing flexibility."

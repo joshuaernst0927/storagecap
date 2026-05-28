@@ -90,19 +90,23 @@ function MotivationBadge({
 }) {
   const t = tier(score)
   const va = breakdown?.valueAdd ?? 0
+  const offerDeal = breakdown?.offerDeal ?? 0
+  const businessPlan = breakdown?.businessPlan ?? 0
   const trend = getTrend(scoreHistory)
   const bars: [string, number, number, string][] = [
     ['Mot',  breakdown?.motivation   ?? 0, 70, '#F87171'],
     ['Own',  breakdown?.ownerProfile ?? 0, 25, '#FBBF24'],
     ['Deal', breakdown?.dealQuality  ?? 0, 15, '#60A5FA'],
     ['VA',   va,                            20, '#34D399'],
+    ['Ofer', offerDeal,                     20, '#A78BFA'],
+    ['Plan', businessPlan,                  25, '#38BDF8'],
   ]
   return (
     <div className="space-y-1.5">
       <div className="flex items-start gap-2">
         <div className={`border-2 font-mono font-bold w-12 h-12 flex flex-col items-center justify-center flex-shrink-0 leading-none ${isFinal ? 'text-[#5A5A55] border-[#E0DDD4] bg-[#F5F5F0]' : scoreColor(score)}`}>
           <span className="text-xl leading-none">{score}</span>
-          <span className="text-[0.5rem] tracking-wide uppercase mt-0.5 font-sans opacity-60">/130</span>
+          <span className="text-[0.5rem] tracking-wide uppercase mt-0.5 font-sans opacity-60">/175</span>
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-0">
           <div className="flex items-center gap-1">
@@ -116,7 +120,19 @@ function MotivationBadge({
               </span>
             )}
           </div>
-          <span className={`border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold ${vaScoreColor(va)}`}>VA {va}</span>
+          <div className="flex gap-1 flex-wrap">
+            <span className={`border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold ${vaScoreColor(va)}`}>VA {va}</span>
+            {offerDeal > 0 && (
+              <span className="border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold text-violet-700 border-violet-400/50 bg-violet-50">
+                Offer {offerDeal}
+              </span>
+            )}
+            {businessPlan > 0 && (
+              <span className="border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold text-sky-700 border-sky-400/50 bg-sky-50">
+                Plan {businessPlan}
+              </span>
+            )}
+          </div>
         </div>
         {!isFinal && onRescore && (
           <button
@@ -282,6 +298,113 @@ function ExpandedRow({
                 </div>
               )}
             </div>
+
+            {(property.askingPrice || property.offerPrice || property.daysOnMarket || property.dealStructure) && (
+              <div className="mt-5 pt-5 border-t border-dark-border">
+                <div className="section-label-sm mb-3">Offer &amp; Deal</div>
+                <div className="space-y-2 text-xs">
+                  {property.askingPrice && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Ask</span>
+                      <span className="text-[#1a1a18]">${(property.askingPrice / 1000000).toFixed(2)}M</span>
+                    </div>
+                  )}
+                  {property.offerPrice && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Our Offer</span>
+                      <span className="text-[#1a1a18] font-semibold">
+                        ${(property.offerPrice / 1000000).toFixed(2)}M
+                        {property.askingPrice && (
+                          <span className="text-emerald-600 ml-1 font-normal">
+                            (−{(((property.askingPrice - property.offerPrice) / property.askingPrice) * 100).toFixed(0)}%)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {property.daysOnMarket != null && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Days on Market</span>
+                      <span className={property.daysOnMarket >= 90 ? 'text-amber-600 font-semibold' : 'text-[#1a1a18]'}>{property.daysOnMarket}d</span>
+                    </div>
+                  )}
+                  {property.offerStatus && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Offer Status</span>
+                      <span className={`capitalize font-semibold ${property.offerStatus === 'accepted' ? 'text-emerald-600' : property.offerStatus === 'countered' ? 'text-amber-600' : property.offerStatus === 'rejected' ? 'text-red-500' : 'text-[#1a1a18]'}`}>{property.offerStatus}</span>
+                    </div>
+                  )}
+                  {property.dealStructure && property.dealStructure !== 'standard' && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Structure</span>
+                      <span className="text-violet-600 capitalize font-semibold">{property.dealStructure.replace('-', ' ')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(property.noiUpsidePct || property.rentIncreasePotentialPct || property.occupancyUpsidePct || property.projectedStabilizedNOI) && (
+              <div className="mt-5 pt-5 border-t border-dark-border">
+                <div className="section-label-sm mb-3">Business Plan</div>
+                <div className="space-y-2 text-xs">
+                  {property.noi && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Current NOI</span>
+                      <span className="text-[#1a1a18]">${property.noi.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {property.projectedYear1NOI && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Yr 1 NOI</span>
+                      <span className="text-sky-600">${property.projectedYear1NOI.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {property.projectedStabilizedNOI && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Stabilized NOI</span>
+                      <span className="text-emerald-600 font-semibold">${property.projectedStabilizedNOI.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {property.noiUpsidePct != null && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">NOI Upside</span>
+                      <span className="text-sky-600 font-semibold">{property.noiUpsidePct}%</span>
+                    </div>
+                  )}
+                  {property.rentIncreasePotentialPct != null && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Rent Increase</span>
+                      <span className="text-sky-600">{property.rentIncreasePotentialPct}%</span>
+                    </div>
+                  )}
+                  {property.occupancyUpsidePct != null && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Occ Upside</span>
+                      <span className="text-sky-600">{property.occupancyUpsidePct}%</span>
+                    </div>
+                  )}
+                  {property.climateConversionPossible && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Climate Conv.</span>
+                      <span className="text-emerald-600 font-semibold">Possible</span>
+                    </div>
+                  )}
+                  {property.exitStrategy && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Exit Strategy</span>
+                      <span className="text-[#1a1a18] capitalize">{property.exitStrategy === 'refi' ? 'Refi & Hold' : property.exitStrategy}</span>
+                    </div>
+                  )}
+                  {property.projectedExitCapRate != null && (
+                    <div className="flex justify-between">
+                      <span className="text-dark-muted uppercase tracking-widest">Exit Cap Rate</span>
+                      <span className="text-[#1a1a18]">{property.projectedExitCapRate.toFixed(1)}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="mt-5 pt-5 border-t border-dark-border">
               <span className="text-dark-muted text-xs block mb-2 uppercase tracking-widest">Stage</span>
@@ -509,6 +632,16 @@ interface NewPropForm {
   decliningOccupancy: boolean; occupancyTrend: string;
   deferredMaintenance: boolean; outOfStateOwner: boolean;
   ownerAge: string; yearsOwned: string;
+  // Offer & deal structure
+  askingPrice: string; offerPrice: string; daysOnMarket: string;
+  offerStatus: PipelineProperty['offerStatus'] | '';
+  dealStructure: PipelineProperty['dealStructure'] | '';
+  // Business plan upside
+  projectedYear1NOI: string; projectedStabilizedNOI: string; noiUpsidePct: string;
+  rentIncreasePotentialPct: string; occupancyUpsidePct: string;
+  climateConversionPossible: boolean;
+  exitStrategy: PipelineProperty['exitStrategy'] | '';
+  projectedExitCapRate: string;
   stage: PipelineProperty['stage']; priority: PipelineProperty['priority'];
   source: PipelineProperty['source']; notes: string;
 }
@@ -523,6 +656,10 @@ const emptyForm: NewPropForm = {
   decliningOccupancy: false, occupancyTrend: '',
   deferredMaintenance: false, outOfStateOwner: false,
   ownerAge: '', yearsOwned: '',
+  askingPrice: '', offerPrice: '', daysOnMarket: '', offerStatus: '', dealStructure: '',
+  projectedYear1NOI: '', projectedStabilizedNOI: '', noiUpsidePct: '',
+  rentIncreasePotentialPct: '', occupancyUpsidePct: '', climateConversionPossible: false,
+  exitStrategy: '', projectedExitCapRate: '',
   stage: 'identified', priority: 'medium', source: 'county-records', notes: '',
 }
 
@@ -564,6 +701,19 @@ function formToPartialProperty(f: NewPropForm): PipelineProperty {
       ownerAge: parseInt(f.ownerAge) || undefined,
       yearsOwned: parseInt(f.yearsOwned) || undefined,
     },
+    askingPrice: parseInt(f.askingPrice.replace(/[^0-9]/g, '')) || undefined,
+    offerPrice: parseInt(f.offerPrice.replace(/[^0-9]/g, '')) || undefined,
+    daysOnMarket: parseInt(f.daysOnMarket) || undefined,
+    offerStatus: (f.offerStatus || undefined) as PipelineProperty['offerStatus'],
+    dealStructure: (f.dealStructure || undefined) as PipelineProperty['dealStructure'],
+    projectedYear1NOI: parseInt(f.projectedYear1NOI.replace(/[^0-9]/g, '')) || undefined,
+    projectedStabilizedNOI: parseInt(f.projectedStabilizedNOI.replace(/[^0-9]/g, '')) || undefined,
+    noiUpsidePct: parseFloat(f.noiUpsidePct) || undefined,
+    rentIncreasePotentialPct: parseFloat(f.rentIncreasePotentialPct) || undefined,
+    occupancyUpsidePct: parseFloat(f.occupancyUpsidePct) || undefined,
+    climateConversionPossible: f.climateConversionPossible || undefined,
+    exitStrategy: (f.exitStrategy || undefined) as PipelineProperty['exitStrategy'],
+    projectedExitCapRate: parseFloat(f.projectedExitCapRate) || undefined,
     motivationScore: 0,
     stage: f.stage,
     currentStatus: 'outreach-sent',
@@ -742,6 +892,85 @@ function AddPropertyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: 
                 </div>
               )
             })()}
+          </div>
+
+          {/* ── Offer & Deal Structure ── */}
+          <div>
+            <div className="section-label-sm mb-3">Offer &amp; Deal Structure</div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="label-text">Ask Price ($)</label>
+                  <input className="input-field-sm" value={form.askingPrice} onChange={e => setF('askingPrice', e.target.value)} placeholder="6,000,000" /></div>
+                <div><label className="label-text">Your Offer ($)</label>
+                  <input className="input-field-sm" value={form.offerPrice} onChange={e => setF('offerPrice', e.target.value)} placeholder="5,000,000" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="label-text">Days on Market</label>
+                  <input className="input-field-sm" type="number" value={form.daysOnMarket} onChange={e => setF('daysOnMarket', e.target.value)} placeholder="120" /></div>
+                <div><label className="label-text">Offer Status</label>
+                  <select className="input-field-sm" value={form.offerStatus} onChange={e => setF('offerStatus', e.target.value)}>
+                    <option value="">— None —</option>
+                    <option value="pending">Pending</option>
+                    <option value="countered">Countered</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="rejected">Rejected</option>
+                  </select></div>
+              </div>
+              <div><label className="label-text">Deal Structure</label>
+                <select className="input-field-sm" value={form.dealStructure} onChange={e => setF('dealStructure', e.target.value)}>
+                  <option value="">— Standard —</option>
+                  <option value="seller-carry">Seller Carry</option>
+                  <option value="leaseback">Leaseback</option>
+                  <option value="installment">Installment Sale</option>
+                  <option value="all-cash">All Cash</option>
+                </select></div>
+            </div>
+          </div>
+
+          {/* ── Business Plan Upside ── */}
+          <div>
+            <div className="section-label-sm mb-3">Business Plan Upside</div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div><label className="label-text">Current NOI ($)</label>
+                  <input className="input-field-sm" value={form.noi} onChange={e => setF('noi', e.target.value)} placeholder="240,000" /></div>
+                <div><label className="label-text">Yr 1 NOI ($)</label>
+                  <input className="input-field-sm" value={form.projectedYear1NOI} onChange={e => setF('projectedYear1NOI', e.target.value)} placeholder="290,000" /></div>
+                <div><label className="label-text">Stabilized NOI ($)</label>
+                  <input className="input-field-sm" value={form.projectedStabilizedNOI} onChange={e => setF('projectedStabilizedNOI', e.target.value)} placeholder="380,000" /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div><label className="label-text">NOI Upside %</label>
+                  <input className="input-field-sm" type="number" value={form.noiUpsidePct} onChange={e => setF('noiUpsidePct', e.target.value)} placeholder="35" /></div>
+                <div><label className="label-text">Rent Increase %</label>
+                  <input className="input-field-sm" type="number" value={form.rentIncreasePotentialPct} onChange={e => setF('rentIncreasePotentialPct', e.target.value)} placeholder="15" /></div>
+                <div><label className="label-text">Occ Upside %</label>
+                  <input className="input-field-sm" type="number" value={form.occupancyUpsidePct} onChange={e => setF('occupancyUpsidePct', e.target.value)} placeholder="20" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="label-text">Exit Strategy</label>
+                  <select className="input-field-sm" value={form.exitStrategy} onChange={e => setF('exitStrategy', e.target.value)}>
+                    <option value="">— None —</option>
+                    <option value="sell">Sell</option>
+                    <option value="refi">Refinance &amp; Hold</option>
+                    <option value="hold">Long-Term Hold</option>
+                  </select></div>
+                <div><label className="label-text">Exit Cap Rate</label>
+                  <input className="input-field-sm" type="number" step="0.1" value={form.projectedExitCapRate} onChange={e => setF('projectedExitCapRate', e.target.value)} placeholder="5.5" /></div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="climateConversionPossible"
+                  checked={form.climateConversionPossible}
+                  onChange={e => setF('climateConversionPossible', e.target.checked)}
+                  className="w-3.5 h-3.5 accent-gold"
+                />
+                <label htmlFor="climateConversionPossible" className="text-xs text-dark-muted uppercase tracking-widest cursor-pointer hover:text-[#1a1a18] transition-colors">
+                  Climate Control Conversion Possible
+                </label>
+              </div>
+            </div>
           </div>
 
           <div>
