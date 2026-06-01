@@ -21,6 +21,10 @@ export interface LeadDistressSignals {
   taxDelinquencyAmount?: number
   fireCodeViolations?: boolean
   lisPendens?: boolean
+  bankruptcy?: boolean
+  bankruptcyChapter?: string   // "Chapter 7", "Chapter 11", etc.
+  bankruptcyDate?: string      // ISO date of filing
+  bankruptcyDocket?: string    // case number
   decliningOccupancy?: boolean
   outOfStateOwner?: boolean
   longTermOwner?: boolean
@@ -100,6 +104,7 @@ export function scoreLead(signals: LeadDistressSignals): number {
   if (signals.taxDelinquency) score += 25
   if (signals.fireCodeViolations) score += 15
   if (signals.lisPendens) score += 20
+  if (signals.bankruptcy) score += 18
   if (signals.decliningOccupancy) score += 10
   if (signals.outOfStateOwner) score += 10
   if (signals.longTermOwner) score += 10
