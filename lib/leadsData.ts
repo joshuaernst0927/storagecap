@@ -113,8 +113,8 @@ export function scoreLead(signals: LeadDistressSignals): number {
 }
 
 export function getLeadTier(score: number): 'HOT' | 'WARM' | 'COLD' {
-  if (score >= 70) return 'HOT'
-  if (score >= 40) return 'WARM'
+  if (score >= 40) return 'HOT'
+  if (score >= 15) return 'WARM'
   return 'COLD'
 }
 

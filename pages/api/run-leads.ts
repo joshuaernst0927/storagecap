@@ -410,10 +410,10 @@ function topSignal(lead: Lead): string {
 
 // ─── Build HTML email body ────────────────────────────────────────────────────
 export function buildDigestHtml(leads: Lead[], scanDate: Date = new Date()): string {
-  const hot = leads.filter(l => l.score >= 70).sort((a, b) => b.score - a.score)
-  const warm = leads.filter(l => l.score >= 40 && l.score < 70)
+  const hot = leads.filter(l => getLeadTier(l.score) === 'HOT').sort((a, b) => b.score - a.score)
+  const warm = leads.filter(l => getLeadTier(l.score) === 'WARM')
   const bkCount = leads.filter(l => l.distressSignals.bankruptcy).length
-  const top5 = hot.slice(0, 5)
+  const top5 = [...leads].sort((a, b) => b.score - a.score).slice(0, 5)
 
   const dateStr = scanDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
@@ -430,7 +430,13 @@ export function buildDigestHtml(leads: Lead[], scanDate: Date = new Date()): str
         <td style="padding:5px 12px;border-bottom:1px solid #f0f0f0;font-weight:600;color:#1B2B5E">${count}</td>
       </tr>`).join('')
 
-  // Top 5 HOT leads table
+  // Top 5 leads by score
+  const tierStyle = (score: number) => {
+    const t = getLeadTier(score)
+    if (t === 'HOT') return 'background:#fef2f2;color:#c0392b;border:1px solid #fecaca'
+    if (t === 'WARM') return 'background:#fffbeb;color:#d97706;border:1px solid #fde68a'
+    return 'background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb'
+  }
   const hotRows = top5.map(l => `
     <tr>
       <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">
@@ -438,7 +444,7 @@ export function buildDigestHtml(leads: Lead[], scanDate: Date = new Date()): str
         <div style="font-size:12px;color:#888;margin-top:2px">${l.city}, ${l.state}</div>
       </td>
       <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;white-space:nowrap">
-        <span style="background:#fef2f2;color:#c0392b;border:1px solid #fecaca;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;font-family:monospace">${l.score} · HOT</span>
+        <span style="${tierStyle(l.score)};padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;font-family:monospace">${l.score} · ${getLeadTier(l.score)}</span>
       </td>
       <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;color:#555">${topSignal(l)}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;color:#888">${SOURCE_LABELS[l.source as keyof typeof SOURCE_LABELS] || l.source}</td>
@@ -501,7 +507,7 @@ export function buildDigestHtml(leads: Lead[], scanDate: Date = new Date()): str
         ${top5.length ? `
         <tr>
           <td style="padding:20px 32px;border-bottom:1px solid #f0f0f0">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#888;font-weight:600;margin-bottom:10px">Top HOT Leads</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#888;font-weight:600;margin-bottom:10px">Top Leads by Score</div>
             <table width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
               <thead>
                 <tr style="background:#f8f9fa">
@@ -551,7 +557,7 @@ export async function sendLeadDigest(leads: Lead[], scanDate: Date = new Date())
 
   const transporter = createTransporter()
   const dateStr = scanDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  const hot = leads.filter(l => l.score >= 70)
+  const hot = leads.filter(l => getLeadTier(l.score) === 'HOT')
 
   await transporter.sendMail({
     from: '"YEM Acquisitions" <joshuaernst@gmail.com>',
