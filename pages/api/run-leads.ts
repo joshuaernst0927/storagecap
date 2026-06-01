@@ -77,7 +77,7 @@ async function clFetch(query: string, token: string, filedAfter: string): Promis
       Authorization: `Token ${token}`,
       'User-Agent': 'YEMAcquisitions/1.0 (joshuaernst@gmail.com)',
     },
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(10000),
   })
   if (!res.ok) throw new Error(`CourtListener HTTP ${res.status}`)
   const data = await res.json()
@@ -198,14 +198,14 @@ const CRAIGSLIST_CITIES = [
 ]
 
 async function scanCraigslist(): Promise<Lead[]> {
-  const leads: Lead[] = []
-  for (const { city, state, subdomain } of CRAIGSLIST_CITIES) {
-    try {
+  const results = await Promise.allSettled(
+    CRAIGSLIST_CITIES.map(async ({ city, state, subdomain }) => {
       const url = `https://${subdomain}.craigslist.org/search/bfs?query=self+storage&format=rss`
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
-      if (!res.ok) continue
+      const res = await fetch(url, { signal: AbortSignal.timeout(4000) })
+      if (!res.ok) return []
       const xml = await res.text()
       const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || []
+      const leads: Lead[] = []
       for (const item of items.slice(0, 5)) {
         const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] || item.match(/<title>(.*?)<\/title>/)?.[1] || ''
         const link = item.match(/<link>(.*?)<\/link>/)?.[1] || ''
@@ -230,24 +230,25 @@ async function scanCraigslist(): Promise<Lead[]> {
           lastUpdated: new Date().toISOString(),
         })
       }
-    } catch { /* non-fatal */ }
-  }
-  return leads
+      return leads
+    })
+  )
+  return results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
 }
 
 // ─── BizBuySell scanner ────────────────────────────────────────────────────────
 async function scanBizBuySell(): Promise<Lead[]> {
-  const leads: Lead[] = []
-  for (const state of TARGET_STATES.slice(0, 4)) {
-    try {
+  const results = await Promise.allSettled(
+    TARGET_STATES.slice(0, 4).map(async (state) => {
       const url = `https://www.bizbuysell.com/self-storage-businesses-for-sale/?q=${state}`
       const res = await fetch(url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YEMAcquisitions/1.0)' },
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(4000),
       })
-      if (!res.ok) continue
+      if (!res.ok) return []
       const html = await res.text()
       const listingPattern = /<a[^>]+href="(\/Business-Opportunity\/[^"]+)"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<\/a>/g
+      const leads: Lead[] = []
       let match, count = 0
       while ((match = listingPattern.exec(html)) !== null && count < 5) {
         const rawTitle = match[2].replace(/<[^>]+>/g, '').trim()
@@ -270,9 +271,10 @@ async function scanBizBuySell(): Promise<Lead[]> {
         })
         count++
       }
-    } catch { /* non-fatal */ }
-  }
-  return leads
+      return leads
+    })
+  )
+  return results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
 }
 
 // ─── LoopNet fetch scraper ─────────────────────────────────────────────────────
@@ -284,10 +286,8 @@ const LOOPNET_STATE_MAP: Record<string, string> = {
 }
 
 async function scanLoopNet(): Promise<Lead[]> {
-  const leads: Lead[] = []
-
-  for (const stateSlug of LOOPNET_STATES) {
-    try {
+  const results = await Promise.allSettled(
+    LOOPNET_STATES.map(async (stateSlug) => {
       const url = `https://www.loopnet.com/search/self-storage-facilities/${stateSlug}/for-sale/`
       const res = await fetch(url, {
         headers: {
@@ -295,11 +295,12 @@ async function scanLoopNet(): Promise<Lead[]> {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
         },
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(4000),
       })
-      if (!res.ok) continue
+      if (!res.ok) return []
       const html = await res.text()
       const state = LOOPNET_STATE_MAP[stateSlug]
+      const leads: Lead[] = []
 
       // Try JSON-LD structured data first
       const jsonLdMatches = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) || []
@@ -334,7 +335,6 @@ async function scanLoopNet(): Promise<Lead[]> {
 
       // Fallback: regex-parse listing cards from SSR HTML
       if (leads.filter(l => l.state === state && l.source === 'loopnet').length === 0) {
-        // LoopNet uses data-testid attributes and class names
         const cardPattern = /data-listing-id="(\d+)"[\s\S]{0,2000}?<[^>]+class="[^"]*(?:property-name|listing-title)[^"]*"[^>]*>([\s\S]*?)<\/[a-z]+>/gi
         let m
         let count = 0
@@ -343,7 +343,6 @@ async function scanLoopNet(): Promise<Lead[]> {
           const rawName = m[2].replace(/<[^>]+>/g, '').trim()
           if (!rawName || !/storage/i.test(rawName)) continue
 
-          // Try to extract price near this listing
           const chunk = html.slice(m.index, m.index + 1500)
           const priceM = chunk.match(/\$\s*([\d,]+(?:\.\d+)?)\s*[MK]?/i)
           let price: number | undefined
@@ -354,7 +353,6 @@ async function scanLoopNet(): Promise<Lead[]> {
                     raw.includes('K') ? Math.round(val * 1_000) : Math.round(val)
           }
 
-          // Try to extract city
           const cityM = chunk.match(/([A-Za-z\s]+),\s+([A-Z]{2})\s+\d{5}/)
           const city = cityM ? cityM[1].trim() : state
 
@@ -376,10 +374,10 @@ async function scanLoopNet(): Promise<Lead[]> {
           count++
         }
       }
-    } catch { /* non-fatal */ }
-  }
-
-  return leads
+      return leads
+    })
+  )
+  return results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
 }
 
 // ─── Gmail transporter ────────────────────────────────────────────────────────
@@ -598,14 +596,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const sendEmail = req.query.email !== '0'
 
+  // Race all scanners against a hard deadline so Vercel never kills the function mid-flight
+  const deadline = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('scan timeout')), 50000)
+  )
+
   try {
     const [craigslistLeads, bizBuySellLeads, courtLeads, loopnetLeads] =
-      await Promise.allSettled([
-        scanCraigslist(),
-        scanBizBuySell(),
-        scanCourtListener(),
-        scanLoopNet(),
-      ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : []))
+      await Promise.race([
+        Promise.allSettled([
+          scanCraigslist(),
+          scanBizBuySell(),
+          scanCourtListener(),
+          scanLoopNet(),
+        ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : [])),
+        deadline,
+      ])
 
     const allLeads = [...courtLeads, ...craigslistLeads, ...bizBuySellLeads, ...loopnetLeads]
 

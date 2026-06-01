@@ -748,7 +748,7 @@ function ScanBar({ onScanDone }: { onScanDone: (leads: Lead[]) => void }) {
     setScanning(true)
     setError('')
     try {
-      const res = await fetch('/api/run-leads?email=0', { method: 'POST' })
+      const res = await fetch('/api/run-leads?email=0', { method: 'POST', signal: AbortSignal.timeout(55000) })
       const data = await res.json()
       if (data.success) {
         setLastResult({ total: data.total, scannedAt: data.scannedAt })
