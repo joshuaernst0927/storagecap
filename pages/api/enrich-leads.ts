@@ -3,6 +3,7 @@ import { Lead, ContactInfo } from '@/lib/leadsData'
 
 const CL_TOKEN = process.env.COURTLISTENER_TOKEN || '25e0d81f7c377dbdd866ba6165afe7af4fa9c99e'
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
+const APOLLO_API_KEY = process.env.APOLLO_API_KEY
 const REPO_OWNER = 'joshuaernst0927'
 const REPO_NAME = 'storagecap'
 const FILE_PATH = 'public/data/leads.json'
@@ -72,6 +73,38 @@ async function clFetch(url: string): Promise<any | null> {
   return data.detail ? null : data
 }
 
+async function lookupEmailViaApollo(name: string, organization: string): Promise<string | undefined> {
+  if (!APOLLO_API_KEY) return undefined
+  try {
+    const res = await fetch('https://api.apollo.io/v1/people/match', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+      body: JSON.stringify({
+        api_key: APOLLO_API_KEY,
+        name,
+        organization_name: organization,
+        reveal_personal_emails: false,
+      }),
+    })
+    if (!res.ok) return undefined
+    const data = await res.json()
+    return data?.person?.email || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function parseAttyNameAndFirm(notes: string): { name: string; firm: string } | null {
+  const m = notes.match(/(?:Attorney|Trustee Atty):\s*([^·\n]+?)(?:\s*·\s*[\d\-]+)?\s*·\s*([^·\n]+)/)
+  if (m) return { name: m[1].trim(), firm: m[2].trim() }
+  const m2 = notes.match(/(?:Attorney|Trustee Atty):\s*([^·\n]+)/)
+  if (m2) return { name: m2[1].trim(), firm: '' }
+  return null
+}
+
 async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: ContactInfo; attyNote?: string } | null> {
   const docketId = extractDocketId(lead.sourceUrl || '')
   if (!docketId) return null
@@ -92,6 +125,8 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
   let phone: string | undefined
   let email: string | undefined
   let attyNote: string | undefined
+  let attyName: string | undefined
+  let attyFirm: string | undefined
 
   if (debtor?.attorneys?.length) {
     await new Promise(r => setTimeout(r, 600))
@@ -101,8 +136,10 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
       phone = parsePhone(raw)
       email = parseEmail(raw)
       if (attyData.name) {
+        attyName = attyData.name
         const rawLines = raw.split('\n').map((l: string) => l.trim()).filter(Boolean)
-        attyNote = `Attorney: ${attyData.name}${phone ? ` · ${phone}` : ''}${rawLines[0] && rawLines[0] !== attyData.name ? ` · ${rawLines[0]}` : ''}`
+        attyFirm = rawLines.find((l: string) => l !== attyData.name && !/\d{3}/.test(l) && !/email/i.test(l)) || ''
+        attyNote = `Attorney: ${attyData.name}${phone ? ` · ${phone}` : ''}${attyFirm ? ` · ${attyFirm}` : ''}`
       }
     }
   }
@@ -116,6 +153,7 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
       const tPhone = parsePhone(tInfo)
       if (tPhone) {
         phone = tPhone
+        attyName = trustee.name
         attyNote = `Trustee: ${trustee.name} · ${phone}`
         break
       }
@@ -127,6 +165,7 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
           phone = parsePhone(raw)
           email = email || parseEmail(raw)
           if (phone && tAttyData.name) {
+            attyName = tAttyData.name
             attyNote = `Trustee Atty: ${tAttyData.name} · ${phone}`
           }
         }
@@ -142,8 +181,16 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
     if (usTrustee) {
       const tInfo = usTrustee?.party_types?.find((pt: any) => /trustee/i.test(pt.name))?.extra_info || ''
       phone = parsePhone(tInfo)
-      if (phone) attyNote = `US Trustee: ${usTrustee.name} · ${phone}`
+      if (phone) {
+        attyName = usTrustee.name
+        attyNote = `US Trustee: ${usTrustee.name} · ${phone}`
+      }
     }
+  }
+
+  // Try Apollo for email if we have attorney name
+  if (!email && attyName) {
+    email = await lookupEmailViaApollo(attyName, attyFirm || '')
   }
 
   if (!mailingAddress && !phone) return null
