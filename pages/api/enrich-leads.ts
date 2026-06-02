@@ -1,16 +1,39 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import fs from 'fs'
-import path from 'path'
 import { Lead, ContactInfo } from '@/lib/leadsData'
 
 const CL_TOKEN = process.env.COURTLISTENER_TOKEN || '25e0d81f7c377dbdd866ba6165afe7af4fa9c99e'
-const LEADS_FILE = path.join(process.cwd(), 'public', 'data', 'leads.json')
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN
+const REPO_OWNER = 'joshuaernst0927'
+const REPO_NAME = 'storagecap'
+const FILE_PATH = 'public/data/leads.json'
 
-function readLeads(): Lead[] {
-  try { return JSON.parse(fs.readFileSync(LEADS_FILE, 'utf-8')) } catch { return [] }
+async function getLeadsFromGitHub(): Promise<{ leads: Lead[], sha: string }> {
+  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
+    headers: {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  })
+  const data = await res.json()
+  const leads = JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8'))
+  return { leads, sha: data.sha }
 }
-function writeLeads(leads: Lead[]): void {
-  fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2))
+
+async function writeLeadsToGitHub(leads: Lead[], sha: string): Promise<void> {
+  const content = Buffer.from(JSON.stringify(leads, null, 2)).toString('base64')
+  await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
+      Accept: 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: 'Enrich lead contact info',
+      content,
+      sha,
+    }),
+  })
 }
 
 function extractDocketId(url: string): string | null {
@@ -60,7 +83,6 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
 
   const parties: any[] = data.results || []
 
-  // -- Debtor address --
   const debtor = parties.find(p =>
     p.party_types?.some((pt: any) => /debtor/i.test(pt.name || ''))
   )
@@ -71,7 +93,6 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
   let email: string | undefined
   let attyNote: string | undefined
 
-  // -- Try debtor's attorney first --
   if (debtor?.attorneys?.length) {
     await new Promise(r => setTimeout(r, 600))
     const attyData = await clFetch(debtor.attorneys[0].attorney)
@@ -86,7 +107,6 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
     }
   }
 
-  // -- Fallback: scan ALL trustees including terminated ones --
   if (!phone) {
     const trustees = parties.filter(p =>
       p.party_types?.some((pt: any) => /trustee/i.test(pt.name || ''))
@@ -99,7 +119,6 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
         attyNote = `Trustee: ${trustee.name} · ${phone}`
         break
       }
-      // Also try fetching trustee's attorney
       if (!phone && trustee?.attorneys?.length) {
         await new Promise(r => setTimeout(r, 600))
         const tAttyData = await clFetch(trustee.attorneys[0].attorney)
@@ -116,7 +135,6 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
     }
   }
 
-  // -- Fallback: US Trustee extra_info --
   if (!phone) {
     const usTrustee = parties.find(p =>
       p.party_types?.some((pt: any) => /u\.?s\.?\s*trustee/i.test(pt.name || ''))
@@ -146,7 +164,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { leadId } = req.body as { leadId?: string }
-  const leads = readLeads()
+  const { leads, sha } = await getLeadsFromGitHub()
 
   const lead = leadId
     ? leads.find(l => l.id === leadId)
@@ -174,7 +192,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         : existing.notes,
       lastUpdated: new Date().toISOString(),
     }
-    writeLeads(leads)
+
+    await writeLeadsToGitHub(leads, sha)
 
     return res.status(200).json({ enriched: 1, lead: leads[idx] })
   } catch (err) {
