@@ -234,8 +234,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     leads[idx] = {
       ...existing,
       contactInfo: result.contactInfo,
-      notes: result.attyNote
-        ? `${existing.notes ? existing.notes + ' · ' : ''}${result.attyNote}`
+   notes: result.attyNote
+        ? (() => {
+            const base = (existing.notes || '').replace(/\s*·\s*(?:Attorney|Trustee)[^]*$/i, '').trim()
+            return base ? `${base} · ${result.attyNote}` : result.attyNote
+          })()
         : existing.notes,
       lastUpdated: new Date().toISOString(),
     }
