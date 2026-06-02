@@ -21,9 +21,11 @@
  *   Start in : C:\Users\joshu\Downloads\storagecap
  */
 
-const puppeteer = require('puppeteer-core')
-const fs        = require('fs')
-const path      = require('path')
+const puppeteerExtra = require('puppeteer-extra')
+const StealthPlugin   = require('puppeteer-extra-plugin-stealth')
+puppeteerExtra.use(StealthPlugin())
+const fs   = require('fs')
+const path = require('path')
 
 // ─── Load .env.local (works on both local dev and Linux server) ────────────────
 ;(function loadEnv() {
@@ -131,44 +133,40 @@ const COURT_CITY = {
 const COURT_STATE = { fl:'FL', tx:'TX', nc:'NC', ga:'GA', tn:'TN', oh:'OH', sc:'SC' }
 
 async function scanCourtListener() {
-  log('CourtListener', 'Starting — V4 search API (paginated)...')
-  const filedAfter = new Date(Date.now() - 365 * 86400_000).toISOString().slice(0, 10)
-  const TARGET_COURTS = new Set(BANKRUPTCY_COURTS)
+  log('CourtListener', `Starting — querying ${BANKRUPTCY_COURTS.length} courts (V4 API)...`)
+  const filedAfter = new Date(Date.now() - 545 * 86400_000).toISOString().slice(0, 10) // 18 months
 
-  const seen = new Set()
+  const seen  = new Set()
   const leads = []
 
-  // Single paginated search across all bankruptcy courts — avoids per-court rate limits
-  let nextUrl = `https://www.courtlistener.com/api/rest/v4/search/?` +
-    new URLSearchParams({ q: 'storage', type: 'r', page_size: '100', order_by: 'score desc' })
-  let page = 0
-
-  while (nextUrl && page < 4) {
-    page++
+  // Query each bankruptcy court sequentially — 13s apart to stay under 5 req/min limit
+  for (let i = 0; i < BANKRUPTCY_COURTS.length; i++) {
+    const courtId = BANKRUPTCY_COURTS[i]
+    if (i > 0) await new Promise(r => setTimeout(r, 13000))
     try {
-      const res = await fetch(nextUrl, {
+      const params = new URLSearchParams({
+        q: 'storage', type: 'r', court: courtId,
+        page_size: '50', order_by: 'dateFiled desc',
+      })
+      const res = await fetch(`https://www.courtlistener.com/api/rest/v4/search/?${params}`, {
         headers: {
           Authorization: `Token ${CL_TOKEN}`,
           'User-Agent': 'YEMAcquisitions/1.0 (joshuaernst@gmail.com)',
         },
         signal: AbortSignal.timeout(20000),
       })
-      if (!res.ok) { log('CourtListener', `HTTP ${res.status} on page ${page}`); break }
+      if (!res.ok) { log('CourtListener', `${courtId}: HTTP ${res.status}`); continue }
       const data = await res.json()
-      if (data.detail) { log('CourtListener', `API error: ${data.detail}`); break }
+      if (data.detail) { log('CourtListener', `${courtId}: ${data.detail}`); continue }
 
+      let found = 0
       for (const d of (data.results || [])) {
         if (seen.has(d.docket_id)) continue
         seen.add(d.docket_id)
-
-        // Only target states' bankruptcy courts
-        if (!TARGET_COURTS.has(d.court_id)) continue
-
         const caseName = d.caseName || ''
         if (!/storage/i.test(caseName)) continue
         if (d.dateFiled && d.dateFiled < filedAfter) continue
 
-        const courtId  = d.court_id
         const state    = COURT_STATE[courtId.slice(0, 2)] || 'US'
         const city     = COURT_CITY[courtId] || courtId.toUpperCase()
         const chapter  = d.chapter ? `Chapter ${d.chapter}` : 'Bankruptcy'
@@ -199,144 +197,90 @@ async function scanCourtListener() {
             `Court: ${courtId.toUpperCase()}`,
           ].filter(Boolean).join(' · '),
         })
+        found++
       }
-
-      log('CourtListener', `Page ${page}: ${(data.results || []).length} results, ${leads.length} leads so far`)
-      nextUrl = data.next || null
+      if (found > 0) log('CourtListener', `${courtId}: ${found} storage leads`)
     } catch (err) {
-      log('CourtListener', `Error page ${page}: ${err.message}`)
-      break
+      log('CourtListener', `${courtId} error: ${err.message}`)
     }
   }
 
-  log('CourtListener', `Found ${leads.length} leads`)
+  log('CourtListener', `Found ${leads.length} total leads`)
   return leads
 }
 
-// ─── 2. Craigslist — geo-specific RSS (individual city feeds work better than national)
-async function scanCraigslist() {
-  log('Craigslist', 'Starting...')
-  // City-specific RSS feeds: these work from servers unlike the national search
-  const feeds = [
-    'https://miami.craigslist.org/search/bfs?format=rss&query=self+storage',
-    'https://dallas.craigslist.org/search/bfs?format=rss&query=self+storage',
-    'https://houston.craigslist.org/search/bfs?format=rss&query=self+storage',
-    'https://atlanta.craigslist.org/search/bfs?format=rss&query=self+storage',
-    'https://charlotte.craigslist.org/search/bfs?format=rss&query=self+storage',
-    'https://tampa.craigslist.org/search/bfs?format=rss&query=self+storage',
-    'https://nashville.craigslist.org/search/bfs?format=rss&query=self+storage',
+// ─── 2. Lands of America / Land.com — RSS feed for rural/commercial storage ────
+async function scanLandsOfAmerica() {
+  log('LandsOfAmerica', 'Starting...')
+  const leads = []
+  const urls = [
+    'https://www.landsofamerica.com/search/farm-and-ranch-real-estate/self-storage/?sort=newest&type=sale',
+    'https://www.land.com/search/?q=self+storage&propertyTypes=Commercial&statuses=ForSale',
   ]
-
-  const CL_CITY_STATE = {
-    'miami': 'FL', 'dallas': 'TX', 'houston': 'TX',
-    'atlanta': 'GA', 'charlotte': 'NC', 'tampa': 'FL', 'nashville': 'TN',
-  }
-
-  const seen = new Set()
-  const leads = []
-
-  for (const url of feeds) {
+  for (const url of urls) {
     try {
-      const res = await safeFetch(url, {
-        headers: {
-          'Accept': 'application/rss+xml, text/xml, */*',
-          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-        },
-      })
-      if (!res.ok) { log('Craigslist', `HTTP ${res.status} — ${url}`); continue }
-      const xml = await res.text()
-      const cityMatch = url.match(/https:\/\/([^.]+)\.craigslist/)
-      const citySlug  = cityMatch?.[1] || 'us'
-      const state     = CL_CITY_STATE[citySlug] || 'US'
-
-      for (const item of parseRssXml(xml)) {
-        if (!item.title || seen.has(item.link)) continue
-        seen.add(item.link)
-        if (!/storage/i.test(`${item.title} ${item.desc}`)) continue
-
-        const priceM = (`${item.title} ${item.desc}`).match(/\$\s*([\d,]+)/)
-        leads.push({
-          id: generateLeadId(),
-          facilityName: item.title.slice(0, 80),
-          address: 'See listing',
-          city: citySlug.charAt(0).toUpperCase() + citySlug.slice(1),
-          state,
-          askingPrice: priceM ? parseInt(priceM[1].replace(/,/g, '')) : undefined,
-          ownerName: 'Unknown',
-          source: 'craigslist',
-          sourceUrl: item.link,
-          distressSignals: {},
-          score: scoreLead({}),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-        })
-      }
-    } catch (err) {
-      log('Craigslist', `Error: ${err.message}`)
-    }
-  }
-
-  log('Craigslist', `Found ${leads.length} leads`)
-  return leads
-}
-
-// ─── 3. BizBuySell — JSON search API (bypasses RSS 403) ───────────────────────
-async function scanBizBuySell() {
-  log('BizBuySell', 'Starting...')
-  const leads = []
-  const queries = ['self storage', 'storage facility']
-
-  for (const q of queries) {
-    try {
-      const params = new URLSearchParams({
-        q, industryId: '1602', pageSize: '30',
-        'industries[0]': '1602',
-      })
-      const res = await safeFetch(
-        `https://www.bizbuysell.com/api/1.1/listings/forsale?${params}`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'Referer': 'https://www.bizbuysell.com/',
-          },
-          timeout: 15000,
-        }
-      )
-      if (!res.ok) { log('BizBuySell', `API HTTP ${res.status}`); continue }
-      const data = await res.json()
-      const listings = data.listings || data.results || data.data || []
-      const seen = new Set()
+      const res = await safeFetch(url, { timeout: 10000 })
+      if (!res.ok) { log('LandsOfAmerica', `HTTP ${res.status}`); continue }
+      const html = await res.text()
+      const ndM  = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
+      if (!ndM) continue
+      const data     = JSON.parse(ndM[1])
+      const listings = data?.props?.pageProps?.listings
+        || data?.props?.pageProps?.properties || []
       for (const l of listings) {
-        const name = l.businessName || l.title || l.name || ''
-        const key  = l.listingId || l.id || l.url || name
-        if (!name || !/storage/i.test(name) || seen.has(key)) continue
-        seen.add(key)
-        const state = l.state || l.stateCode || 'US'
-        const city  = l.city || state
-        const price = l.askingPrice || l.price || l.salePrice
+        const name = l.title || l.name || ''
+        if (!name || !/storage/i.test(name)) continue
         leads.push({
           id: generateLeadId(),
           facilityName: name.slice(0, 80),
           address: l.address || 'See listing',
-          city, state,
-          askingPrice: typeof price === 'number' ? price : undefined,
-          ownerName: 'Unknown',
-          source: 'bizbuysell',
-          sourceUrl: l.listingUrl || l.url || `https://www.bizbuysell.com/listing/${l.listingId || l.id}/`,
-          distressSignals: {},
-          score: scoreLead({}),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
+          city: l.city || 'Unknown', state: l.state || 'US',
+          askingPrice: l.price || l.askingPrice || undefined,
+          ownerName: 'Unknown', source: 'fsbo',
+          sourceUrl: l.url || url,
+          distressSignals: {}, score: scoreLead({}), status: 'new',
+          foundAt: new Date().toISOString(), lastUpdated: new Date().toISOString(),
         })
       }
-    } catch (err) {
-      log('BizBuySell', `Error: ${err.message}`)
-    }
+    } catch (err) { log('LandsOfAmerica', `Error: ${err.message}`) }
   }
+  log('LandsOfAmerica', `Found ${leads.length} leads`)
+  return leads
+}
 
-  log('BizBuySell', `Found ${leads.length} leads`)
+// ─── 3. Showcase.com — commercial real estate RSS / search ────────────────────
+async function scanShowcase() {
+  log('Showcase', 'Starting...')
+  const leads = []
+  try {
+    const res = await safeFetch(
+      'https://www.showcase.com/search/?q=self+storage&property_type=industrial&transaction_type=sale',
+      { timeout: 12000 }
+    )
+    if (!res.ok) { log('Showcase', `HTTP ${res.status}`); return leads }
+    const html = await res.text()
+    const ndM  = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
+    if (ndM) {
+      const data = JSON.parse(ndM[1])
+      const listings = data?.props?.pageProps?.listings || data?.props?.pageProps?.results || []
+      for (const l of listings) {
+        const name = l.name || l.title || l.address || ''
+        if (!/storage/i.test(name)) continue
+        leads.push({
+          id: generateLeadId(),
+          facilityName: name.slice(0, 80),
+          address: l.address || 'See listing',
+          city: l.city || 'Unknown', state: l.state || 'US',
+          askingPrice: l.price || undefined,
+          ownerName: 'Unknown', source: 'fsbo',
+          sourceUrl: l.url || 'https://www.showcase.com',
+          distressSignals: {}, score: scoreLead({}), status: 'new',
+          foundAt: new Date().toISOString(), lastUpdated: new Date().toISOString(),
+        })
+      }
+    }
+  } catch (err) { log('Showcase', `Error: ${err.message}`) }
+  log('Showcase', `Found ${leads.length} leads`)
   return leads
 }
 
@@ -344,8 +288,8 @@ async function scanBizBuySell() {
 async function scanBrevitas() {
   log('Brevitas', 'Starting...')
   const queries = [
-    'https://www.brevitas.com/for-sale/?q=self+storage',
-    'https://www.brevitas.com/for-sale/?q=storage+facility',
+    'https://www.brevitas.com/search/?q=self+storage&type=sale',
+    'https://www.brevitas.com/search/?q=storage+facility&type=sale',
   ]
 
   const seen = new Set()
@@ -754,7 +698,7 @@ async function main() {
 
   if (executablePath) {
     try {
-      browser = await puppeteer.launch({
+      browser = await puppeteerExtra.launch({
         executablePath,
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
@@ -773,8 +717,8 @@ async function main() {
     log('Runner', 'Running API + fetch-based scrapers in parallel...')
     const fetchResults = await Promise.allSettled([
       scanCourtListener(),
-      scanCraigslist(),
-      scanBizBuySell(),
+      scanLandsOfAmerica(),
+      scanShowcase(),
       scanBrevitas(),
       scanFSBO(),
       scanCrexi(),
