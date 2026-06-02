@@ -44,8 +44,14 @@
     "score": 18,
     "status": "new",
     "foundAt": "2026-06-02T14:57:24.238Z",
-    "lastUpdated": "2026-06-02T14:57:24.238Z",
-    "notes": "Chapter 11 bankruptcy filing · Filed: Aug 14, 2025 · Court: FLNB"
+    "lastUpdated": "2026-06-02T20:38:02.633Z",
+    "notes": "Chapter 11 bankruptcy filing · Filed: Aug 14, 2025 · Court: FLNB · Trustee: United States Trustee · 850-942-1660",
+    "contactInfo": {
+      "mailingAddress": "1563 Capital Circle SE, Tallahassee, FL 32301, Leon-FL",
+      "phone": "850-942-1660",
+      "enrichedAt": "2026-06-02T20:38:02.633Z",
+      "enrichedBy": "manual"
+    }
   },
   {
     "id": "lead_1780412244237_bnfju",
