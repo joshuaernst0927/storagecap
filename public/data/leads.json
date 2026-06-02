@@ -1,1 +1,86 @@
-[]
+[
+  {
+    "id": "lead_1780412247573_q8mxd",
+    "facilityName": "City Park Storage Ventures, LP",
+    "address": "Case No. 25-35121",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "City Park Storage Ventures, LP",
+    "source": "courtlistener",
+    "sourceUrl": "https://www.courtlistener.com/docket/71235697/city-park-storage-ventures-lp/",
+    "distressSignals": {
+      "bankruptcy": true,
+      "bankruptcyChapter": "Chapter 11",
+      "bankruptcyDate": "2025-08-29",
+      "bankruptcyDocket": "25-35121"
+    },
+    "score": 18,
+    "status": "new",
+    "foundAt": "2026-06-02T14:57:27.573Z",
+    "lastUpdated": "2026-06-02T14:57:27.573Z",
+    "notes": "Chapter 11 bankruptcy filing · Filed: Aug 29, 2025 · Court: TXSB"
+  },
+  {
+    "id": "lead_1780412244238_5m7nu",
+    "facilityName": "Mission Self-Storage Leesburg, LLC",
+    "address": "Case No. 25-40380",
+    "city": "Tallahassee",
+    "state": "FL",
+    "ownerName": "Mission Self-Storage Leesburg, LLC",
+    "source": "courtlistener",
+    "sourceUrl": "https://www.courtlistener.com/docket/71111136/mission-self-storage-leesburg-llc/",
+    "distressSignals": {
+      "bankruptcy": true,
+      "bankruptcyChapter": "Chapter 11",
+      "bankruptcyDate": "2025-08-14",
+      "bankruptcyDocket": "25-40380"
+    },
+    "score": 18,
+    "status": "new",
+    "foundAt": "2026-06-02T14:57:24.238Z",
+    "lastUpdated": "2026-06-02T14:57:24.238Z",
+    "notes": "Chapter 11 bankruptcy filing · Filed: Aug 14, 2025 · Court: FLNB"
+  },
+  {
+    "id": "lead_1780412244237_bnfju",
+    "facilityName": "Troyz Towing & Storage, Inc.",
+    "address": "Case No. 3:25-bk-02906",
+    "city": "Orlando",
+    "state": "FL",
+    "ownerName": "Troyz Towing & Storage, Inc.",
+    "source": "courtlistener",
+    "sourceUrl": "https://www.courtlistener.com/docket/71185041/troyz-towing-storage-inc/",
+    "distressSignals": {
+      "bankruptcy": true,
+      "bankruptcyChapter": "Chapter 11",
+      "bankruptcyDate": "2025-08-23",
+      "bankruptcyDocket": "3:25-bk-02906"
+    },
+    "score": 18,
+    "status": "new",
+    "foundAt": "2026-06-02T14:57:24.237Z",
+    "lastUpdated": "2026-06-02T14:57:24.237Z",
+    "notes": "Chapter 11 bankruptcy filing · Filed: Aug 23, 2025 · Court: FLMB"
+  },
+  {
+    "id": "lead_1780412241129_4yfkg",
+    "facilityName": "Keaton Beach Storage, LLC",
+    "address": "Case No. 26-40043",
+    "city": "Tallahassee",
+    "state": "FL",
+    "ownerName": "Keaton Beach Storage, LLC",
+    "source": "courtlistener",
+    "sourceUrl": "https://www.courtlistener.com/docket/72197606/keaton-beach-storage-llc/",
+    "distressSignals": {
+      "bankruptcy": true,
+      "bankruptcyChapter": "Chapter 11",
+      "bankruptcyDate": "2026-01-28",
+      "bankruptcyDocket": "26-40043"
+    },
+    "score": 18,
+    "status": "new",
+    "foundAt": "2026-06-02T14:57:21.130Z",
+    "lastUpdated": "2026-06-02T14:57:21.130Z",
+    "notes": "Chapter 11 bankruptcy filing · Filed: Jan 28, 2026 · Court: FLNB"
+  }
+]
