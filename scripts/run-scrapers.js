@@ -131,73 +131,81 @@ const COURT_CITY = {
 const COURT_STATE = { fl:'FL', tx:'TX', nc:'NC', ga:'GA', tn:'TN', oh:'OH', sc:'SC' }
 
 async function scanCourtListener() {
-  log('CourtListener', 'Starting — querying 19 bankruptcy courts...')
+  log('CourtListener', 'Starting — V4 search API (paginated)...')
   const filedAfter = new Date(Date.now() - 365 * 86400_000).toISOString().slice(0, 10)
-
-  const results = await Promise.allSettled(
-    BANKRUPTCY_COURTS.map(async courtId => {
-      const params = new URLSearchParams({
-        q: 'storage', order_by: 'date_filed',
-        date_filed__gte: filedAfter, page_size: '50', format: 'json', court: courtId,
-      })
-      const res = await fetch(`https://www.courtlistener.com/api/rest/v3/dockets/?${params}`, {
-        headers: {
-          Authorization: `Token ${CL_TOKEN}`,
-          'User-Agent': 'YEMAcquisitions/1.0 (joshuaernst@gmail.com)',
-        },
-        signal: AbortSignal.timeout(15000),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      return { courtId, dockets: data.results || [] }
-    })
-  )
+  const TARGET_COURTS = new Set(BANKRUPTCY_COURTS)
 
   const seen = new Set()
   const leads = []
 
-  for (const r of results) {
-    if (r.status === 'rejected') { log('CourtListener', `Error: ${r.reason}`); continue }
-    const { courtId, dockets } = r.value
-    for (const d of dockets) {
-      if (seen.has(d.id)) continue
-      seen.add(d.id)
+  // Single paginated search across all bankruptcy courts — avoids per-court rate limits
+  let nextUrl = `https://www.courtlistener.com/api/rest/v4/search/?` +
+    new URLSearchParams({ q: 'storage', type: 'r', page_size: '100', order_by: 'score desc' })
+  let page = 0
 
-      const caseName = d.case_name || d.case_name_short || ''
-      if (!/storage/i.test(caseName)) continue
-
-      const state = COURT_STATE[courtId.slice(0, 2)] || 'US'
-      const city  = COURT_CITY[courtId] || courtId.toUpperCase()
-      const chM   = (d.cause || '').match(/chapter\s+(\d+)/i)
-      const chapter = chM ? `Chapter ${chM[1]}` : 'Bankruptcy'
-      const debtorM = caseName.match(/in\s+re:?\s+(.+)/i)
-      const ownerName = debtorM
-        ? debtorM[1].trim().slice(0, 80)
-        : caseName.split(/\s+v\.?\s+/i)[0].trim().slice(0, 80)
-
-      const signals = {
-        bankruptcy: true, bankruptcyChapter: chapter,
-        bankruptcyDate: d.date_filed, bankruptcyDocket: d.docket_number,
-      }
-      leads.push({
-        id: generateLeadId(),
-        facilityName: caseName.slice(0, 80),
-        address: `Case No. ${d.docket_number || 'N/A'}`,
-        city, state, ownerName,
-        source: 'courtlistener',
-        sourceUrl: `https://www.courtlistener.com/docket/${d.id}/`,
-        distressSignals: signals,
-        score: scoreLead(signals),
-        status: 'new',
-        foundAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        notes: [
-          chapter + ' bankruptcy filing',
-          d.date_filed ? `Filed: ${new Date(d.date_filed).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}` : '',
-          d.cause ? `Cause: ${d.cause}` : '',
-          `Court: ${courtId.toUpperCase()}`,
-        ].filter(Boolean).join(' · '),
+  while (nextUrl && page < 4) {
+    page++
+    try {
+      const res = await fetch(nextUrl, {
+        headers: {
+          Authorization: `Token ${CL_TOKEN}`,
+          'User-Agent': 'YEMAcquisitions/1.0 (joshuaernst@gmail.com)',
+        },
+        signal: AbortSignal.timeout(20000),
       })
+      if (!res.ok) { log('CourtListener', `HTTP ${res.status} on page ${page}`); break }
+      const data = await res.json()
+      if (data.detail) { log('CourtListener', `API error: ${data.detail}`); break }
+
+      for (const d of (data.results || [])) {
+        if (seen.has(d.docket_id)) continue
+        seen.add(d.docket_id)
+
+        // Only target states' bankruptcy courts
+        if (!TARGET_COURTS.has(d.court_id)) continue
+
+        const caseName = d.caseName || ''
+        if (!/storage/i.test(caseName)) continue
+        if (d.dateFiled && d.dateFiled < filedAfter) continue
+
+        const courtId  = d.court_id
+        const state    = COURT_STATE[courtId.slice(0, 2)] || 'US'
+        const city     = COURT_CITY[courtId] || courtId.toUpperCase()
+        const chapter  = d.chapter ? `Chapter ${d.chapter}` : 'Bankruptcy'
+        const debtorM  = caseName.match(/in\s+re:?\s+(.+)/i)
+        const ownerName = debtorM
+          ? debtorM[1].trim().slice(0, 80)
+          : caseName.split(/\s+v\.?\s+/i)[0].trim().slice(0, 80)
+
+        const signals = {
+          bankruptcy: true, bankruptcyChapter: chapter,
+          bankruptcyDate: d.dateFiled, bankruptcyDocket: d.docketNumber,
+        }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: caseName.slice(0, 80),
+          address: `Case No. ${d.docketNumber || 'N/A'}`,
+          city, state, ownerName,
+          source: 'courtlistener',
+          sourceUrl: `https://www.courtlistener.com${d.docket_absolute_url || '/'}`,
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: [
+            chapter + ' bankruptcy filing',
+            d.dateFiled ? `Filed: ${new Date(d.dateFiled).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}` : '',
+            `Court: ${courtId.toUpperCase()}`,
+          ].filter(Boolean).join(' · '),
+        })
+      }
+
+      log('CourtListener', `Page ${page}: ${(data.results || []).length} results, ${leads.length} leads so far`)
+      nextUrl = data.next || null
+    } catch (err) {
+      log('CourtListener', `Error page ${page}: ${err.message}`)
+      break
     }
   }
 
@@ -205,48 +213,60 @@ async function scanCourtListener() {
   return leads
 }
 
-// ─── 2. Craigslist — national RSS feed ────────────────────────────────────────
+// ─── 2. Craigslist — geo-specific RSS (individual city feeds work better than national)
 async function scanCraigslist() {
   log('Craigslist', 'Starting...')
-  const queries = [
-    'https://www.craigslist.org/search/bfs?format=rss&query=self+storage+for+sale',
-    'https://www.craigslist.org/search/bfs?format=rss&query=storage+facility+for+sale',
-    'https://www.craigslist.org/search/bfs?format=rss&query=self+storage+business+sale',
+  // City-specific RSS feeds: these work from servers unlike the national search
+  const feeds = [
+    'https://miami.craigslist.org/search/bfs?format=rss&query=self+storage',
+    'https://dallas.craigslist.org/search/bfs?format=rss&query=self+storage',
+    'https://houston.craigslist.org/search/bfs?format=rss&query=self+storage',
+    'https://atlanta.craigslist.org/search/bfs?format=rss&query=self+storage',
+    'https://charlotte.craigslist.org/search/bfs?format=rss&query=self+storage',
+    'https://tampa.craigslist.org/search/bfs?format=rss&query=self+storage',
+    'https://nashville.craigslist.org/search/bfs?format=rss&query=self+storage',
   ]
+
+  const CL_CITY_STATE = {
+    'miami': 'FL', 'dallas': 'TX', 'houston': 'TX',
+    'atlanta': 'GA', 'charlotte': 'NC', 'tampa': 'FL', 'nashville': 'TN',
+  }
 
   const seen = new Set()
   const leads = []
 
-  for (const url of queries) {
+  for (const url of feeds) {
     try {
-      const res = await safeFetch(url)
+      const res = await safeFetch(url, {
+        headers: {
+          'Accept': 'application/rss+xml, text/xml, */*',
+          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+        },
+      })
       if (!res.ok) { log('Craigslist', `HTTP ${res.status} — ${url}`); continue }
       const xml = await res.text()
+      const cityMatch = url.match(/https:\/\/([^.]+)\.craigslist/)
+      const citySlug  = cityMatch?.[1] || 'us'
+      const state     = CL_CITY_STATE[citySlug] || 'US'
+
       for (const item of parseRssXml(xml)) {
         if (!item.title || seen.has(item.link)) continue
         seen.add(item.link)
         if (!/storage/i.test(`${item.title} ${item.desc}`)) continue
-        if (!/for sale|selling|price|asking/i.test(`${item.title} ${item.desc}`)) continue
 
-        const combo = `${item.geo} ${item.desc} ${item.title}`
-        const stateM = combo.match(/,\s*([A-Z]{2})(?:\s+\d{5})?/)
-        const state  = stateM?.[1] || 'US'
-        if (state !== 'US' && !TARGET_STATES.includes(state)) continue
-        const cityM  = combo.match(/([A-Za-z][A-Za-z\s]+),\s*[A-Z]{2}/)
-        const city   = cityM?.[1]?.trim() || state
-
-        const priceM = combo.match(/\$\s*([\d,]+)/)
-        const signals = {}
+        const priceM = (`${item.title} ${item.desc}`).match(/\$\s*([\d,]+)/)
         leads.push({
           id: generateLeadId(),
           facilityName: item.title.slice(0, 80),
-          address: 'See listing', city, state,
+          address: 'See listing',
+          city: citySlug.charAt(0).toUpperCase() + citySlug.slice(1),
+          state,
           askingPrice: priceM ? parseInt(priceM[1].replace(/,/g, '')) : undefined,
           ownerName: 'Unknown',
           source: 'craigslist',
           sourceUrl: item.link,
-          distressSignals: signals,
-          score: scoreLead(signals),
+          distressSignals: {},
+          score: scoreLead({}),
           status: 'new',
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
@@ -261,49 +281,51 @@ async function scanCraigslist() {
   return leads
 }
 
-// ─── 3. BizBuySell — public RSS feed ──────────────────────────────────────────
+// ─── 3. BizBuySell — JSON search API (bypasses RSS 403) ───────────────────────
 async function scanBizBuySell() {
   log('BizBuySell', 'Starting...')
-  const queries = [
-    'https://www.bizbuysell.com/rss/businesses-for-sale.aspx?q=self+storage',
-    'https://www.bizbuysell.com/rss/businesses-for-sale.aspx?q=storage+facility',
-  ]
-
-  const seen = new Set()
   const leads = []
+  const queries = ['self storage', 'storage facility']
 
-  for (const url of queries) {
+  for (const q of queries) {
     try {
-      const res = await safeFetch(url)
-      if (!res.ok) { log('BizBuySell', `HTTP ${res.status}`); continue }
-      const xml = await res.text()
-      for (const item of parseRssXml(xml)) {
-        if (!item.title || seen.has(item.link)) continue
-        seen.add(item.link)
-        if (!/storage/i.test(item.title)) continue
-
-        const combo  = `${item.desc} ${item.title}`
-        const locM   = combo.match(/([A-Za-z][A-Za-z\s]+),\s*([A-Z]{2})/)
-        const state  = locM?.[2] || 'US'
-        const city   = locM?.[1]?.trim() || state
-
-        const priceM = combo.match(/\$\s*([\d,.]+)\s*[Mm]illion|\$\s*([\d,]+)/)
-        let askingPrice
-        if (priceM) {
-          if (priceM[1]) askingPrice = Math.round(parseFloat(priceM[1].replace(/,/g, '')) * 1_000_000)
-          else if (priceM[2]) askingPrice = parseInt(priceM[2].replace(/,/g, ''))
+      const params = new URLSearchParams({
+        q, industryId: '1602', pageSize: '30',
+        'industries[0]': '1602',
+      })
+      const res = await safeFetch(
+        `https://www.bizbuysell.com/api/1.1/listings/forsale?${params}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Referer': 'https://www.bizbuysell.com/',
+          },
+          timeout: 15000,
         }
-
-        const signals = {}
+      )
+      if (!res.ok) { log('BizBuySell', `API HTTP ${res.status}`); continue }
+      const data = await res.json()
+      const listings = data.listings || data.results || data.data || []
+      const seen = new Set()
+      for (const l of listings) {
+        const name = l.businessName || l.title || l.name || ''
+        const key  = l.listingId || l.id || l.url || name
+        if (!name || !/storage/i.test(name) || seen.has(key)) continue
+        seen.add(key)
+        const state = l.state || l.stateCode || 'US'
+        const city  = l.city || state
+        const price = l.askingPrice || l.price || l.salePrice
         leads.push({
           id: generateLeadId(),
-          facilityName: item.title.slice(0, 80),
-          address: 'See listing', city, state, askingPrice,
+          facilityName: name.slice(0, 80),
+          address: l.address || 'See listing',
+          city, state,
+          askingPrice: typeof price === 'number' ? price : undefined,
           ownerName: 'Unknown',
           source: 'bizbuysell',
-          sourceUrl: item.link,
-          distressSignals: signals,
-          score: scoreLead(signals),
+          sourceUrl: l.listingUrl || l.url || `https://www.bizbuysell.com/listing/${l.listingId || l.id}/`,
+          distressSignals: {},
+          score: scoreLead({}),
           status: 'new',
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
