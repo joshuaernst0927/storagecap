@@ -1154,10 +1154,16 @@ function LeadsContent() {
                       </td>
                       <td className="px-4 py-3 text-dark-muted text-xs whitespace-nowrap">{lead.city}, {lead.state}</td>
                       <td className="px-4 py-3">
-                        {hasContact ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
-                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Enriched
-                          </span>
+                {hasContact ? (
+                          <div className="space-y-0.5">
+                            {lead.contactInfo?.phone && (
+                              <div className="text-xs font-medium text-[#1B2B5E]">{lead.contactInfo.phone}</div>
+                            )}
+                            {lead.notes && (() => {
+                              const m = lead.notes.match(/(?:Attorney|Trustee)[^:]*:\s*([^·\n]+)/)
+                              return m ? <div className="text-[0.65rem] text-dark-muted">{m[1].trim()}</div> : null
+                            })()}
+                          </div>
                         ) : emailsSent > 0 ? (
                           <span className="text-xs text-dark-muted">{emailsSent} sent</span>
                         ) : (
