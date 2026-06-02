@@ -5,6 +5,7 @@ export type LeadSource =
   | 'lis-pendens'
   | 'courtlistener'
   | 'loopnet'
+  | 'brevitas'
   | 'crexi'
   | 'bizbuysell'
   | 'facebook'
@@ -81,6 +82,7 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   'lis-pendens': 'Lis Pendens',
   'courtlistener': 'Court Filing',
   'loopnet': 'LoopNet',
+  'brevitas': 'Brevitas',
   'crexi': 'Crexi',
   'bizbuysell': 'BizBuySell',
   'facebook': 'Facebook',

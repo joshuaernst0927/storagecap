@@ -49,6 +49,10 @@ function chapterFromCause(cause: string): string {
   return m ? `Chapter ${m[1]}` : 'Bankruptcy'
 }
 
+// ─── CourtListener auth — env var with hardcoded fallback for reliability ─────
+// Token is for public court records; hardcoding is intentional per operator decision.
+const CL_TOKEN = process.env.COURTLISTENER_TOKEN || '25e0d81f7c377dbdd866ba6165afe7af4fa9c99e'
+
 // ─── CourtListener dockets query ──────────────────────────────────────────────
 interface CLDocket {
   id: number
@@ -96,8 +100,7 @@ function courtIdFromDocket(d: CLDocket): string {
 }
 
 async function scanCourtListener(): Promise<{ leads: Lead[]; errors: string[] }> {
-  const token = process.env.COURTLISTENER_TOKEN
-  if (!token) return { leads: [], errors: ['COURTLISTENER_TOKEN not configured'] }
+  const token = CL_TOKEN
 
   // 1 year lookback — bankruptcy cases linger for months
   const filedAfter = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10)
@@ -187,45 +190,130 @@ async function scanCourtListener(): Promise<{ leads: Lead[]; errors: string[] }>
   return { leads, errors }
 }
 
-// ─── Craigslist RSS scanner ────────────────────────────────────────────────────
-const CRAIGSLIST_CITIES = [
-  { city: 'Dallas', state: 'TX', subdomain: 'dallas' },
-  { city: 'Houston', state: 'TX', subdomain: 'houston' },
-  { city: 'San Antonio', state: 'TX', subdomain: 'sanantonio' },
-  { city: 'Atlanta', state: 'GA', subdomain: 'atlanta' },
-  { city: 'Nashville', state: 'TN', subdomain: 'nashville' },
-  { city: 'Phoenix', state: 'AZ', subdomain: 'phoenix' },
-  { city: 'Tampa', state: 'FL', subdomain: 'tampa' },
-  { city: 'Jacksonville', state: 'FL', subdomain: 'jacksonville' },
-  { city: 'Columbia', state: 'SC', subdomain: 'columbia' },
-  { city: 'Birmingham', state: 'AL', subdomain: 'birmingham' },
+// ─── Craigslist national RSS scanner ──────────────────────────────────────────
+// Uses craigslist.org national search RSS — no per-city subdomain, less IP blocking.
+const CL_QUERIES = [
+  'https://www.craigslist.org/search/bfs?format=rss&query=self+storage+for+sale',
+  'https://www.craigslist.org/search/bfs?format=rss&query=storage+facility+for+sale',
 ]
 
+function parseRssItems(xml: string, source: 'craigslist', stateHint?: string): Lead[] {
+  const leads: Lead[] = []
+  const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || []
+  for (const item of items.slice(0, 20)) {
+    const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
+              ?? item.match(/<title>(.*?)<\/title>/)?.[1] ?? ''
+    const link  = item.match(/<link>(.*?)<\/link>/)?.[1] ?? ''
+    const desc  = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/)?.[1]
+              ?? item.match(/<description>(.*?)<\/description>/)?.[1] ?? ''
+    const geo   = item.match(/<g:location>(.*?)<\/g:location>/)?.[1] ?? ''
+    if (!title) continue
+    if (!/storage/i.test(`${title} ${desc}`)) continue
+    if (!/for sale|selling|price|asking/i.test(`${title} ${desc}`)) continue
+
+    const priceMatch = desc.match(/\$\s*([\d,]+)/)
+    // Try to extract state from geo tag "City, ST 12345" or from location hints
+    const stateMatch = (geo || desc).match(/,\s*([A-Z]{2})(?:\s+\d{5})?/)
+    const state = stateMatch?.[1] || stateHint || 'US'
+    const cityMatch = (geo || desc).match(/^([^,]+),/)
+    const city = cityMatch?.[1]?.trim() || state
+
+    if (TARGET_STATES.includes(state) === false && state !== 'US') continue
+
+    const signals: LeadDistressSignals = {}
+    leads.push({
+      id: generateLeadId(),
+      facilityName: title.slice(0, 80),
+      address: 'See listing',
+      city, state,
+      askingPrice: priceMatch ? parseInt(priceMatch[1].replace(/,/g, '')) : undefined,
+      ownerName: 'Unknown',
+      source,
+      sourceUrl: link,
+      distressSignals: signals,
+      score: scoreLead(signals),
+      status: 'new',
+      foundAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+    })
+  }
+  return leads
+}
+
 async function scanCraigslist(): Promise<{ leads: Lead[]; errors: string[] }> {
+  const errors: string[] = []
   const results = await Promise.allSettled(
-    CRAIGSLIST_CITIES.map(async ({ city, state, subdomain }) => {
-      const url = `https://${subdomain}.craigslist.org/search/bfs?query=self+storage&format=rss`
-      const res = await fetch(url, { signal: AbortSignal.timeout(4000) })
-      if (!res.ok) throw new Error(`craigslist ${subdomain}: HTTP ${res.status}`)
+    CL_QUERIES.map(async (url) => {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YEMAcquisitions/1.0; +https://yemacquisitions.com)' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!res.ok) throw new Error(`craigslist RSS HTTP ${res.status}`)
+      const xml = await res.text()
+      return parseRssItems(xml, 'craigslist')
+    })
+  )
+  // Deduplicate by sourceUrl
+  const seen = new Set<string>()
+  const leads: Lead[] = []
+  for (const r of results) {
+    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); continue }
+    for (const l of r.value) {
+      if (l.sourceUrl && seen.has(l.sourceUrl)) continue
+      seen.add(l.sourceUrl || l.id)
+      leads.push(l)
+    }
+  }
+  return { leads, errors }
+}
+
+// ─── BizBuySell RSS scanner ────────────────────────────────────────────────────
+// Uses BizBuySell's public RSS feed — bypasses HTML scraping and IP blocking.
+const BBS_RSS_URLS = [
+  'https://www.bizbuysell.com/rss/businesses-for-sale.aspx?q=self+storage',
+  'https://www.bizbuysell.com/rss/businesses-for-sale.aspx?q=storage+facility',
+]
+
+async function scanBizBuySell(): Promise<{ leads: Lead[]; errors: string[] }> {
+  const errors: string[] = []
+  const results = await Promise.allSettled(
+    BBS_RSS_URLS.map(async (url) => {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YEMAcquisitions/1.0; +https://yemacquisitions.com)' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (!res.ok) throw new Error(`bizbuysell RSS HTTP ${res.status}`)
       const xml = await res.text()
       const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || []
       const leads: Lead[] = []
-      for (const item of items.slice(0, 5)) {
-        const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] || item.match(/<title>(.*?)<\/title>/)?.[1] || ''
-        const link = item.match(/<link>(.*?)<\/link>/)?.[1] || ''
-        const desc = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/)?.[1] || ''
-        if (!/self.?storage|storage (unit|facility|business|property)/i.test(`${title} ${desc}`)) continue
-        if (!/for sale|selling|price|asking/i.test(`${title} ${desc}`)) continue
-        const priceMatch = desc.match(/\$\s*([\d,]+)/)
+      for (const item of items.slice(0, 20)) {
+        const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1]
+                  ?? item.match(/<title>(.*?)<\/title>/)?.[1] ?? ''
+        const link  = item.match(/<link>(.*?)<\/link>/)?.[1] ?? ''
+        const desc  = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/)?.[1]
+                  ?? item.match(/<description>(.*?)<\/description>/)?.[1] ?? ''
+        if (!title || !/storage/i.test(title)) continue
+
+        // Extract location — BBS items typically have "City, ST" in description or title
+        const locMatch = (desc + ' ' + title).match(/([A-Za-z\s]+),\s*([A-Z]{2})/)
+        const state = locMatch?.[2] || 'US'
+        const city  = locMatch?.[1]?.trim() || state
+
+        const priceMatch = (desc + ' ' + title).match(/\$\s*([\d,.]+)\s*[Mm]illion|\$\s*([\d,]+)/)
+        let askingPrice: number | undefined
+        if (priceMatch) {
+          if (priceMatch[1]) askingPrice = Math.round(parseFloat(priceMatch[1].replace(/,/g, '')) * 1_000_000)
+          else if (priceMatch[2]) askingPrice = parseInt(priceMatch[2].replace(/,/g, ''))
+        }
+
         const signals: LeadDistressSignals = {}
         leads.push({
           id: generateLeadId(),
           facilityName: title.slice(0, 80),
-          address: 'See listing',
-          city, state,
-          askingPrice: priceMatch ? parseInt(priceMatch[1].replace(/,/g, '')) : undefined,
+          address: 'See listing', city, state,
+          askingPrice,
           ownerName: 'Unknown',
-          source: 'craigslist',
+          source: 'bizbuysell',
           sourceUrl: link,
           distressSignals: signals,
           score: scoreLead(signals),
@@ -237,106 +325,74 @@ async function scanCraigslist(): Promise<{ leads: Lead[]; errors: string[] }> {
       return leads
     })
   )
-  const errors: string[] = []
-  const leads = results.flatMap(r => {
-    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); return [] }
-    return r.value
-  })
+  // Deduplicate by sourceUrl
+  const seen = new Set<string>()
+  const leads: Lead[] = []
+  for (const r of results) {
+    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); continue }
+    for (const l of r.value) {
+      const key = l.sourceUrl || l.id
+      if (seen.has(key)) continue
+      seen.add(key)
+      leads.push(l)
+    }
+  }
   return { leads, errors }
 }
 
-// ─── BizBuySell scanner ────────────────────────────────────────────────────────
-async function scanBizBuySell(): Promise<{ leads: Lead[]; errors: string[] }> {
-  const results = await Promise.allSettled(
-    TARGET_STATES.slice(0, 4).map(async (state) => {
-      const url = `https://www.bizbuysell.com/self-storage-businesses-for-sale/?q=${state}`
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YEMAcquisitions/1.0)' },
-        signal: AbortSignal.timeout(4000),
-      })
-      if (!res.ok) throw new Error(`bizbuysell ${state}: HTTP ${res.status}`)
-      const html = await res.text()
-      const listingPattern = /<a[^>]+href="(\/Business-Opportunity\/[^"]+)"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<\/a>/g
-      const leads: Lead[] = []
-      let match, count = 0
-      while ((match = listingPattern.exec(html)) !== null && count < 5) {
-        const rawTitle = match[2].replace(/<[^>]+>/g, '').trim()
-        if (!rawTitle || !/storage/i.test(rawTitle)) continue
-        const priceMatch = html.slice(match.index, match.index + 500).match(/\$([\d,]+)/)
-        const signals: LeadDistressSignals = {}
-        leads.push({
-          id: generateLeadId(),
-          facilityName: rawTitle,
-          address: 'See listing', city: state, state,
-          askingPrice: priceMatch ? parseInt(priceMatch[1].replace(/,/g, '')) : undefined,
-          ownerName: 'Unknown',
-          source: 'bizbuysell',
-          sourceUrl: `https://www.bizbuysell.com${match[1]}`,
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-        })
-        count++
-      }
-      return leads
-    })
-  )
+// ─── Brevitas public listings scanner ─────────────────────────────────────────
+// Brevitas is a CRE marketplace that doesn't block server IPs.
+// Fetches their self-storage for-sale pages and parses JSON-LD or __NEXT_DATA__.
+const BREVITAS_URLS = [
+  'https://www.brevitas.com/for-sale/?q=self+storage',
+  'https://www.brevitas.com/for-sale/?q=storage+facility',
+]
+
+async function scanBrevitas(): Promise<{ leads: Lead[]; errors: string[] }> {
   const errors: string[] = []
-  const leads = results.flatMap(r => {
-    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); return [] }
-    return r.value
-  })
-  return { leads, errors }
-}
-
-// ─── LoopNet fetch scraper ─────────────────────────────────────────────────────
-// Note: LoopNet is JS-rendered — this captures SEO-pre-rendered content only.
-// Full scraping requires Playwright (see backend/agents/monitor.py).
-const LOOPNET_STATES = ['fl', 'tx', 'nc', 'ga', 'tn']
-const LOOPNET_STATE_MAP: Record<string, string> = {
-  fl: 'FL', tx: 'TX', nc: 'NC', ga: 'GA', tn: 'TN',
-}
-
-async function scanLoopNet(): Promise<{ leads: Lead[]; errors: string[] }> {
   const results = await Promise.allSettled(
-    LOOPNET_STATES.map(async (stateSlug) => {
-      const url = `https://www.loopnet.com/search/self-storage-facilities/${stateSlug}/for-sale/`
+    BREVITAS_URLS.map(async (url) => {
       const res = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'User-Agent': 'Mozilla/5.0 (compatible; YEMAcquisitions/1.0; +https://yemacquisitions.com)',
+          'Accept': 'text/html,application/xhtml+xml',
           'Accept-Language': 'en-US,en;q=0.9',
         },
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(8000),
       })
-      if (!res.ok) throw new Error(`loopnet ${stateSlug}: HTTP ${res.status}`)
+      if (!res.ok) throw new Error(`brevitas HTTP ${res.status}`)
       const html = await res.text()
-      const state = LOOPNET_STATE_MAP[stateSlug]
       const leads: Lead[] = []
 
-      // Try JSON-LD structured data first
-      const jsonLdMatches = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) || []
-      for (const block of jsonLdMatches) {
+      // Try __NEXT_DATA__ first (Brevitas uses Next.js)
+      const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
+      if (nextDataMatch) {
         try {
-          const jsonStr = block.replace(/<script[^>]*>/, '').replace(/<\/script>/, '')
-          const obj = JSON.parse(jsonStr)
-          const items = Array.isArray(obj) ? obj : obj['@graph'] ? obj['@graph'] : [obj]
-          for (const item of items) {
-            if (!item.name || !/storage/i.test(item.name)) continue
-            const addr = item.address || {}
-            const priceSpec = item.offers?.price || item.price
+          const pageData = JSON.parse(nextDataMatch[1])
+          const listings: unknown[] = pageData?.props?.pageProps?.listings
+            || pageData?.props?.pageProps?.properties
+            || pageData?.props?.pageProps?.results
+            || []
+          for (const listing of listings.slice(0, 20)) {
+            const l = listing as Record<string, unknown>
+            const name = String(l.title || l.name || l.address || '')
+            if (!name || !/storage/i.test(name)) continue
+            const addr = (l.address || l.location || '') as string
+            const stateMatch = addr.match(/,\s*([A-Z]{2})/)
+            const state = stateMatch?.[1] || 'US'
+            const cityMatch = addr.match(/^([^,]+)/)
+            const city = cityMatch?.[1]?.trim() || state
+            const price = typeof l.price === 'number' ? l.price
+              : typeof l.price === 'string' ? parseInt(String(l.price).replace(/[^\d]/g, '')) || undefined
+              : undefined
             leads.push({
               id: generateLeadId(),
-              facilityName: item.name.slice(0, 80),
-              address: [addr.streetAddress, addr.addressLocality].filter(Boolean).join(', ') || 'See listing',
-              city: addr.addressLocality || state,
-              state: addr.addressRegion || state,
-              askingPrice: priceSpec ? Math.round(parseFloat(String(priceSpec).replace(/[^\d.]/g, ''))) || undefined : undefined,
-              ownerName: 'LoopNet Listing',
-              source: 'loopnet',
-              sourceUrl: item.url || url,
+              facilityName: name.slice(0, 80),
+              address: addr || 'See listing', city, state,
+              askingPrice: price,
+              ownerName: 'Unknown',
+              source: 'brevitas',
+              sourceUrl: l.url ? `https://www.brevitas.com${l.url}` : url,
               distressSignals: {},
               score: scoreLead({}),
               status: 'new',
@@ -344,58 +400,57 @@ async function scanLoopNet(): Promise<{ leads: Lead[]; errors: string[] }> {
               lastUpdated: new Date().toISOString(),
             })
           }
-        } catch { /* bad JSON block */ }
+        } catch { /* malformed __NEXT_DATA__ */ }
       }
 
-      // Fallback: regex-parse listing cards from SSR HTML
-      if (leads.filter(l => l.state === state && l.source === 'loopnet').length === 0) {
-        const cardPattern = /data-listing-id="(\d+)"[\s\S]{0,2000}?<[^>]+class="[^"]*(?:property-name|listing-title)[^"]*"[^>]*>([\s\S]*?)<\/[a-z]+>/gi
-        let m
-        let count = 0
-        while ((m = cardPattern.exec(html)) !== null && count < 8) {
-          const listingId = m[1]
-          const rawName = m[2].replace(/<[^>]+>/g, '').trim()
-          if (!rawName || !/storage/i.test(rawName)) continue
-
-          const chunk = html.slice(m.index, m.index + 1500)
-          const priceM = chunk.match(/\$\s*([\d,]+(?:\.\d+)?)\s*[MK]?/i)
-          let price: number | undefined
-          if (priceM) {
-            const raw = priceM[0]
-            const val = parseFloat(priceM[1].replace(/,/g, ''))
-            price = raw.includes('M') ? Math.round(val * 1_000_000) :
-                    raw.includes('K') ? Math.round(val * 1_000) : Math.round(val)
-          }
-
-          const cityM = chunk.match(/([A-Za-z\s]+),\s+([A-Z]{2})\s+\d{5}/)
-          const city = cityM ? cityM[1].trim() : state
-
-          leads.push({
-            id: generateLeadId(),
-            facilityName: rawName.slice(0, 80),
-            address: 'See LoopNet listing',
-            city, state,
-            askingPrice: price,
-            ownerName: 'LoopNet Listing',
-            source: 'loopnet',
-            sourceUrl: `https://www.loopnet.com/listing/${listingId}/`,
-            distressSignals: {},
-            score: scoreLead({}),
-            status: 'new',
-            foundAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-          })
-          count++
+      // Fallback: JSON-LD structured data
+      if (leads.length === 0) {
+        const jsonLdBlocks = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) || []
+        for (const block of jsonLdBlocks) {
+          try {
+            const obj = JSON.parse(block.replace(/<script[^>]*>/, '').replace(/<\/script>/, ''))
+            const items = Array.isArray(obj) ? obj : obj['@graph'] ? obj['@graph'] : [obj]
+            for (const item of items) {
+              if (!item.name || !/storage/i.test(item.name)) continue
+              const addr = item.address || {}
+              const state = addr.addressRegion || 'US'
+              leads.push({
+                id: generateLeadId(),
+                facilityName: item.name.slice(0, 80),
+                address: [addr.streetAddress, addr.addressLocality].filter(Boolean).join(', ') || 'See listing',
+                city: addr.addressLocality || state, state,
+                askingPrice: item.offers?.price ? Math.round(parseFloat(String(item.offers.price).replace(/[^\d.]/g, ''))) || undefined : undefined,
+                ownerName: 'Unknown',
+                source: 'brevitas',
+                sourceUrl: item.url || url,
+                distressSignals: {},
+                score: scoreLead({}),
+                status: 'new',
+                foundAt: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+              })
+            }
+          } catch { /* skip */ }
         }
       }
+
+      console.log(`Brevitas ${url}: ${leads.length} leads`)
       return leads
     })
   )
-  const errors: string[] = []
-  const leads = results.flatMap(r => {
-    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); return [] }
-    return r.value
-  })
+
+  // Deduplicate by sourceUrl
+  const seen = new Set<string>()
+  const leads: Lead[] = []
+  for (const r of results) {
+    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); continue }
+    for (const l of r.value) {
+      const key = l.sourceUrl || l.id
+      if (seen.has(key)) continue
+      seen.add(key)
+      leads.push(l)
+    }
+  }
   return { leads, errors }
 }
 
@@ -628,39 +683,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   )
 
   try {
-    const [clResult, crResult, bbResult, lnResult] =
+    const [clResult, crResult, bbResult, brResult] =
       await Promise.race([
         Promise.allSettled([
           scanCourtListener(),
           scanCraigslist(),
           scanBizBuySell(),
-          scanLoopNet(),
+          scanBrevitas(),
         ]).then(rs => rs.map(r => r.status === 'fulfilled' ? r.value : { leads: [], errors: [String((r as PromiseRejectedResult).reason)] })),
         deadline,
       ]) as Array<{ leads: Lead[]; errors: string[] }>
 
-    const courtLeads = clResult.leads
+    const courtLeads     = clResult.leads
     const craigslistLeads = crResult.leads
     const bizBuySellLeads = bbResult.leads
-    const loopnetLeads = lnResult.leads
+    const brevitasLeads   = brResult.leads
 
     const scanErrors = {
       courtlistener: clResult.errors,
       craigslist: crResult.errors,
       bizbuysell: bbResult.errors,
-      loopnet: lnResult.errors,
+      brevitas: brResult.errors,
     }
 
-    // Log a summary so Vercel function logs show exactly what happened
     console.log('Scan complete:', {
       courtlistener: courtLeads.length,
       craigslist: craigslistLeads.length,
       bizbuysell: bizBuySellLeads.length,
-      loopnet: loopnetLeads.length,
+      brevitas: brevitasLeads.length,
       errors: Object.entries(scanErrors).flatMap(([k, v]) => v.map(e => `${k}: ${e}`)),
     })
 
-    const allLeads = [...courtLeads, ...craigslistLeads, ...bizBuySellLeads, ...loopnetLeads]
+    const allLeads = [...courtLeads, ...craigslistLeads, ...bizBuySellLeads, ...brevitasLeads]
 
     if (allLeads.length > 0) persistLeads(allLeads)
 
@@ -677,7 +731,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         courtlistener: courtLeads.length,
         craigslist: craigslistLeads.length,
         bizbuysell: bizBuySellLeads.length,
-        loopnet: loopnetLeads.length,
+        brevitas: brevitasLeads.length,
       },
       errors: scanErrors,
       bankruptcy: courtLeads.length,
