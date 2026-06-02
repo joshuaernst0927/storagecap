@@ -25,13 +25,35 @@ const puppeteer = require('puppeteer-core')
 const fs        = require('fs')
 const path      = require('path')
 
+// ─── Load .env.local (works on both local dev and Linux server) ────────────────
+;(function loadEnv() {
+  const envFile = path.join(__dirname, '..', '.env.local')
+  if (!fs.existsSync(envFile)) return
+  for (const line of fs.readFileSync(envFile, 'utf-8').split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 1) continue
+    const key = trimmed.slice(0, eq).trim()
+    const val = trimmed.slice(eq + 1).trim()
+    if (!process.env[key]) process.env[key] = val
+  }
+})()
+
 // ─── Config ────────────────────────────────────────────────────────────────────
-const LEADS_FILE   = path.join(__dirname, '..', 'public', 'data', 'leads.json')
-const CL_TOKEN     = process.env.COURTLISTENER_TOKEN || '25e0d81f7c377dbdd866ba6165afe7af4fa9c99e'
+const LEADS_FILE    = path.join(__dirname, '..', 'public', 'data', 'leads.json')
+const CL_TOKEN      = process.env.COURTLISTENER_TOKEN || '25e0d81f7c377dbdd866ba6165afe7af4fa9c99e'
 const TARGET_STATES = ['TX', 'GA', 'SC', 'TN', 'AZ', 'FL', 'AL', 'MS', 'NC', 'OH']
 
-// Chrome paths to try (Windows)
+// Browser paths — Linux server first, then Windows local
 const CHROME_PATHS = [
+  // Linux (DigitalOcean / Ubuntu)
+  '/usr/bin/chromium-browser',
+  '/usr/bin/chromium',
+  '/snap/bin/chromium',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/google-chrome',
+  // Windows (local dev)
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   (process.env.LOCALAPPDATA  || '') + '\\Google\\Chrome\\Application\\chrome.exe',
