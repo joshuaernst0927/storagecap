@@ -18,12 +18,11 @@ function extractDocketId(url: string): string | null {
   return m ? m[1] : null
 }
 
-// Parse "902 S Friendswood Drive\nFriendswood, TX 77546\nGALVESTON-TX\nTax ID..." → address only
 function parseDebtorAddress(extraInfo: string): string | undefined {
   const lines = extraInfo.split('\n').map(l => l.trim()).filter(Boolean)
   const addrLines: string[] = []
   for (const line of lines) {
-    if (/^[A-Z]+-[A-Z]{2}$/.test(line)) break   // COUNTY-STATE marker
+    if (/^[A-Z]+-[A-Z]{2}$/.test(line)) break
     if (/^(Tax ID|TERMINATED|DISMISSED|Pro Se)/i.test(line)) break
     addrLines.push(line)
   }
@@ -61,18 +60,18 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
 
   const parties: any[] = data.results || []
 
-  // ── Debtor address ──────────────────────────────────────────────────────────
+  // -- Debtor address --
   const debtor = parties.find(p =>
     p.party_types?.some((pt: any) => /debtor/i.test(pt.name || ''))
   )
   const debtorTypeInfo = debtor?.party_types?.find((pt: any) => /debtor/i.test(pt.name))?.extra_info || ''
   const mailingAddress = parseDebtorAddress(debtorTypeInfo)
 
-  // ── Debtor's attorney contact ───────────────────────────────────────────────
   let phone: string | undefined
   let email: string | undefined
   let attyNote: string | undefined
 
+  // -- Try debtor's attorney first --
   if (debtor?.attorneys?.length) {
     await new Promise(r => setTimeout(r, 600))
     const attyData = await clFetch(debtor.attorneys[0].attorney)
@@ -87,14 +86,46 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
     }
   }
 
-  // ── Fallback: trustee phone ─────────────────────────────────────────────────
+  // -- Fallback: scan ALL trustees including terminated ones --
   if (!phone) {
-    const trustee = parties.find(p =>
+    const trustees = parties.filter(p =>
       p.party_types?.some((pt: any) => /trustee/i.test(pt.name || ''))
     )
-    const tInfo = trustee?.party_types?.find((pt: any) => /trustee/i.test(pt.name))?.extra_info || ''
-    phone = parsePhone(tInfo)
-    if (phone && trustee?.name) attyNote = `Trustee: ${trustee.name} · ${phone}`
+    for (const trustee of trustees) {
+      const tInfo = trustee?.party_types?.find((pt: any) => /trustee/i.test(pt.name))?.extra_info || ''
+      const tPhone = parsePhone(tInfo)
+      if (tPhone) {
+        phone = tPhone
+        attyNote = `Trustee: ${trustee.name} · ${phone}`
+        break
+      }
+      // Also try fetching trustee's attorney
+      if (!phone && trustee?.attorneys?.length) {
+        await new Promise(r => setTimeout(r, 600))
+        const tAttyData = await clFetch(trustee.attorneys[0].attorney)
+        if (tAttyData) {
+          const raw: string = tAttyData.contact_raw || ''
+          phone = parsePhone(raw)
+          email = email || parseEmail(raw)
+          if (phone && tAttyData.name) {
+            attyNote = `Trustee Atty: ${tAttyData.name} · ${phone}`
+          }
+        }
+      }
+      if (phone) break
+    }
+  }
+
+  // -- Fallback: US Trustee extra_info --
+  if (!phone) {
+    const usTrustee = parties.find(p =>
+      p.party_types?.some((pt: any) => /u\.?s\.?\s*trustee/i.test(pt.name || ''))
+    )
+    if (usTrustee) {
+      const tInfo = usTrustee?.party_types?.find((pt: any) => /trustee/i.test(pt.name))?.extra_info || ''
+      phone = parsePhone(tInfo)
+      if (phone) attyNote = `US Trustee: ${usTrustee.name} · ${phone}`
+    }
   }
 
   if (!mailingAddress && !phone) return null
@@ -111,7 +142,6 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
   }
 }
 
-// ─── Handler — enriches one lead at a time (call per-lead from client) ─────────
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
