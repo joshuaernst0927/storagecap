@@ -64,7 +64,7 @@ function ContactSection({
   const [enriching, setEnriching] = useState(false)
   const [enrichError, setEnrichError] = useState('')
 
-  const hasContact = !!(ci.phone || ci.email)
+  const hasContact = !!(ci.phone || ci.email || ci.mailingAddress)
 
   const save = () => {
     onUpdate(lead.id, { contactInfo: { ...form, enrichedBy: form.enrichedBy || 'manual' } })
@@ -203,9 +203,9 @@ function ContactSection({
               <div className="text-sm font-medium text-[#1a1a18]">{ci.mailingAddress}</div>
             </div>
           )}
-          {!hasContact && !ci.linkedIn && !ci.mailingAddress && (
+          {!hasContact && !ci.linkedIn && (
             <div className="text-sm text-dark-muted italic py-2">
-              No contact info yet. Click &ldquo;Edit&rdquo; to add manually or &ldquo;Enrich Contact&rdquo; to look up via Apollo.
+              No contact info yet. Click &ldquo;Edit&rdquo; to add manually or &ldquo;Enrich Contact&rdquo; to look up from CourtListener.
             </div>
           )}
           {ci.enrichedAt && (
@@ -788,9 +788,9 @@ function ScanBar({ onScanDone }: { onScanDone: (leads: Lead[]) => void }) {
 // ─── Summary bar ───────────────────────────────────────────────────────────────
 
 function SummaryBar({ leads }: { leads: Lead[] }) {
-  const withContact = leads.filter(l => l.contactInfo?.phone || l.contactInfo?.email).length
+  const withContact = leads.filter(l => l.contactInfo?.phone || l.contactInfo?.email || l.contactInfo?.mailingAddress).length
   const emailed = leads.filter(l => (l.emailHistory?.length ?? 0) > 0).length
-  const awaitingContact = leads.filter(l => !l.contactInfo?.phone && !l.contactInfo?.email).length
+  const awaitingContact = leads.filter(l => !l.contactInfo?.phone && !l.contactInfo?.email && !l.contactInfo?.mailingAddress).length
   const totalContacted = leads.filter(l => l.status !== 'new').length
   const responded = leads.filter(l => l.status === 'qualified' || l.status === 'added-to-pipeline').length
   const responseRate = totalContacted > 0 ? Math.round((responded / totalContacted) * 100) : 0
@@ -827,6 +827,8 @@ function LeadsContent() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [sortBy, setSortBy] = useState<'score' | 'foundAt' | 'city'>('score')
   const [apolloEnabled, setApolloEnabled] = useState(false)
+  const [enrichingAll, setEnrichingAll] = useState(false)
+  const [enrichResult, setEnrichResult] = useState('')
 
   useEffect(() => {
     setLeads(loadLeads())
@@ -877,6 +879,35 @@ function LeadsContent() {
     selected.forEach(id => updateLeadStatus(id, { status }))
     setSelected(new Set())
     refresh()
+  }
+
+  const enrichAllContacts = async () => {
+    setEnrichingAll(true)
+    setEnrichResult('')
+    const toEnrich = leads.filter(l =>
+      l.source === 'courtlistener' &&
+      !l.contactInfo?.mailingAddress &&
+      !l.contactInfo?.phone
+    )
+    let count = 0
+    for (let i = 0; i < toEnrich.length; i++) {
+      if (i > 0) await new Promise(r => setTimeout(r, 14000))
+      try {
+        const res = await fetch('/api/enrich-leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leadId: toEnrich[i].id }),
+        })
+        const data = await res.json()
+        if (data.enriched === 1 && data.lead) {
+          upsertLeads([data.lead])
+          refresh()
+          count++
+        }
+      } catch {}
+    }
+    setEnrichResult(`Enriched ${count} of ${toEnrich.length} leads`)
+    setEnrichingAll(false)
   }
 
   const handleBulkDelete = () => {
@@ -979,6 +1010,26 @@ function LeadsContent() {
           {/* Scan bar */}
           <ScanBar onScanDone={handleScanDone} />
 
+          {/* Enrich bar — shown when CL leads have no contact info */}
+          {leads.some(l => l.source === 'courtlistener' && !l.contactInfo?.mailingAddress && !l.contactInfo?.phone) && (
+            <div className="flex items-center gap-4 bg-dark-surface border border-dark-border px-5 py-3">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${enrichingAll ? 'bg-gold animate-pulse' : enrichResult ? 'bg-green-500' : 'bg-dark-border'}`} />
+                <span className="text-dark-muted text-xs uppercase tracking-widest">
+                  {enrichingAll ? 'Enriching contacts from CourtListener...'
+                    : enrichResult || 'CourtListener leads have unenriched contacts'}
+                </span>
+              </div>
+              <button
+                onClick={enrichAllContacts}
+                disabled={enrichingAll}
+                className="ml-auto btn-navy text-xs py-1.5 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {enrichingAll ? 'Enriching...' : 'Enrich Contacts'}
+              </button>
+            </div>
+          )}
+
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-3">
             <input
@@ -1067,7 +1118,7 @@ function LeadsContent() {
                     </td>
                   </tr>
                 ) : filtered.map((lead, i) => {
-                  const hasContact = !!(lead.contactInfo?.phone || lead.contactInfo?.email)
+                  const hasContact = !!(lead.contactInfo?.phone || lead.contactInfo?.email || lead.contactInfo?.mailingAddress)
                   const emailsSent = lead.emailHistory?.length ?? 0
                   return (
                     <tr
