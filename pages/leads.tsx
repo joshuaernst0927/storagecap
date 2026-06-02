@@ -906,7 +906,11 @@ function LeadsContent() {
         }
       } catch {}
     }
-    setEnrichResult(`Enriched ${count} of ${toEnrich.length} leads`)
+ setEnrichResult(`Enriched ${count} of ${toEnrich.length} leads`)
+    // Re-fetch from server to sync enriched data
+    const serverRes = await fetch('/api/run-leads?email=0', { method: 'POST' })
+    const serverData = await serverRes.json()
+    if (serverData.leads) { upsertLeads(serverData.leads); refresh() }
     setEnrichingAll(false)
   }
 
