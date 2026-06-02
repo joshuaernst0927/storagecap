@@ -917,8 +917,8 @@ function LeadsContent() {
     }
   }
 
-  const hotCount = leads.filter(l => l.score >= 70 && l.status === 'new').length
-  const warmCount = leads.filter(l => l.score >= 40 && l.score < 70 && l.status === 'new').length
+  const hotCount = leads.filter(l => getLeadTier(l.score) === 'HOT').length
+  const warmCount = leads.filter(l => getLeadTier(l.score) === 'WARM').length
   const totalNew = leads.filter(l => l.status === 'new').length
   const states = Array.from(new Set(leads.map(l => l.state))).sort()
   const sources = Array.from(new Set(leads.map(l => l.source))) as LeadSource[]
