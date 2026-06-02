@@ -63,7 +63,7 @@ interface CLDocket {
   nature_of_suit?: string
 }
 
-async function clFetch(query: string, token: string, filedAfter: string): Promise<CLDocket[]> {
+async function clFetch(query: string, token: string, filedAfter: string, court?: string): Promise<CLDocket[]> {
   const params = new URLSearchParams({
     q: query,
     order_by: 'date_filed',
@@ -71,6 +71,7 @@ async function clFetch(query: string, token: string, filedAfter: string): Promis
     page_size: '50',
     format: 'json',
   })
+  if (court) params.set('court', court)
   const url = `https://www.courtlistener.com/api/rest/v3/dockets/?${params}`
   const res = await fetch(url, {
     headers: {
@@ -79,7 +80,7 @@ async function clFetch(query: string, token: string, filedAfter: string): Promis
     },
     signal: AbortSignal.timeout(10000),
   })
-  if (!res.ok) throw new Error(`CourtListener HTTP ${res.status}`)
+  if (!res.ok) throw new Error(`CL ${court || 'global'} HTTP ${res.status}`)
   const data = await res.json()
   return (data.results || []) as CLDocket[]
 }
@@ -94,57 +95,59 @@ function courtIdFromDocket(d: CLDocket): string {
   return ''
 }
 
-async function scanCourtListener(): Promise<Lead[]> {
+async function scanCourtListener(): Promise<{ leads: Lead[]; errors: string[] }> {
   const token = process.env.COURTLISTENER_TOKEN
-  if (!token) return []
+  if (!token) return { leads: [], errors: ['COURTLISTENER_TOKEN not configured'] }
 
-  const filedAfter = new Date(Date.now() - 180 * 86400000).toISOString().slice(0, 10) // 6 months
+  // 1 year lookback — bankruptcy cases linger for months
+  const filedAfter = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10)
 
-  let rawResults: CLDocket[] = []
-  try {
-    const [general, ch11, ch7] = await Promise.allSettled([
-      clFetch('"self storage"', token, filedAfter),
-      clFetch('"self storage" "chapter 11"', token, filedAfter),
-      clFetch('"self storage" "chapter 7"', token, filedAfter),
-    ])
+  // Query EVERY target bankruptcy court directly so we never have to post-filter by court.
+  // Broader keyword "storage" catches "ABC Storage LLC", "Self Storage Partners", etc.
+  const courtIds = Array.from(BANKRUPTCY_COURTS)
+  const results = await Promise.allSettled(
+    courtIds.map(courtId => clFetch('storage', token, filedAfter, courtId))
+  )
 
-    const all = [
-      ...(general.status === 'fulfilled' ? general.value : []),
-      ...(ch11.status === 'fulfilled' ? ch11.value : []),
-      ...(ch7.status === 'fulfilled' ? ch7.value : []),
-    ]
+  const errors: string[] = []
+  const seen = new Set<number>()
+  const rawResults: CLDocket[] = []
 
-    // Deduplicate by docket ID
-    const seen = new Set<number>()
-    rawResults = all.filter(d => {
-      if (seen.has(d.id)) return false
-      seen.add(d.id)
-      return true
-    })
-  } catch (err) {
-    console.error('CourtListener fetch failed:', err)
-    return []
-  }
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      const msg = String(r.reason)
+      errors.push(`${courtIds[i]}: ${msg}`)
+      console.error(`CourtListener ${courtIds[i]} failed:`, msg)
+    } else {
+      for (const d of r.value) {
+        if (!seen.has(d.id)) {
+          seen.add(d.id)
+          rawResults.push(d)
+        }
+      }
+    }
+  })
+
+  console.log(`CourtListener: ${rawResults.length} raw dockets across ${courtIds.length} courts`)
 
   const leads: Lead[] = []
 
   for (const docket of rawResults) {
-    const courtId = courtIdFromDocket(docket)
-
-    // Only include if it's a bankruptcy court in our target states
-    if (!BANKRUPTCY_COURTS.has(courtId)) continue
-
+    const courtId = courtIdFromDocket(docket) || courtIds[0] // fallback to first court
     const state = stateFromCourtId(courtId)
-    if (!state || !CL_TARGET_STATES.includes(state)) continue
+    if (!state) continue
 
     const caseName = docket.case_name || docket.case_name_short || 'Unknown Case'
-    // Extract debtor name — bankruptcy cases are "In re: DEBTOR NAME" or "DEBTOR v. CREDITOR"
+
+    // Must mention storage in the case name to be relevant
+    if (!/storage/i.test(caseName)) continue
+
     const debtorMatch = caseName.match(/in\s+re:?\s+(.+)/i)
     const ownerName = debtorMatch
       ? debtorMatch[1].trim().slice(0, 80)
       : caseName.split(/\s+v\.?\s+/i)[0].trim().slice(0, 80)
 
-    const chapter = chapterFromCause(docket.cause || '')
+    const chapter = chapterFromCause(docket.cause || docket.nature_of_suit || '')
     const locationStr = cityFromCourtId(courtId)
     const [city] = locationStr.split(', ')
 
@@ -180,7 +183,8 @@ async function scanCourtListener(): Promise<Lead[]> {
     })
   }
 
-  return leads
+  console.log(`CourtListener: ${leads.length} storage leads after name filter`)
+  return { leads, errors }
 }
 
 // ─── Craigslist RSS scanner ────────────────────────────────────────────────────
@@ -197,12 +201,12 @@ const CRAIGSLIST_CITIES = [
   { city: 'Birmingham', state: 'AL', subdomain: 'birmingham' },
 ]
 
-async function scanCraigslist(): Promise<Lead[]> {
+async function scanCraigslist(): Promise<{ leads: Lead[]; errors: string[] }> {
   const results = await Promise.allSettled(
     CRAIGSLIST_CITIES.map(async ({ city, state, subdomain }) => {
       const url = `https://${subdomain}.craigslist.org/search/bfs?query=self+storage&format=rss`
       const res = await fetch(url, { signal: AbortSignal.timeout(4000) })
-      if (!res.ok) return []
+      if (!res.ok) throw new Error(`craigslist ${subdomain}: HTTP ${res.status}`)
       const xml = await res.text()
       const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || []
       const leads: Lead[] = []
@@ -233,11 +237,16 @@ async function scanCraigslist(): Promise<Lead[]> {
       return leads
     })
   )
-  return results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
+  const errors: string[] = []
+  const leads = results.flatMap(r => {
+    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); return [] }
+    return r.value
+  })
+  return { leads, errors }
 }
 
 // ─── BizBuySell scanner ────────────────────────────────────────────────────────
-async function scanBizBuySell(): Promise<Lead[]> {
+async function scanBizBuySell(): Promise<{ leads: Lead[]; errors: string[] }> {
   const results = await Promise.allSettled(
     TARGET_STATES.slice(0, 4).map(async (state) => {
       const url = `https://www.bizbuysell.com/self-storage-businesses-for-sale/?q=${state}`
@@ -245,7 +254,7 @@ async function scanBizBuySell(): Promise<Lead[]> {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YEMAcquisitions/1.0)' },
         signal: AbortSignal.timeout(4000),
       })
-      if (!res.ok) return []
+      if (!res.ok) throw new Error(`bizbuysell ${state}: HTTP ${res.status}`)
       const html = await res.text()
       const listingPattern = /<a[^>]+href="(\/Business-Opportunity\/[^"]+)"[^>]*>[\s\S]*?<h3[^>]*>([\s\S]*?)<\/h3>[\s\S]*?<\/a>/g
       const leads: Lead[] = []
@@ -274,7 +283,12 @@ async function scanBizBuySell(): Promise<Lead[]> {
       return leads
     })
   )
-  return results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
+  const errors: string[] = []
+  const leads = results.flatMap(r => {
+    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); return [] }
+    return r.value
+  })
+  return { leads, errors }
 }
 
 // ─── LoopNet fetch scraper ─────────────────────────────────────────────────────
@@ -285,7 +299,7 @@ const LOOPNET_STATE_MAP: Record<string, string> = {
   fl: 'FL', tx: 'TX', nc: 'NC', ga: 'GA', tn: 'TN',
 }
 
-async function scanLoopNet(): Promise<Lead[]> {
+async function scanLoopNet(): Promise<{ leads: Lead[]; errors: string[] }> {
   const results = await Promise.allSettled(
     LOOPNET_STATES.map(async (stateSlug) => {
       const url = `https://www.loopnet.com/search/self-storage-facilities/${stateSlug}/for-sale/`
@@ -297,7 +311,7 @@ async function scanLoopNet(): Promise<Lead[]> {
         },
         signal: AbortSignal.timeout(4000),
       })
-      if (!res.ok) return []
+      if (!res.ok) throw new Error(`loopnet ${stateSlug}: HTTP ${res.status}`)
       const html = await res.text()
       const state = LOOPNET_STATE_MAP[stateSlug]
       const leads: Lead[] = []
@@ -377,7 +391,12 @@ async function scanLoopNet(): Promise<Lead[]> {
       return leads
     })
   )
-  return results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
+  const errors: string[] = []
+  const leads = results.flatMap(r => {
+    if (r.status === 'rejected') { console.error(String(r.reason)); errors.push(String(r.reason)); return [] }
+    return r.value
+  })
+  return { leads, errors }
 }
 
 // ─── Gmail transporter ────────────────────────────────────────────────────────
@@ -565,21 +584,28 @@ export async function sendLeadDigest(leads: Lead[], scanDate: Date = new Date())
   })
 }
 
-// ─── Persist leads to public/data/leads.json (dev) ───────────────────────────
+// ─── Persist leads ────────────────────────────────────────────────────────────
+// Writes to public/data/leads.json in dev. On Vercel the fs is read-only except
+// /tmp, so we fall back there (ephemeral per-instance, but better than nothing).
 function persistLeads(newLeads: Lead[]): void {
-  try {
-    const filePath = path.join(process.cwd(), 'public', 'data', 'leads.json')
-    let existing: Lead[] = []
+  const candidates = [
+    path.join(process.cwd(), 'public', 'data', 'leads.json'),
+    '/tmp/leads.json',
+  ]
+  for (const filePath of candidates) {
     try {
-      existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    } catch { /* file missing or empty */ }
-
-    const existingIds = new Set(existing.map(l => l.id))
-    const merged = [...existing, ...newLeads.filter(l => !existingIds.has(l.id))]
-    // Keep most recent 500 leads
-    merged.sort((a, b) => new Date(b.foundAt).getTime() - new Date(a.foundAt).getTime())
-    fs.writeFileSync(filePath, JSON.stringify(merged.slice(0, 500), null, 2))
-  } catch { /* read-only filesystem on Vercel — non-fatal */ }
+      let existing: Lead[] = []
+      try { existing = JSON.parse(fs.readFileSync(filePath, 'utf-8')) } catch { /* empty */ }
+      const existingIds = new Set(existing.map((l: Lead) => l.id))
+      const merged = [...existing, ...newLeads.filter(l => !existingIds.has(l.id))]
+      merged.sort((a, b) => new Date(b.foundAt).getTime() - new Date(a.foundAt).getTime())
+      fs.writeFileSync(filePath, JSON.stringify(merged.slice(0, 500), null, 2))
+      console.log(`Persisted ${merged.length} leads to ${filePath}`)
+      return
+    } catch (err) {
+      console.warn(`persistLeads: could not write to ${filePath}:`, String(err))
+    }
+  }
 }
 
 // ─── Main handler ──────────────────────────────────────────────────────────────
@@ -602,20 +628,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   )
 
   try {
-    const [craigslistLeads, bizBuySellLeads, courtLeads, loopnetLeads] =
+    const [clResult, crResult, bbResult, lnResult] =
       await Promise.race([
         Promise.allSettled([
+          scanCourtListener(),
           scanCraigslist(),
           scanBizBuySell(),
-          scanCourtListener(),
           scanLoopNet(),
-        ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : [])),
+        ]).then(rs => rs.map(r => r.status === 'fulfilled' ? r.value : { leads: [], errors: [String((r as PromiseRejectedResult).reason)] })),
         deadline,
-      ])
+      ]) as Array<{ leads: Lead[]; errors: string[] }>
+
+    const courtLeads = clResult.leads
+    const craigslistLeads = crResult.leads
+    const bizBuySellLeads = bbResult.leads
+    const loopnetLeads = lnResult.leads
+
+    const scanErrors = {
+      courtlistener: clResult.errors,
+      craigslist: crResult.errors,
+      bizbuysell: bbResult.errors,
+      loopnet: lnResult.errors,
+    }
+
+    // Log a summary so Vercel function logs show exactly what happened
+    console.log('Scan complete:', {
+      courtlistener: courtLeads.length,
+      craigslist: craigslistLeads.length,
+      bizbuysell: bizBuySellLeads.length,
+      loopnet: loopnetLeads.length,
+      errors: Object.entries(scanErrors).flatMap(([k, v]) => v.map(e => `${k}: ${e}`)),
+    })
 
     const allLeads = [...courtLeads, ...craigslistLeads, ...bizBuySellLeads, ...loopnetLeads]
 
-    // Persist to file (works in dev; silently fails on Vercel)
     if (allLeads.length > 0) persistLeads(allLeads)
 
     if (sendEmail && allLeads.length > 0) {
@@ -633,6 +679,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         bizbuysell: bizBuySellLeads.length,
         loopnet: loopnetLeads.length,
       },
+      errors: scanErrors,
       bankruptcy: courtLeads.length,
       leads: allLeads,
       scannedAt: new Date().toISOString(),
