@@ -14,7 +14,10 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import type { PipelineProperty } from '@/lib/pipelineData'
 import { scoreProperty } from '@/lib/scorer'
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'pipeline-ingest.json')
+// Vercel's project root is read-only; /tmp is the only writable path in prod.
+const DATA_FILE = process.env.VERCEL
+  ? '/tmp/pipeline-ingest.json'
+  : path.join(process.cwd(), 'data', 'pipeline-ingest.json')
 
 function ensureDataDir() {
   const dir = path.dirname(DATA_FILE)

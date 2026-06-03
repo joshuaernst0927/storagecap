@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import type { PipelineProperty, DistressSignals } from '@/lib/pipelineData'
 import { FileDropZone, type UploadFile } from '@/components/FileChips'
 import AuthGate from '@/components/AuthGate'
+import { saveProperty } from '@/lib/pipelineStore'
 
 type FormState = {
   facilityName: string
@@ -169,12 +170,16 @@ export default function UploadDeal() {
         property.notes = property.notes ? `${property.notes}\n${capNote}` : capNote
       }
 
-      const res = await fetch('/api/pipeline-ingest', {
+      // Always save to localStorage first — this is the primary source for /pipeline.
+      saveProperty(property)
+
+      // Best-effort server sync (may fail on first cold Vercel deployment due to /tmp isolation).
+      fetch('/api/pipeline-ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([property]),
-      })
-      if (!res.ok) throw new Error(`Save failed: HTTP ${res.status}`)
+      }).catch(() => {})
+
       router.push('/pipeline')
     } catch (err) {
       setSaveError(String(err))
