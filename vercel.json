@@ -17,6 +17,9 @@
     },
     "pages/api/auto-score-deal.ts": {
       "maxDuration": 30
+    },
+    "pages/api/upload-deal.ts": {
+      "maxDuration": 60
     }
   }
 }

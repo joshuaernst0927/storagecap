@@ -75,10 +75,14 @@ export default function UploadDeal() {
 
   const set = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  // Vercel enforces a hard 4.5 MB platform limit on serverless request bodies.
-  // 3 MB binary → ~4 MB base64 → stays under the ceiling with JSON overhead.
-  const MAX_FILE_BINARY = 3_000_000      // bytes — individual file cap before base64
-  const MAX_BATCH_BASE64 = 3_500_000     // base64 chars — per-request budget
+  // Vercel's hard request-body limit is 4.5 MB. A file of N bytes encodes to ~1.37×N
+  // bytes of base64, plus ~200 bytes of JSON envelope per file.
+  // 3 MB binary → ~4.1 MB base64 → safe under 4.5 MB with overhead.
+  // We CANNOT truncate structured files (PDFs, XLSX, etc.) — partial bytes are
+  // invalid and the Anthropic API rejects them. Instead we check sizes up-front and
+  // explain clearly what the user needs to do.
+  const MAX_SAFE_FILE = 3_000_000       // bytes — hard limit per individual file
+  const MAX_BATCH_BASE64 = 3_400_000    // base64 chars — per-request budget
 
   async function extractPayload(filePayloads: { fileName: string; mimeType: string; data: string }[]) {
     const res = await fetch('/api/upload-deal', {
@@ -88,7 +92,8 @@ export default function UploadDeal() {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error(err.error ?? `HTTP ${res.status}`)
+      const detail = err.detail ? ` — ${err.detail}` : ''
+      throw new Error(`${err.error ?? `HTTP ${res.status}`}${detail}`)
     }
     return res.json()
   }
@@ -120,17 +125,25 @@ export default function UploadDeal() {
     setExtracting(true)
     setExtractError('')
     try {
-      // Read files, capping each at MAX_FILE_BINARY bytes before base64 encoding.
-      // For PDFs, first 3 MB covers the front matter and first pages where financial
-      // data appears; truncated PDFs may still parse partially in Claude's doc pipeline.
+      // Pre-flight size check: structured files (PDF, XLSX, DOCX) cannot be
+      // truncated — partial bytes are invalid and the Anthropic API rejects them.
+      // Reject oversized files up-front with a helpful message.
+      const oversized = files.filter(({ file }) => file.size > MAX_SAFE_FILE)
+      if (oversized.length > 0) {
+        const names = oversized.map(f => `${f.file.name} (${(f.file.size / 1_000_000).toFixed(1)} MB)`).join(', ')
+        throw new Error(
+          `${names} ${oversized.length === 1 ? 'is' : 'are'} too large (limit 3 MB per file). ` +
+          `Try compressing the PDF, removing image-heavy pages, or splitting it into smaller documents.`
+        )
+      }
+
       const filePayloads = await Promise.all(
         files.map(async ({ file, mime }) => {
-          const source = file.size > MAX_FILE_BINARY ? file.slice(0, MAX_FILE_BINARY) : file
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onload = () => resolve((reader.result as string).split(',')[1])
             reader.onerror = reject
-            reader.readAsDataURL(source)
+            reader.readAsDataURL(file)
           })
           return { fileName: file.name, mimeType: mime, data: base64 }
         })

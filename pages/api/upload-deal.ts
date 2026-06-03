@@ -101,8 +101,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const raw = ((msg.content[0] as { type: string; text: string }).text ?? '').trim()
     const extracted = JSON.parse(raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, ''))
     return res.status(200).json(extracted)
-  } catch (err) {
-    console.error('upload-deal extraction error:', err)
-    return res.status(500).json({ error: 'Extraction failed', detail: String(err) })
+  } catch (err: unknown) {
+    // Extract a useful message from Anthropic SDK errors, which expose `.status`
+    // and a nested `.error.error.message` field on API failures.
+    let detail = String(err)
+    if (err instanceof Error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ae = err as any
+      if (ae.status && ae.error?.error?.message) {
+        detail = `Anthropic ${ae.status}: ${ae.error.error.message}`
+      } else if (ae.status) {
+        detail = `Anthropic ${ae.status}: ${err.message}`
+      } else {
+        detail = err.message
+      }
+    }
+    console.error('[upload-deal] extraction failed:', detail)
+    return res.status(500).json({ error: 'Extraction failed', detail })
   }
 }
