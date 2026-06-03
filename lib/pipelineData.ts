@@ -164,18 +164,6 @@ export const STAGES = [
   { key: 'dead', label: 'Dead' },
 ] as const
 
-export function tier(score: number): 'HOT' | 'WARM' | 'COLD' {
-  if (score >= 110) return 'HOT'
-  if (score >= 70) return 'WARM'
-  return 'COLD'
-}
-
-export function tierColor(t: 'HOT' | 'WARM' | 'COLD'): string {
-  if (t === 'HOT') return 'text-red-700 border-red-400/50 bg-red-50'
-  if (t === 'WARM') return 'text-amber-700 border-amber-500/50 bg-amber-50'
-  return 'text-[#5A5A55] border-[#E0DDD4] bg-[#F5F5F0]'
-}
-
 export function statusLabel(s: DealStatus): string {
   const map: Record<DealStatus, string> = {
     'outreach-sent': 'Outreach Sent',
@@ -194,27 +182,6 @@ export function statusColor(s: DealStatus): string {
     'under-contract': 'text-green-700 border-green-500/40 bg-green-50',
   }
   return map[s]
-}
-
-// Score out of 175 points
-export function scoreColor(score: number): string {
-  if (score >= 110) return 'text-red-700 border-red-400/50 bg-red-50'
-  if (score >= 85) return 'text-amber-700 border-amber-500/50 bg-amber-50'
-  if (score >= 55) return 'text-yellow-700 border-yellow-500/50 bg-yellow-50'
-  return 'text-[#5A5A55] border-[#E0DDD4] bg-[#F5F5F0]'
-}
-
-export function vaScoreColor(va: number): string {
-  if (va >= 14) return 'text-emerald-700 border-emerald-500/50 bg-emerald-50'
-  if (va >= 8) return 'text-teal-700 border-teal-500/50 bg-teal-50'
-  return 'text-[#5A5A55] border-[#E0DDD4] bg-[#F5F5F0]'
-}
-
-export function scoreLabel(score: number): string {
-  if (score >= 110) return 'HOT'
-  if (score >= 85) return 'WARM+'
-  if (score >= 55) return 'WARM'
-  return 'COLD'
 }
 
 export function stageBadgeColor(stage: string): string {

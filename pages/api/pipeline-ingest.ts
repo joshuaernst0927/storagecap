@@ -1,18 +1,14 @@
 /**
- * Pipeline ingest API — receives PipelineProperty objects.
+ * Pipeline ingest API — receives and stores PipelineProperty objects.
  *
  * POST /api/pipeline-ingest  — accepts array of PipelineProperty objects
  * GET  /api/pipeline-ingest  — returns all ingested properties
- *
- * Runs the scorer on every incoming deal to ensure breakdown + explanation
- * are always populated regardless of source.
  */
 
 import fs from 'fs'
 import path from 'path'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import type { PipelineProperty } from '@/lib/pipelineData'
-import { scoreProperty } from '@/lib/scorer'
 
 // Vercel's project root is read-only; /tmp is the only writable path in prod.
 const DATA_FILE = process.env.VERCEL
@@ -37,20 +33,6 @@ function readStored(): PipelineProperty[] {
 function writeStored(properties: PipelineProperty[]) {
   ensureDataDir()
   fs.writeFileSync(DATA_FILE, JSON.stringify(properties, null, 2), 'utf-8')
-}
-
-function applyScore(prop: PipelineProperty): PipelineProperty {
-  const result = scoreProperty(prop)
-  const now = new Date().toISOString()
-  const entry = { score: result.total, date: now }
-  return {
-    ...prop,
-    motivationScore: result.total,
-    scoreBreakdown: result.breakdown,
-    scoreExplanation: result.explanation,
-    lastScored: now,
-    scoreHistory: [...(prop.scoreHistory ?? []).slice(-19), entry],
-  }
 }
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -79,7 +61,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     for (const prop of incoming) {
       if (!prop.id || !prop.facilityName) continue
       if (!existingIds.has(prop.id)) {
-        merged.push(applyScore(prop))
+        merged.push(prop)
         added++
       }
     }

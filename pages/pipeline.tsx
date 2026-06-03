@@ -1,82 +1,22 @@
 import Head from 'next/head'
-import { useState, useEffect, useRef, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import {
   PipelineProperty,
   PortfolioEntry,
-  ScoreBreakdown,
-  ScoreHistoryEntry,
   NoteEntry,
   NextStep,
   ActivityEvent,
   ActivityEventType,
   DealStatus,
   STAGES,
-  scoreColor,
-  vaScoreColor,
   stageBadgeColor,
-  tier,
-  tierColor,
   statusLabel,
   statusColor,
 } from '@/lib/pipelineData'
-import { scoreProperty } from '@/lib/scorer'
 import { loadSavedProperties, saveProperty } from '@/lib/pipelineStore'
 import AuthGate from '@/components/AuthGate'
 import DealScoreBadge from '@/components/DealScoreBadge'
 
-// ─── Scoring helpers ─────────────────────────────────────────────────────────
-
-function getTrend(history: ScoreHistoryEntry[]): 'up' | 'down' | 'flat' | 'none' {
-  if (history.length < 2) return 'none'
-  const delta = history[history.length - 1].score - history[history.length - 2].score
-  if (delta > 3) return 'up'
-  if (delta < -3) return 'down'
-  return 'flat'
-}
-
-function formatLastScored(iso: string): string {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (diff < 1) return 'just now'
-  if (diff < 60) return `${diff}m ago`
-  if (diff < 1440) return `${Math.floor(diff / 60)}h ago`
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function Sparkline({ history }: { history: ScoreHistoryEntry[] }) {
-  const pts = history.slice(-6)
-  if (pts.length < 2) return null
-  const scores = pts.map(h => h.score)
-  const lo = Math.min(...scores), hi = Math.max(...scores)
-  const range = Math.max(hi - lo, 5)
-  const W = 44, H = 14
-  const d = scores.map((s, i) => {
-    const x = ((i / (scores.length - 1)) * W).toFixed(1)
-    const y = (H - ((s - lo) / range) * (H - 2) - 1).toFixed(1)
-    return `${x},${y}`
-  }).join(' ')
-  const rising = scores[scores.length - 1] >= scores[0]
-  return (
-    <svg width={W} height={H} style={{ overflow: 'visible' }}>
-      <polyline points={d} fill="none" stroke={rising ? '#34D399' : '#F87171'} strokeWidth="1.5" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function rescoreProperty(p: PipelineProperty): PipelineProperty {
-  if (p.stage === 'closed' || p.stage === 'dead') return p
-  const result = scoreProperty(p)
-  const now = new Date().toISOString()
-  const entry: ScoreHistoryEntry = { score: result.total, date: now }
-  return {
-    ...p,
-    motivationScore: result.total,
-    scoreBreakdown: result.breakdown,
-    scoreExplanation: result.explanation,
-    lastScored: now,
-    scoreHistory: [...(p.scoreHistory ?? []).slice(-19), entry],
-  }
-}
 
 // ─── Notes / Activity helpers ─────────────────────────────────────────────────
 
@@ -220,112 +160,6 @@ function SpreadCell({ askingPrice, optHigh }: { askingPrice?: number; optHigh: n
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function MotivationBadge({
-  score,
-  breakdown,
-  lastScored,
-  scoreHistory = [],
-  isFinal = false,
-  onRescore,
-}: {
-  score: number
-  breakdown?: ScoreBreakdown
-  lastScored?: string
-  scoreHistory?: ScoreHistoryEntry[]
-  isFinal?: boolean
-  onRescore?: () => void
-}) {
-  const t = tier(score)
-  const va = breakdown?.valueAdd ?? 0
-  const offerDeal = breakdown?.offerDeal ?? 0
-  const businessPlan = breakdown?.businessPlan ?? 0
-  const trend = getTrend(scoreHistory)
-  const bars: [string, number, number, string][] = [
-    ['Mot',  breakdown?.motivation   ?? 0, 70, '#F87171'],
-    ['Own',  breakdown?.ownerProfile ?? 0, 25, '#FBBF24'],
-    ['Deal', breakdown?.dealQuality  ?? 0, 15, '#60A5FA'],
-    ['VA',   va,                            20, '#34D399'],
-    ['Ofer', offerDeal,                     20, '#A78BFA'],
-    ['Plan', businessPlan,                  25, '#38BDF8'],
-  ]
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-start gap-2">
-        <div className={`border-2 font-mono font-bold w-12 h-12 flex flex-col items-center justify-center flex-shrink-0 leading-none ${isFinal ? 'text-[#5A5A55] border-[#E0DDD4] bg-[#F5F5F0]' : scoreColor(score)}`}>
-          <span className="text-xl leading-none">{score}</span>
-          <span className="text-[0.5rem] tracking-wide uppercase mt-0.5 font-sans opacity-60">/175</span>
-        </div>
-        <div className="flex flex-col gap-1 flex-1 min-w-0">
-          <div className="flex items-center gap-1">
-            {isFinal
-              ? <span className="border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold text-[#5A5A55] border-[#E0DDD4] bg-[#F5F5F0]">Final</span>
-              : <span className={`border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold ${tierColor(t)}`}>{t}</span>
-            }
-            {trend !== 'none' && (
-              <span className={`text-sm leading-none ${trend === 'up' ? 'text-emerald-500' : trend === 'down' ? 'text-red-400' : 'text-dark-muted'}`}>
-                {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
-              </span>
-            )}
-          </div>
-          <div className="flex gap-1 flex-wrap">
-            <span className={`border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold ${vaScoreColor(va)}`}>VA {va}</span>
-            {offerDeal > 0 && (
-              <span className="border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold text-violet-700 border-violet-400/50 bg-violet-50">
-                Offer {offerDeal}
-              </span>
-            )}
-            {businessPlan > 0 && (
-              <span className="border text-[0.65rem] uppercase tracking-widest px-1.5 py-0.5 font-bold text-sky-700 border-sky-400/50 bg-sky-50">
-                Plan {businessPlan}
-              </span>
-            )}
-          </div>
-        </div>
-        {!isFinal && onRescore && (
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); onRescore() }}
-            title="Re-score now"
-            className="text-dark-muted hover:text-gold transition-colors text-base leading-none flex-shrink-0 mt-1"
-          >
-            ↻
-          </button>
-        )}
-      </div>
-
-      {breakdown && (
-        <div className="space-y-0.5 w-28">
-          {bars.map(([label, val, max, color]) => (
-            <div key={label} className="flex items-center gap-1">
-              <span className="text-[0.5rem] uppercase text-dark-muted w-5 flex-shrink-0 font-mono">{label}</span>
-              <div className="flex-1 h-1 bg-dark-border">
-                <div style={{ width: `${Math.max(0, (val / max) * 100)}%`, backgroundColor: color, height: '100%' }} />
-              </div>
-              <span className="text-[0.5rem] font-mono text-dark-muted w-4 text-right">{val}</span>
-            </div>
-          ))}
-          {(breakdown.negatives !== 0 || breakdown.override !== 0) && (
-            <div className="flex items-center gap-1 pt-0.5">
-              <span className="text-[0.5rem] uppercase text-dark-muted w-5 flex-shrink-0 font-mono">adj</span>
-              <span className="flex-1 text-right space-x-1">
-                {breakdown.negatives !== 0 && <span className="text-[0.5rem] font-mono text-red-500">{breakdown.negatives}</span>}
-                {breakdown.override > 0 && <span className="text-[0.5rem] font-mono text-emerald-600">+{breakdown.override}</span>}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {scoreHistory.length >= 3 && <Sparkline history={scoreHistory} />}
-
-      {lastScored && (
-        <div className="text-[0.5rem] text-dark-muted uppercase tracking-widest">
-          {isFinal ? 'Final' : 'Scored'} {formatLastScored(lastScored)}
-        </div>
-      )}
-    </div>
-  )
-}
 
 function StatusBadge({ status }: { status: DealStatus }) {
   return (
@@ -1123,16 +957,10 @@ function AddPropertyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: 
   const handleSubmit = () => {
     if (!form.facilityName || !form.city || !form.state) return
     const base = formToPartialProperty(form)
-    const result = scoreProperty(base)
-    const now = new Date().toISOString()
     const property: PipelineProperty = {
       ...base,
       id: `new-${Date.now()}`,
-      motivationScore: result.total,
-      scoreBreakdown: result.breakdown,
-      scoreExplanation: result.explanation,
-      lastScored: now,
-      scoreHistory: [{ score: result.total, date: now }],
+      motivationScore: 0,
     }
     onAdd(property)
     onClose()
@@ -1242,47 +1070,6 @@ function AddPropertyModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: 
               )}
             </div>
 
-            {(() => {
-              const preview = scoreProperty(formToPartialProperty(form))
-              return (
-                <div className="mt-4 border border-dark-border p-4 bg-dark-surface space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-dark-muted text-xs uppercase tracking-widest">Calculated Score</span>
-                    <span className={`font-mono text-lg font-bold border px-3 py-1 ${scoreColor(preview.total)}`}>
-                      {preview.total} / 130
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    {([
-                      ['Motivation', preview.breakdown.motivation, 70],
-                      ['Owner Profile', preview.breakdown.ownerProfile, 25],
-                      ['Deal Quality', preview.breakdown.dealQuality, 15],
-                      ['Value-Add', preview.breakdown.valueAdd, 20],
-                    ] as [string, number, number][]).map(([label, val, max]) => (
-                      <div key={label} className="flex items-center gap-2 text-xs text-dark-muted">
-                        <span className="w-24 flex-shrink-0">{label}</span>
-                        <div className="flex-1 h-1.5 bg-dark-border">
-                          <div className="h-full bg-gold" style={{ width: `${(val / max) * 100}%` }} />
-                        </div>
-                        <span className="font-mono w-8 text-right">{val}/{max}</span>
-                      </div>
-                    ))}
-                    {(preview.breakdown.negatives !== 0 || preview.breakdown.override !== 0) && (
-                      <div className="flex items-center gap-2 text-xs text-dark-muted pt-1 border-t border-dark-border">
-                        <span className="w-24 flex-shrink-0">Adjustments</span>
-                        <span className="flex-1 font-mono text-xs">
-                          {preview.breakdown.negatives !== 0 && <span className="text-red-500">{preview.breakdown.negatives}</span>}
-                          {preview.breakdown.override > 0 && <span className="text-emerald-600 ml-2">+{preview.breakdown.override} override</span>}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {preview.explanation && (
-                    <p className="text-dark-muted text-xs italic leading-relaxed border-t border-dark-border pt-3">{preview.explanation}</p>
-                  )}
-                </div>
-              )
-            })()}
           </div>
 
           {/* ── Offer & Deal Structure ── */}
@@ -1544,45 +1331,6 @@ export default function Pipeline() {
       .finally(() => setSourcesLoaded(n => n + 1))
   }, [])
 
-  // Auto-rescore all active deals once all 3 sources have loaded
-  useEffect(() => {
-    if (sourcesLoaded < 3) return
-    setProperties(prev => prev.map(p => {
-      const scored = rescoreProperty(p)
-      if (scored !== p) saveProperty(scored)
-      return scored
-    }))
-  }, [sourcesLoaded])
-
-  // Continuous re-scoring: every 5 minutes rescore all active deals
-  const rescoreAllRef = useRef<() => void>(() => {})
-  rescoreAllRef.current = () => {
-    setProperties(prev => prev.map(p => {
-      const scored = rescoreProperty(p)
-      if (scored !== p) saveProperty(scored)
-      return scored
-    }))
-  }
-  useEffect(() => {
-    const interval = setInterval(() => rescoreAllRef.current(), 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const rescore = (id: string) => {
-    setProperties(prev => prev.map(p => {
-      if (p.id !== id) return p
-      const oldScore = p.motivationScore
-      const scored = rescoreProperty(p)
-      if (Math.abs(scored.motivationScore - oldScore) >= 2) {
-        const event = mkActivityEvent('score_changed', `Score changed ${oldScore} → ${scored.motivationScore}`)
-        const withActivity = { ...scored, activityLog: [...(scored.activityLog ?? []), event] }
-        saveProperty(withActivity)
-        return withActivity
-      }
-      saveProperty(scored)
-      return scored
-    }))
-  }
 
   const addNote = (id: string, text: string) => {
     setProperties(prev => prev.map(p => {
@@ -1642,9 +1390,8 @@ export default function Pipeline() {
     setProperties(prev => prev.map(p => {
       if (p.id !== id) return p
       const updated = { ...p, ...updates }
-      const scored = rescoreProperty(updated)
-      saveProperty(scored)
-      return scored
+      saveProperty(updated)
+      return updated
     }))
   }
 
@@ -1686,11 +1433,6 @@ export default function Pipeline() {
       const stageLabel = STAGES.find(s => s.key === stage)?.label ?? stage
       const event = mkActivityEvent('stage_changed', `Stage → ${stageLabel}`)
       const updated = { ...p, stage, activityLog: [...(p.activityLog ?? []), event] }
-      if (stage !== 'dead') {
-        const scored = rescoreProperty(updated)
-        saveProperty(scored)
-        return scored
-      }
       saveProperty(updated)
       return updated
     }))
@@ -1729,14 +1471,13 @@ export default function Pipeline() {
   const filtered = activeProperties
     .filter(p => stageFilter === 'all' || p.stage === stageFilter)
     .sort((a, b) => {
-      if (sortBy === 'score') return b.motivationScore - a.motivationScore
+      if (sortBy === 'score') return (b.dealScore ?? -1) - (a.dealScore ?? -1)
       if (sortBy === 'name') return a.facilityName.localeCompare(b.facilityName)
       if (sortBy === 'stage') return a.stage.localeCompare(b.stage)
       return 0
     })
 
-  const totalScore = Math.round(properties.reduce((sum, p) => sum + p.motivationScore, 0) / (properties.length || 1))
-  const highMot = properties.filter(p => p.motivationScore >= 110).length
+  const highScoring = properties.filter(p => p.dealScore != null && p.dealScore >= 75).length
   const activeConvos = properties.filter(p => ['conversation', 'loi', 'dd'].includes(p.stage)).length
   const inOutreach = properties.filter(p => p.stage === 'outreach').length
 
@@ -1786,7 +1527,7 @@ export default function Pipeline() {
             <div className="font-sans text-xs uppercase tracking-[0.14em] font-semibold mb-1" style={{ color: '#D4A843' }}>Internal Platform</div>
             <h1 className="font-serif font-light text-white" style={{ fontSize: '2.2rem', lineHeight: '1.1' }}>Acquisition Pipeline</h1>
             <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              {properties.length} properties · {highMot} high motivation · {activeConvos} active conversations
+              {properties.length} properties · {highScoring} scored HOT · {activeConvos} active conversations
             </p>
           </div>
           <button onClick={() => setShowAdd(true)} className="btn-gold self-start md:self-auto">
@@ -1803,7 +1544,7 @@ export default function Pipeline() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
             { label: 'Total Pipeline', value: properties.length, sub: 'properties tracked' },
-            { label: 'High Motivation', value: highMot, sub: 'score ≥ 85' },
+            { label: 'Scored HOT', value: highScoring, sub: 'deal score ≥ 75' },
             { label: 'Active Outreach', value: inOutreach, sub: 'letters sent' },
             { label: 'In Conversation', value: activeConvos, sub: 'loi / dd / convo' },
           ].map(s => (
@@ -1928,27 +1669,16 @@ export default function Pipeline() {
                           </div>
                         )
                       })()}
-                      {property.scoreExplanation && (
-                        <div className="text-dark-muted text-[0.68rem] mt-1.5 leading-relaxed italic">{property.scoreExplanation}</div>
-                      )}
                     </td>
                     <td className="pipeline-td">
                       <div className="text-[#1a1a18] text-sm">{property.unitCount.toLocaleString()}</div>
                       <div className="text-dark-muted text-xs">{property.yearBuilt}</div>
                     </td>
                     <td className="pipeline-td">
-                      <MotivationBadge
-                        score={property.motivationScore}
-                        breakdown={property.scoreBreakdown}
-                        lastScored={property.lastScored}
-                        scoreHistory={property.scoreHistory}
-                        isFinal={property.stage === 'closed' || property.stage === 'dead'}
-                        onRescore={() => rescore(property.id)}
-                      />
-                      {property.dealScore != null && (
-                        <div className="mt-1.5">
-                          <DealScoreBadge score={property.dealScore} dealType={property.dealType} />
-                        </div>
+                      {property.dealScore != null ? (
+                        <DealScoreBadge score={property.dealScore} dealType={property.dealType} />
+                      ) : (
+                        <span className="text-dark-muted text-xs">—</span>
                       )}
                       <a
                         href={`/score-deal?id=${property.id}`}
@@ -2035,7 +1765,7 @@ export default function Pipeline() {
         </div>
 
         <p className="text-dark-muted text-xs mt-4">
-          {filtered.length} of {activeProperties.length} active properties shown · Avg motivation score: {totalScore}
+          {filtered.length} of {activeProperties.length} active properties shown
         </p>
 
         {/* Closed Deals Section */}
@@ -2081,7 +1811,9 @@ export default function Pipeline() {
                           {pe?.lenderName || '—'}
                         </td>
                         <td className="pipeline-td">
-                          <span className="font-mono text-sm">{p.motivationScore}</span>
+                          {p.dealScore != null
+                            ? <DealScoreBadge score={p.dealScore} dealType={p.dealType} />
+                            : <span className="text-dark-muted text-xs">—</span>}
                         </td>
                       </tr>
                     )

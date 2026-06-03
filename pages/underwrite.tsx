@@ -399,7 +399,7 @@ export default function Underwrite() {
                           <option value="">— Choose a deal —</option>
                           {pipelineDeals.map(d => (
                             <option key={d.id} value={d.id}>
-                              {d.facilityName} · {d.city}, {d.state}{d.dealScore != null ? ` · Deal Score ${d.dealScore}` : ` · Motivation ${d.motivationScore}`}
+                              {d.facilityName} · {d.city}, {d.state}{d.dealScore != null ? ` · Score ${d.dealScore}` : ''}
                             </option>
                           ))}
                         </select>

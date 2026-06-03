@@ -147,7 +147,7 @@ export default function Portfolio() {
                       <div className="space-y-3 text-sm">
                         {[
                           ['Source', prop.source, false],
-                          ['Motivation Score', `${prop.motivationScore} / 175`, true],
+                          ['Deal Score', prop.dealScore != null ? `${prop.dealScore} / 100` : '—', true],
                           ['Owner', prop.ownerName, false],
                           ['Entity', prop.ownerEntity || '—', false],
                           ['Added', prop.addedDate, false],
@@ -158,12 +158,6 @@ export default function Portfolio() {
                           </div>
                         ))}
                       </div>
-                      {prop.scoreExplanation && (
-                        <div className="mt-4 pt-4 border-t border-dark-border">
-                          <div className="text-dark-muted text-xs uppercase tracking-widest mb-2">Acquisition Thesis</div>
-                          <p className="text-dark-muted text-xs leading-relaxed italic">{prop.scoreExplanation}</p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
