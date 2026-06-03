@@ -70,7 +70,10 @@ export const GROUP_LABELS: Record<string, { label: string; max: number; color: s
 
 // ─── Score inputs / result types ─────────────────────────────────────────────
 
-export type DealScoreInputs = Record<string, number> & { dealType: DealType }
+export interface DealScoreInputs {
+  dealType: DealType
+  [key: string]: number | string
+}
 
 export interface DealScoreBreakdown {
   locationMarket: number    // 0-20
