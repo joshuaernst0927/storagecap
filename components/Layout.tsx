@@ -43,7 +43,6 @@ const navItems: NavItem[] = [
     label: 'Underwrite',
     dropdown: [
       { href: '/underwrite', label: 'Underwrite Deal' },
-      { href: '/score-deal', label: 'Score Deal' },
       { href: '/generate-loi', label: 'Generate LOI' },
     ],
   },

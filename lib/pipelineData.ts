@@ -131,10 +131,11 @@ export interface PipelineProperty {
   scoreExplanation?: string
   scoreHistory?: ScoreHistoryEntry[]
   lastScored?: string  // ISO timestamp
-  // Manual 100-pt deal score (set via /score-deal)
+  // Manual / AI 100-pt deal score
   dealScore?: number
   dealType?: 'value-add' | 'stabilized' | 'distressed'
   dealScoreBreakdown?: { locationMarket: number; priceValue: number; sellerMotivation: number; specific: number }
+  dealScoreInputs?: Record<string, string | number>
   dealScoredAt?: string
   stage: 'identified' | 'researching' | 'outreach' | 'conversation' | 'loi' | 'dd' | 'closed' | 'dead'
   currentStatus: DealStatus

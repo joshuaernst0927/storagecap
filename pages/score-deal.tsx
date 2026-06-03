@@ -1,9 +1,9 @@
 import Head from 'next/head'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import AuthGate from '@/components/AuthGate'
 import DealScoreBadge from '@/components/DealScoreBadge'
-import { saveProperty } from '@/lib/pipelineStore'
+import { saveProperty, loadSavedProperties } from '@/lib/pipelineStore'
 import type { PipelineProperty } from '@/lib/pipelineData'
 import {
   DealType, DealScoreInputs, DEAL_TYPE_LABELS,
@@ -108,7 +108,7 @@ function SectionCard({
 // ─── Score display ────────────────────────────────────────────────────────────
 
 function ScorePanel({
-  score, dealType, onSave, saving, saveError, saved,
+  score, dealType, onSave, saving, saveError, saved, isOverride,
 }: {
   score: ReturnType<typeof computeDealScore>
   dealType: DealType
@@ -116,6 +116,7 @@ function ScorePanel({
   saving: boolean
   saveError: string
   saved: boolean
+  isOverride?: boolean
 }) {
   const { total, breakdown, tier } = score
   const tierBg   = tier === 'HOT' ? 'bg-green-600' : tier === 'WARM' ? 'bg-amber-500' : 'bg-gray-500'
@@ -179,7 +180,7 @@ function ScorePanel({
           disabled={saving || saved}
           className="btn-gold w-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {saving ? 'Saving...' : saved ? 'Saved to Pipeline ✓' : 'Save to Pipeline'}
+          {saving ? 'Saving...' : saved ? 'Saved ✓' : isOverride ? 'Update Score' : 'Save to Pipeline'}
         </button>
       </div>
     </div>
@@ -199,6 +200,38 @@ function ScoreDealContent() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [existingPropertyId, setExistingPropertyId] = useState<string | null>(null)
+
+  // Pre-populate from ?id= query param (Override Score flow)
+  useEffect(() => {
+    if (!router.isReady) return
+    const id = router.query.id as string | undefined
+    if (!id) return
+    const found = loadSavedProperties().find(p => p.id === id)
+    if (!found) return
+
+    setExistingPropertyId(id)
+    setDealInfo({
+      facilityName: found.facilityName ?? '',
+      address: found.address ?? '',
+      city: found.city ?? '',
+      state: found.state ?? '',
+      unitCount: found.unitCount ? String(found.unitCount) : '',
+      askingPrice: found.askingPrice ? String(found.askingPrice) : '',
+      noi: found.noi ? String(found.noi) : '',
+      occupancy: found.occupancy ? String(found.occupancy) : '',
+    })
+
+    if (found.dealType) {
+      const dt = found.dealType as DealType
+      setDealType(dt)
+      if (found.dealScoreInputs) {
+        setInputs({ dealType: dt, ...found.dealScoreInputs } as DealScoreInputs)
+      } else {
+        setInputs(blankInputs(dt))
+      }
+    }
+  }, [router.isReady])
 
   const setDealTypeAndReset = (t: DealType) => {
     setDealType(t)
@@ -218,6 +251,31 @@ function ScoreDealContent() {
     setSaving(true)
     setSaveError('')
     try {
+      const scoreFields = {
+        dealScore: score.total,
+        dealType: dealType,
+        dealScoreBreakdown: score.breakdown,
+        dealScoreInputs: inputs as Record<string, string | number>,
+        dealScoredAt: new Date().toISOString(),
+      }
+
+      // Override mode: update existing pipeline property in place
+      if (existingPropertyId) {
+        const existing = loadSavedProperties().find(p => p.id === existingPropertyId)
+        if (existing) {
+          const updated: PipelineProperty = { ...existing, ...scoreFields }
+          saveProperty(updated)
+          fetch('/api/pipeline-ingest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify([updated]),
+          }).catch(() => {})
+          setSaved(true)
+          return
+        }
+      }
+
+      // New property (standalone scoring flow)
       const property: PipelineProperty = {
         id: `scored-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
         facilityName: dealInfo.facilityName || 'Scored Deal',
@@ -250,14 +308,9 @@ function ScoreDealContent() {
         priority: 'medium',
         source: 'broker',
         addedDate: new Date().toISOString().split('T')[0],
-        // Deal score
-        dealScore: score.total,
-        dealType: dealType,
-        dealScoreBreakdown: score.breakdown,
-        dealScoredAt: new Date().toISOString(),
+        ...scoreFields,
       }
 
-      // Save to localStorage (primary) and API (best-effort)
       saveProperty(property)
       fetch('/api/pipeline-ingest', {
         method: 'POST',
@@ -401,7 +454,7 @@ function ScoreDealContent() {
                   disabled={saving || saved}
                   className="btn-gold w-full disabled:opacity-50"
                 >
-                  {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save to Pipeline'}
+                  {saving ? 'Saving...' : saved ? 'Saved ✓' : existingPropertyId ? 'Update Score' : 'Save to Pipeline'}
                 </button>
               </div>
 
@@ -416,6 +469,7 @@ function ScoreDealContent() {
                 saving={saving}
                 saveError={saveError}
                 saved={saved}
+                isOverride={!!existingPropertyId}
               />
               {saved && (
                 <button

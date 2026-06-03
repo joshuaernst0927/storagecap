@@ -1950,6 +1950,13 @@ export default function Pipeline() {
                           <DealScoreBadge score={property.dealScore} dealType={property.dealType} />
                         </div>
                       )}
+                      <a
+                        href={`/score-deal?id=${property.id}`}
+                        onClick={e => e.stopPropagation()}
+                        className="block mt-1.5 text-[0.6rem] uppercase tracking-widest text-dark-muted hover:text-gold transition-colors"
+                      >
+                        {property.dealScore != null ? 'Override Score →' : 'Score Deal →'}
+                      </a>
                     </td>
                     <td className="pipeline-td max-w-[220px]">
                       <DistressTagRow signals={property.distressSignals} />

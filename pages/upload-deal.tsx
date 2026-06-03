@@ -5,6 +5,8 @@ import type { PipelineProperty, DistressSignals } from '@/lib/pipelineData'
 import { FileDropZone, type UploadFile } from '@/components/FileChips'
 import AuthGate from '@/components/AuthGate'
 import { saveProperty } from '@/lib/pipelineStore'
+import DealScoreBadge from '@/components/DealScoreBadge'
+import { computeDealScore, type DealScoreInputs } from '@/lib/dealScore'
 
 type FormState = {
   facilityName: string
@@ -68,6 +70,8 @@ export default function UploadDeal() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [extracted, setExtracted] = useState(false)
+  const [autoScoring, setAutoScoring] = useState(false)
+  const [autoScore, setAutoScore] = useState<{ inputs: DealScoreInputs; reasoning: string } | null>(null)
 
   const set = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }))
 
@@ -120,6 +124,31 @@ export default function UploadDeal() {
       })
       setHighlights(Array.isArray(data.highlights) ? data.highlights : [])
       setExtracted(true)
+
+      // Fire auto-scoring in background — non-blocking
+      setAutoScoring(true)
+      fetch('/api/auto-score-deal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          facilityName: data.facilityName,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          askingPrice: data.askingPrice,
+          noi: data.noi,
+          capRate: data.capRate != null ? (data.capRate * 100).toFixed(2) : undefined,
+          occupancy: data.occupancy,
+          unitCount: data.unitCount,
+          yearBuilt: data.yearBuilt,
+          sqft: data.sqft,
+          highlights: Array.isArray(data.highlights) ? data.highlights : [],
+        }),
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.inputs) setAutoScore({ inputs: d.inputs, reasoning: d.reasoning ?? '' }) })
+        .catch(() => {})
+        .finally(() => setAutoScoring(false))
     } catch (err) {
       setExtractError(String(err))
     } finally {
@@ -170,6 +199,16 @@ export default function UploadDeal() {
         property.notes = property.notes ? `${property.notes}\n${capNote}` : capNote
       }
 
+      // Attach AI deal score if available
+      if (autoScore) {
+        const scoreResult = computeDealScore(autoScore.inputs)
+        property.dealScore = scoreResult.total
+        property.dealType = autoScore.inputs.dealType as PipelineProperty['dealType']
+        property.dealScoreBreakdown = scoreResult.breakdown
+        property.dealScoreInputs = autoScore.inputs as Record<string, string | number>
+        property.dealScoredAt = new Date().toISOString()
+      }
+
       // Always save to localStorage first — this is the primary source for /pipeline.
       saveProperty(property)
 
@@ -194,6 +233,8 @@ export default function UploadDeal() {
     setForm(EMPTY_FORM)
     setHighlights([])
     setExtractError('')
+    setAutoScore(null)
+    setAutoScoring(false)
   }
 
   return (
@@ -413,6 +454,29 @@ export default function UploadDeal() {
                 {saveError && (
                   <div className="p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">
                     {saveError}
+                  </div>
+                )}
+
+                {(autoScoring || autoScore) && (
+                  <div className="flex items-center gap-3 py-3 border-t border-dark-border">
+                    <span className="text-xs uppercase tracking-widest text-dark-muted flex-shrink-0">AI Score</span>
+                    {autoScoring ? (
+                      <div className="flex items-center gap-2 text-xs text-dark-muted">
+                        <div className="w-3 h-3 border border-gold border-t-transparent rounded-full animate-spin" />
+                        Analyzing deal...
+                      </div>
+                    ) : autoScore && (
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <DealScoreBadge
+                          score={computeDealScore(autoScore.inputs).total}
+                          dealType={autoScore.inputs.dealType as 'value-add' | 'stabilized' | 'distressed'}
+                          size="sm"
+                        />
+                        {autoScore.reasoning && (
+                          <p className="text-xs text-dark-muted leading-relaxed">{autoScore.reasoning}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

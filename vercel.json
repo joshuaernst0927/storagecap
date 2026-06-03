@@ -14,6 +14,9 @@
     },
     "pages/api/generate-loi.ts": {
       "maxDuration": 60
+    },
+    "pages/api/auto-score-deal.ts": {
+      "maxDuration": 30
     }
   }
 }
