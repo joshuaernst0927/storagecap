@@ -892,25 +892,30 @@ function LeadsContent() {
     let count = 0
     for (let i = 0; i < toEnrich.length; i++) {
       if (i > 0) await new Promise(r => setTimeout(r, 14000))
+      const lead = toEnrich[i]
       try {
         const res = await fetch('/api/enrich-leads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ leadId: toEnrich[i].id }),
+          body: JSON.stringify({ leadId: lead.id, sourceUrl: lead.sourceUrl }),
         })
         const data = await res.json()
-        if (data.enriched === 1 && data.lead) {
-          upsertLeads([data.lead])
+        if (data.enriched === 1 && data.contactInfo) {
+          const updated: Lead = {
+            ...lead,
+            contactInfo: data.contactInfo,
+            notes: data.attyNote
+              ? `${lead.notes ? lead.notes + ' · ' : ''}${data.attyNote}`
+              : lead.notes,
+            lastUpdated: new Date().toISOString(),
+          }
+          upsertLeads([updated])
           refresh()
           count++
         }
       } catch {}
     }
- setEnrichResult(`Enriched ${count} of ${toEnrich.length} leads`)
-    // Re-fetch from server to sync enriched data
-    const serverRes = await fetch('/api/run-leads?email=0', { method: 'POST' })
-    const serverData = await serverRes.json()
-    if (serverData.leads) { upsertLeads(serverData.leads); refresh() }
+    setEnrichResult(`Enriched ${count} of ${toEnrich.length} leads`)
     setEnrichingAll(false)
   }
 

@@ -8,33 +8,46 @@ const REPO_OWNER = 'joshuaernst0927'
 const REPO_NAME = 'storagecap'
 const FILE_PATH = 'public/data/leads.json'
 
-async function getLeadsFromGitHub(): Promise<{ leads: Lead[], sha: string }> {
-  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
-    headers: {
-      Authorization: `Bearer ${GITHUB_TOKEN}`,
-      Accept: 'application/vnd.github.v3+json',
-    },
-  })
-  const data = await res.json()
-  const leads = JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8'))
-  return { leads, sha: data.sha }
-}
-
-async function writeLeadsToGitHub(leads: Lead[], sha: string): Promise<void> {
-  const content = Buffer.from(JSON.stringify(leads, null, 2)).toString('base64')
-  await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${GITHUB_TOKEN}`,
-      Accept: 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: 'Enrich lead contact info',
-      content,
-      sha,
-    }),
-  })
+// Best-effort: update leads.json in GitHub repo so scraper picks up enriched data.
+// Non-fatal — enrichment still succeeds even if this write fails.
+async function tryUpdateGitHub(leadId: string, contactInfo: ContactInfo, attyNote?: string): Promise<void> {
+  if (!GITHUB_TOKEN) return
+  try {
+    const getRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' },
+    })
+    if (!getRes.ok) return
+    const fileData = await getRes.json()
+    const leads: Lead[] = JSON.parse(Buffer.from(fileData.content, 'base64').toString('utf-8'))
+    const idx = leads.findIndex(l => l.id === leadId)
+    if (idx < 0) return
+    leads[idx] = {
+      ...leads[idx],
+      contactInfo,
+      notes: attyNote
+        ? (() => {
+            const base = (leads[idx].notes || '').replace(/\s*·\s*(?:Attorney|Trustee)[^]*$/i, '').trim()
+            return base ? `${base} · ${attyNote}` : attyNote
+          })()
+        : leads[idx].notes,
+      lastUpdated: new Date().toISOString(),
+    }
+    await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `Enrich contact for lead ${leadId}`,
+        content: Buffer.from(JSON.stringify(leads, null, 2)).toString('base64'),
+        sha: fileData.sha,
+      }),
+    })
+  } catch (e) {
+    console.warn('GitHub write failed (non-fatal):', e)
+  }
 }
 
 function extractDocketId(url: string): string | null {
@@ -78,10 +91,7 @@ async function lookupEmailViaApollo(name: string, organization: string): Promise
   try {
     const res = await fetch('https://api.apollo.io/v1/people/match', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-      },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
       body: JSON.stringify({
         api_key: APOLLO_API_KEY,
         name,
@@ -97,16 +107,8 @@ async function lookupEmailViaApollo(name: string, organization: string): Promise
   }
 }
 
-function parseAttyNameAndFirm(notes: string): { name: string; firm: string } | null {
-  const m = notes.match(/(?:Attorney|Trustee Atty):\s*([^·\n]+?)(?:\s*·\s*[\d\-]+)?\s*·\s*([^·\n]+)/)
-  if (m) return { name: m[1].trim(), firm: m[2].trim() }
-  const m2 = notes.match(/(?:Attorney|Trustee Atty):\s*([^·\n]+)/)
-  if (m2) return { name: m2[1].trim(), firm: '' }
-  return null
-}
-
-async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: ContactInfo; attyNote?: string } | null> {
-  const docketId = extractDocketId(lead.sourceUrl || '')
+async function enrichFromCourtListener(sourceUrl: string): Promise<{ contactInfo: ContactInfo; attyNote?: string } | null> {
+  const docketId = extractDocketId(sourceUrl)
   if (!docketId) return null
 
   const data = await clFetch(
@@ -144,6 +146,7 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
     }
   }
 
+  // Fallback: check each trustee's extra_info and then their attorney
   if (!phone) {
     const trustees = parties.filter(p =>
       p.party_types?.some((pt: any) => /trustee/i.test(pt.name || ''))
@@ -174,21 +177,6 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
     }
   }
 
-  if (!phone) {
-    const usTrustee = parties.find(p =>
-      p.party_types?.some((pt: any) => /u\.?s\.?\s*trustee/i.test(pt.name || ''))
-    )
-    if (usTrustee) {
-      const tInfo = usTrustee?.party_types?.find((pt: any) => /trustee/i.test(pt.name))?.extra_info || ''
-      phone = parsePhone(tInfo)
-      if (phone) {
-        attyName = usTrustee.name
-        attyNote = `US Trustee: ${usTrustee.name} · ${phone}`
-      }
-    }
-  }
-
-  // Try Apollo for email if we have attorney name
   if (!email && attyName) {
     email = await lookupEmailViaApollo(attyName, attyFirm || '')
   }
@@ -207,45 +195,30 @@ async function enrichFromCourtListener(lead: Lead): Promise<{ contactInfo: Conta
   }
 }
 
+// ─── Handler ──────────────────────────────────────────────────────────────────
+// Client sends { leadId, sourceUrl }. We look up CL and return enriched
+// contactInfo directly — no filesystem reads/writes needed on Vercel.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { leadId } = req.body as { leadId?: string }
-  const { leads, sha } = await getLeadsFromGitHub()
+  const { leadId, sourceUrl } = req.body as { leadId?: string; sourceUrl?: string }
 
-  const lead = leadId
-    ? leads.find(l => l.id === leadId)
-    : leads.find(l =>
-        l.source === 'courtlistener' &&
-        !l.contactInfo?.mailingAddress && !l.contactInfo?.phone
-      )
+  if (!sourceUrl) return res.status(400).json({ error: 'sourceUrl required' })
 
-  if (!lead) return res.status(200).json({ enriched: 0, message: 'No eligible lead found' })
+  const docketId = extractDocketId(sourceUrl)
+  if (!docketId) return res.status(200).json({ enriched: 0, message: 'Could not extract docket ID from sourceUrl' })
 
   try {
-    const result = await enrichFromCourtListener(lead)
+    const result = await enrichFromCourtListener(sourceUrl)
 
-    if (!result) return res.status(200).json({ enriched: 0, message: 'No contact data in docket' })
+    if (!result) return res.status(200).json({ enriched: 0, message: 'No contact data found in docket' })
 
-    const idx = leads.findIndex(l => l.id === lead.id)
-    if (idx < 0) return res.status(200).json({ enriched: 0 })
-
-    const existing = leads[idx]
-    leads[idx] = {
-      ...existing,
-      contactInfo: result.contactInfo,
-   notes: result.attyNote
-        ? (() => {
-            const base = (existing.notes || '').replace(/\s*·\s*(?:Attorney|Trustee)[^]*$/i, '').trim()
-            return base ? `${base} · ${result.attyNote}` : result.attyNote
-          })()
-        : existing.notes,
-      lastUpdated: new Date().toISOString(),
+    // Best-effort GitHub update so leads.json stays fresh for the scraper
+    if (leadId) {
+      tryUpdateGitHub(leadId, result.contactInfo, result.attyNote).catch(() => {})
     }
 
-    await writeLeadsToGitHub(leads, sha)
-
-    return res.status(200).json({ enriched: 1, lead: leads[idx] })
+    return res.status(200).json({ enriched: 1, contactInfo: result.contactInfo, attyNote: result.attyNote })
   } catch (err) {
     console.error('Enrich error:', err)
     return res.status(500).json({ error: 'Enrichment failed', detail: String(err) })
