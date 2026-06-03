@@ -73,6 +73,10 @@ export interface Lead {
   emailSubject?: string
   emailBody?: string
   emailHistory?: EmailRecord[]
+  // Manual 100-pt deal score (set via /score-deal)
+  dealScore?: number
+  dealType?: 'value-add' | 'stabilized' | 'distressed'
+  dealScoredAt?: string
 }
 
 export const SOURCE_LABELS: Record<LeadSource, string> = {

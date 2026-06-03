@@ -6,6 +6,7 @@ import {
   SOURCE_LABELS, STATUS_LABELS, getLeadTier, generateLeadId, scoreLead,
 } from '@/lib/leadsData'
 import { loadLeads, upsertLeads, updateLeadStatus, deleteLead } from '@/lib/leadsStore'
+import DealScoreBadge from '@/components/DealScoreBadge'
 
 // ─── Small badges / chips ──────────────────────────────────────────────────────
 
@@ -440,6 +441,7 @@ function LeadDetailModal({
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <ScoreBadge score={lead.score} />
+              {lead.dealScore != null && <DealScoreBadge score={lead.dealScore} dealType={lead.dealType} />}
               <StatusBadge status={lead.status} />
               <SourceChip source={lead.source} />
             </div>
@@ -1176,7 +1178,12 @@ function LeadsContent() {
                         )}
                       </td>
                       <td className="px-4 py-3"><SourceChip source={lead.source} /></td>
-                      <td className="px-4 py-3"><ScoreBadge score={lead.score} /></td>
+                      <td className="px-4 py-3">
+                        <ScoreBadge score={lead.score} />
+                        {lead.dealScore != null && (
+                          <div className="mt-1"><DealScoreBadge score={lead.dealScore} dealType={lead.dealType} /></div>
+                        )}
+                      </td>
                       <td className="px-4 py-3"><StatusBadge status={lead.status} /></td>
                       <td className="px-4 py-3 text-dark-muted text-xs whitespace-nowrap">
                         {new Date(lead.foundAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

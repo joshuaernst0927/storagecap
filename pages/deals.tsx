@@ -2,6 +2,8 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
 import AuthGate from '@/components/AuthGate'
+import DealScoreBadge from '@/components/DealScoreBadge'
+import type { DealType } from '@/lib/dealScore'
 
 interface Deal {
   id: string
@@ -22,6 +24,8 @@ interface Deal {
   status: 'available' | 'under-review' | 'pending'
   addedDate: string
   pricePerUnit: number
+  dealScore?: number
+  dealType?: DealType
 }
 
 const deals: Deal[] = []
@@ -165,9 +169,10 @@ export default function Deals() {
                             <h2 className="font-serif text-3xl font-light text-[#1B2B5E] mb-1">{deal.name}</h2>
                             <p className="text-dark-muted text-sm">{deal.address}, {deal.city}, {deal.state} {deal.zipCode}</p>
                           </div>
-                          <span className={`tag border flex-shrink-0 ${statusInfo.cls}`}>
-                            {statusInfo.label}
-                          </span>
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <span className={`tag border ${statusInfo.cls}`}>{statusInfo.label}</span>
+                            {deal.dealScore != null && <DealScoreBadge score={deal.dealScore} dealType={deal.dealType} size="sm" />}
+                          </div>
                         </div>
 
                         {/* Metrics */}

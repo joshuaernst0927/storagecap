@@ -125,12 +125,17 @@ export interface PipelineProperty {
   climateConversionPossible?: boolean
   exitStrategy?: 'sell' | 'refi' | 'hold'
   projectedExitCapRate?: number
-  // Score
+  // Automated motivation score
   motivationScore: number
   scoreBreakdown?: ScoreBreakdown
   scoreExplanation?: string
   scoreHistory?: ScoreHistoryEntry[]
   lastScored?: string  // ISO timestamp
+  // Manual 100-pt deal score (set via /score-deal)
+  dealScore?: number
+  dealType?: 'value-add' | 'stabilized' | 'distressed'
+  dealScoreBreakdown?: { locationMarket: number; priceValue: number; sellerMotivation: number; specific: number }
+  dealScoredAt?: string
   stage: 'identified' | 'researching' | 'outreach' | 'conversation' | 'loi' | 'dd' | 'closed' | 'dead'
   currentStatus: DealStatus
   priority: 'high' | 'medium' | 'low'

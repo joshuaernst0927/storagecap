@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import type { PipelineProperty } from '@/lib/pipelineData'
 import { FileDropZone, type UploadFile } from '@/components/FileChips'
 import AuthGate from '@/components/AuthGate'
+import DealScoreBadge from '@/components/DealScoreBadge'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -398,10 +399,18 @@ export default function Underwrite() {
                           <option value="">— Choose a deal —</option>
                           {pipelineDeals.map(d => (
                             <option key={d.id} value={d.id}>
-                              {d.facilityName} · {d.city}, {d.state} · Score {d.motivationScore}
+                              {d.facilityName} · {d.city}, {d.state}{d.dealScore != null ? ` · Deal Score ${d.dealScore}` : ` · Motivation ${d.motivationScore}`}
                             </option>
                           ))}
                         </select>
+                        {selectedDealId && (() => {
+                          const d = pipelineDeals.find(x => x.id === selectedDealId)
+                          return d?.dealScore != null ? (
+                            <div className="mt-1.5">
+                              <DealScoreBadge score={d.dealScore} dealType={d.dealType} size="sm" />
+                            </div>
+                          ) : null
+                        })()}
                       </div>
                       <button onClick={handleLoadDeal} disabled={!selectedDealId} className="btn-gold disabled:opacity-60 mb-0.5">
                         Load Deal

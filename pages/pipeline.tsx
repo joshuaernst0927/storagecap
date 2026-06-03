@@ -22,6 +22,7 @@ import {
 import { scoreProperty } from '@/lib/scorer'
 import { loadSavedProperties, saveProperty } from '@/lib/pipelineStore'
 import AuthGate from '@/components/AuthGate'
+import DealScoreBadge from '@/components/DealScoreBadge'
 
 // ─── Scoring helpers ─────────────────────────────────────────────────────────
 
@@ -1944,6 +1945,11 @@ export default function Pipeline() {
                         isFinal={property.stage === 'closed' || property.stage === 'dead'}
                         onRescore={() => rescore(property.id)}
                       />
+                      {property.dealScore != null && (
+                        <div className="mt-1.5">
+                          <DealScoreBadge score={property.dealScore} dealType={property.dealType} />
+                        </div>
+                      )}
                     </td>
                     <td className="pipeline-td max-w-[220px]">
                       <DistressTagRow signals={property.distressSignals} />
