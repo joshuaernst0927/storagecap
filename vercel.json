@@ -11,6 +11,9 @@
     },
     "pages/api/enrich-leads.ts": {
       "maxDuration": 30
+    },
+    "pages/api/generate-loi.ts": {
+      "maxDuration": 60
     }
   }
 }

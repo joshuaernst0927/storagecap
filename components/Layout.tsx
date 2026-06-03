@@ -39,7 +39,13 @@ const navItems: NavItem[] = [
       { href: '/investor-deal-access', label: 'Deal Access Request' },
     ],
   },
-  { href: '/underwrite', label: 'Underwrite' },
+  {
+    label: 'Underwrite',
+    dropdown: [
+      { href: '/underwrite', label: 'Underwrite Deal' },
+      { href: '/generate-loi', label: 'Generate LOI' },
+    ],
+  },
 ]
 
 function DropdownMenu({ item }: { item: Extract<NavItem, { dropdown: unknown }> }) {
