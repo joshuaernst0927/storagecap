@@ -75,33 +75,88 @@ export default function UploadDeal() {
 
   const set = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }))
 
+  // Vercel enforces a hard 4.5 MB platform limit on serverless request bodies.
+  // 3 MB binary → ~4 MB base64 → stays under the ceiling with JSON overhead.
+  const MAX_FILE_BINARY = 3_000_000      // bytes — individual file cap before base64
+  const MAX_BATCH_BASE64 = 3_500_000     // base64 chars — per-request budget
+
+  async function extractPayload(filePayloads: { fileName: string; mimeType: string; data: string }[]) {
+    const res = await fetch('/api/upload-deal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: filePayloads }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error ?? `HTTP ${res.status}`)
+    }
+    return res.json()
+  }
+
+  type ExtractionResult = {
+    facilityName?: string | null; address?: string | null; city?: string | null
+    state?: string | null; zipCode?: string | null; askingPrice?: number | null
+    unitCount?: number | null; capRate?: number | null; noi?: number | null
+    occupancy?: number | null; yearBuilt?: number | null; sqft?: number | null
+    highlights?: string[] | null
+  }
+
+  // Merge multiple partial extractions — first non-null value wins per scalar field.
+  function mergeExtractionResults(results: ExtractionResult[]): ExtractionResult {
+    if (results.length === 1) return results[0]
+    const scalars: (keyof ExtractionResult)[] = ['facilityName','address','city','state','zipCode','askingPrice','unitCount','capRate','noi','occupancy','yearBuilt','sqft']
+    const merged: ExtractionResult = {}
+    for (const f of scalars) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(merged as any)[f] = results.map(r => r[f]).find(v => v != null) ?? null
+    }
+    const allHighlights = results.flatMap(r => Array.isArray(r.highlights) ? r.highlights as string[] : [])
+    merged.highlights = Array.from(new Set(allHighlights)).slice(0, 5)
+    return merged
+  }
+
   async function handleExtract() {
     if (files.length === 0) return
     setExtracting(true)
     setExtractError('')
     try {
+      // Read files, capping each at MAX_FILE_BINARY bytes before base64 encoding.
+      // For PDFs, first 3 MB covers the front matter and first pages where financial
+      // data appears; truncated PDFs may still parse partially in Claude's doc pipeline.
       const filePayloads = await Promise.all(
         files.map(async ({ file, mime }) => {
+          const source = file.size > MAX_FILE_BINARY ? file.slice(0, MAX_FILE_BINARY) : file
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onload = () => resolve((reader.result as string).split(',')[1])
             reader.onerror = reject
-            reader.readAsDataURL(file)
+            reader.readAsDataURL(source)
           })
           return { fileName: file.name, mimeType: mime, data: base64 }
         })
       )
 
-      const res = await fetch('/api/upload-deal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: filePayloads }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error ?? `HTTP ${res.status}`)
+      // Batch files into requests so each stays under MAX_BATCH_BASE64.
+      const batches: (typeof filePayloads)[] = []
+      let batch: typeof filePayloads = []
+      let batchSize = 0
+      for (const fp of filePayloads) {
+        if (batch.length > 0 && batchSize + fp.data.length > MAX_BATCH_BASE64) {
+          batches.push(batch)
+          batch = [fp]
+          batchSize = fp.data.length
+        } else {
+          batch.push(fp)
+          batchSize += fp.data.length
+        }
       }
-      const data = await res.json()
+      if (batch.length > 0) batches.push(batch)
+
+      const results: ExtractionResult[] = []
+      for (const b of batches) {
+        results.push(await extractPayload(b) as ExtractionResult)
+      }
+      const data = mergeExtractionResults(results)
 
       setForm({
         facilityName: data.facilityName ?? '',
