@@ -60,6 +60,36 @@ function emptyDistress(): DistressSignals {
   }
 }
 
+// Extracts the text layer of a PDF entirely in the browser.
+// A 7–10 MB PDF typically yields 50–300 KB of text — well under Vercel's 4.5 MB limit.
+async function extractPdfTextClient(file: File): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfjs: any = await import('pdfjs-dist')
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
+  const buf = await file.arrayBuffer()
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise
+  const pages: string[] = []
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i)
+    const tc = await page.getTextContent()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pages.push(tc.items.map((it: any) => it.str ?? '').join(' '))
+  }
+  return pages.join('\n\n')
+}
+
+// Safe base64 encode for potentially unicode text (btoa rejects non-Latin1 chars)
+function textToBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text)
+  let binary = ''
+  const chunk = 8192
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...Array.from(bytes.subarray(i, i + chunk)))
+  }
+  return btoa(binary)
+}
+
 export default function UploadDeal() {
   const router = useRouter()
   const [files, setFiles] = useState<UploadFile[]>([])
@@ -75,13 +105,11 @@ export default function UploadDeal() {
 
   const set = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  // Vercel's hard request-body limit is 4.5 MB. A file of N bytes encodes to ~1.37×N
-  // bytes of base64, plus ~200 bytes of JSON envelope per file.
-  // 3 MB binary → ~4.1 MB base64 → safe under 4.5 MB with overhead.
-  // We CANNOT truncate structured files (PDFs, XLSX, etc.) — partial bytes are
-  // invalid and the Anthropic API rejects them. Instead we check sizes up-front and
-  // explain clearly what the user needs to do.
-  const MAX_SAFE_FILE = 3_000_000       // bytes — hard limit per individual file
+  // Vercel enforces a hard 4.5 MB platform limit on incoming request bodies.
+  // PDFs > 3 MB are text-extracted in-browser (extractPdfTextClient) so the payload
+  // stays small. Non-PDF files must be < 3 MB (sent as raw binary base64).
+  const MAX_BINARY_FILE = 3_000_000     // bytes — images, spreadsheets, Word docs
+  const MAX_PDF_FILE = 10_000_000       // bytes — PDFs (text extracted client-side)
   const MAX_BATCH_BASE64 = 3_400_000    // base64 chars — per-request budget
 
   async function extractPayload(filePayloads: { fileName: string; mimeType: string; data: string }[]) {
@@ -125,20 +153,34 @@ export default function UploadDeal() {
     setExtracting(true)
     setExtractError('')
     try {
-      // Pre-flight size check: structured files (PDF, XLSX, DOCX) cannot be
-      // truncated — partial bytes are invalid and the Anthropic API rejects them.
-      // Reject oversized files up-front with a helpful message.
-      const oversized = files.filter(({ file }) => file.size > MAX_SAFE_FILE)
+      // Per-file size pre-flight: PDFs up to 10 MB OK (text extracted in-browser);
+      // other file types (images, xlsx, docx) must be under 3 MB.
+      const oversized = files.filter(({ file, mime }) => {
+        const limit = mime === 'application/pdf' ? MAX_PDF_FILE : MAX_BINARY_FILE
+        return file.size > limit
+      })
       if (oversized.length > 0) {
-        const names = oversized.map(f => `${f.file.name} (${(f.file.size / 1_000_000).toFixed(1)} MB)`).join(', ')
+        const names = oversized.map(({ file }) => `${file.name} (${(file.size / 1_000_000).toFixed(1)} MB)`).join(', ')
         throw new Error(
-          `${names} ${oversized.length === 1 ? 'is' : 'are'} too large (limit 3 MB per file). ` +
-          `Try compressing the PDF, removing image-heavy pages, or splitting it into smaller documents.`
+          `${names} ${oversized.length === 1 ? 'is' : 'are'} too large. ` +
+          `PDFs support up to 10 MB; images and spreadsheets support up to 3 MB.`
         )
       }
 
       const filePayloads = await Promise.all(
         files.map(async ({ file, mime }) => {
+          // Large PDFs: extract text in-browser so the JSON body stays under Vercel's 4.5 MB limit.
+          // Sending the raw binary of a 7+ MB PDF would be ~10 MB base64 — rejected before the handler runs.
+          if (mime === 'application/pdf' && file.size > MAX_BINARY_FILE) {
+            const text = await extractPdfTextClient(file)
+            if (text.trim().length < 200) {
+              throw new Error(
+                `${file.name} appears to be a scanned or image-only PDF with no text layer. ` +
+                `Please compress it to under 3 MB or use a text-searchable PDF.`
+              )
+            }
+            return { fileName: file.name, mimeType: 'text/plain', data: textToBase64(text.slice(0, 80_000)) }
+          }
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onload = () => resolve((reader.result as string).split(',')[1])

@@ -45,6 +45,12 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
     ]
   }
 
+  if (mimeType === 'text/plain') {
+    // Text was extracted from a large PDF client-side to stay under Vercel's 4.5 MB request limit
+    const text = Buffer.from(data, 'base64').toString('utf-8')
+    return [{ type: 'text', text: `--- File: ${label} (text extracted from PDF) ---\n\n${text}` }]
+  }
+
   let text = ''
   if (mimeType.includes('spreadsheetml') || fileName?.toLowerCase().endsWith('.xlsx')) {
     const xlsx = await import('xlsx')
