@@ -1,5 +1,26 @@
 [
   {
+    "id": "lead_1780489904906_5v1zd",
+    "facilityName": "Lowe, Chapter 7 Trustee v. Triple Temp Cold Storage, LLC",
+    "address": "Case No. 26-01002",
+    "city": "San Antonio",
+    "state": "TX",
+    "ownerName": "Lowe, Chapter 7 Trustee",
+    "source": "courtlistener",
+    "sourceUrl": "https://www.courtlistener.com/docket/72121473/lowe-chapter-7-trustee-v-triple-temp-cold-storage-llc/",
+    "distressSignals": {
+      "bankruptcy": true,
+      "bankruptcyChapter": "Bankruptcy",
+      "bankruptcyDate": "2026-01-08",
+      "bankruptcyDocket": "26-01002"
+    },
+    "score": 18,
+    "status": "new",
+    "foundAt": "2026-06-03T12:31:44.906Z",
+    "lastUpdated": "2026-06-03T12:31:44.906Z",
+    "notes": "Bankruptcy bankruptcy filing · Filed: Jan 8, 2026 · Court: TXWB"
+  },
+  {
     "id": "lead_1780412247573_q8mxd",
     "facilityName": "City Park Storage Ventures, LP",
     "address": "Case No. 25-35121",
