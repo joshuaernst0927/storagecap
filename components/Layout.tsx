@@ -20,10 +20,10 @@ type NavItem =
   | { label: string; dropdown: { href: string; label: string }[]; href?: never; dot?: never }
 
 const navItems: NavItem[] = [
-  { href: '/', label: 'Home' },
   {
-    label: 'About Us',
+    label: 'Home',
     dropdown: [
+      { href: '/', label: 'Home' },
       { href: '/about', label: 'About YEM' },
       { href: '/acquisitions', label: 'Our Criteria' },
     ],
