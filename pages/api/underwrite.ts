@@ -201,6 +201,55 @@ const payload = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== n
       return res.status(500).json({ error: 'Model run failed', detail: String(err) })
     }
   }
+// ── Download: return populated Excel file ────────────────────────────────
+  if (action === 'download') {
+    const { inputs } = req.body as { inputs: UWData }
+    if (!inputs) return res.status(400).json({ error: 'Missing inputs' })
 
+    try {
+      const raw: Record<string, unknown> = {
+        purchase_price:       inputs.purchasePrice,
+        closing_costs_pct:    inputs.closingCostsPct,
+        initial_repairs:      inputs.initialRepairs,
+        acquisition_fee_pct:  inputs.acquisitionFeePct,
+        start_occupancy:      inputs.startOccupancy,
+        stabilized_occupancy: inputs.stabilizedOccupancy,
+        months_to_stabilize:  inputs.monthsToStabilization,
+        rent_growth:          inputs.annualRentGrowth,
+        initial_ltv:          inputs.initialLTV,
+        initial_rate:         inputs.initialRate,
+        refi_ltv:             inputs.refiLTV,
+        refi_rate:            inputs.refiRate,
+        exit_cap_rate:        inputs.exitCapRate,
+        exit_month:           inputs.exitMonth,
+        unlevered:            'No',
+      }
+      const payload = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== null && v !== undefined))
+
+      const doRes = await fetch(`${DO_API}/download-model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!doRes.ok) {
+        const err = await doRes.text()
+        throw new Error(`DO API error ${doRes.status}: ${err}`)
+      }
+
+      const buffer = Buffer.from(await doRes.arrayBuffer())
+      const safeName = (inputs.propertyName as string || inputs.address as string || 'underwrite')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .slice(0, 60)
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename="${safeName}_UW.xlsx"`)
+      return res.end(buffer)
+    } catch (err) {
+      console.error('underwrite download error:', err)
+      return res.status(500).json({ error: 'Download failed', detail: String(err) })
+    }
+  }
   return res.status(400).json({ error: 'Unknown action. Use "extract" or "run".' })
 }
