@@ -1,293 +1,336 @@
-import Head from 'next/head'
+import { ReactNode, useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
+import { isAuthenticated, clearAuth } from '@/lib/auth'
+import { ChangePasswordForm } from '@/components/AuthGate'
 
-const stats = [
-  { value: '$350M+', label: 'Underwritten' },
-  { value: '75+', label: 'Transactions' },
-  { value: '5+', label: 'Years Storage Focus' },
-  { value: '15–20%', label: 'Target IRR' },
+const tickerItems = [
+  '8 Properties in Pipeline',
+  '3 High-Motivation Targets',
+  'Avg Motivation Score: 72',
+  '6 Markets Tracked',
+  '1 Active Conversation',
+  'Sun Belt Focus',
+  'Off-Market Acquisitions Only',
+  '15–20% Target IRR',
 ]
 
-const process = [
+type NavItem =
+  | { href: string; label: string; dot?: boolean; dropdown?: never }
+  | { label: string; dropdown: { href: string; label: string }[]; href?: never; dot?: never }
+
+const navItems: NavItem[] = [
+  { href: '/about', label: 'About' },
+  { href: '/leads', label: 'Leads', dot: true },
   {
-    num: '01',
-    title: 'Source',
-    body: 'We screen county records, tax rolls, code enforcement databases, and court filings to surface motivated sellers before properties ever reach the market.',
+    label: 'Acquisitions',
+    dropdown: [
+      { href: '/acquisitions', label: 'Our Criteria' },
+      { href: '/submit-deal', label: 'Sell Your Facility' },
+      { href: '/upload-deal', label: 'Import Deal' },
+    ],
+  },
+  { href: '/pipeline', label: 'Pipeline', dot: true },
+  { href: '/deals', label: 'Deals' },
+  { href: '/portfolio', label: 'Portfolio' },
+  {
+    label: 'Investors',
+    dropdown: [
+      { href: '/invest', label: 'Invest With Us' },
+      { href: '/investor-deal-access', label: 'Deal Access Request' },
+    ],
   },
   {
-    num: '02',
-    title: 'Score',
-    body: 'Our 100-point distress model ranks every property by owner motivation — tax delinquency, fire code violations, occupancy trends, ownership patterns.',
-  },
-  {
-    num: '03',
-    title: 'Contact',
-    body: 'AI-personalized outreach letters reach owners at the right moment. We build relationships months before any sale becomes official.',
-  },
-  {
-    num: '04',
-    title: 'Underwrite',
-    body: 'Institutional-grade financial modeling, market analysis, and deal structuring — every acquisition is underwritten to the same exacting standard.',
-  },
-  {
-    num: '05',
-    title: 'Close',
-    body: 'We move in 5 days and close in 30–45. Direct principal-to-owner transactions with no broker middlemen and no auction pressure.',
+    label: 'Underwrite',
+    dropdown: [
+      { href: '/underwrite', label: 'Underwrite Deal' },
+      { href: '/generate-loi', label: 'Generate LOI' },
+    ],
   },
 ]
 
-const markets = [
-  { state: 'TX', cities: 'Dallas · Lubbock · San Antonio' },
-  { state: 'GA', cities: 'Atlanta · Macon · Savannah' },
-  { state: 'SC', cities: 'Columbia · Greenville · Charleston' },
-  { state: 'TN', cities: 'Nashville · Chattanooga · Memphis' },
-  { state: 'AZ', cities: 'Phoenix · Tucson · Mesa' },
-  { state: 'FL', cities: 'Tampa · Jacksonville · Pensacola' },
-  { state: 'AL', cities: 'Huntsville · Birmingham · Montgomery' },
-  { state: 'MS', cities: 'Jackson · Biloxi · Hattiesburg' },
-]
+function DropdownMenu({ item }: { item: Extract<NavItem, { dropdown: unknown }> }) {
+  const router = useRouter()
+  const isActive = item.dropdown.some(d => router.pathname === d.href)
 
-const scoreFactors = [
-  { name: 'Tax Delinquency', pts: '+25 pts', desc: 'Strongest distress indicator — owner unable or unwilling to pay property taxes' },
-  { name: 'Lis Pendens', pts: '+20 pts', desc: 'Active litigation against the property signals financial distress or ownership dispute' },
-  { name: 'Fire Code Violations', pts: '+15 pts', desc: 'Unresolved violations signal deferred maintenance and disengaged ownership' },
-  { name: 'Declining Occupancy', pts: '+10 pts', desc: 'Falling occupancy over 12 months without intervention signals operational neglect' },
-  { name: 'Out-of-State Owner', pts: '+10 pts', desc: 'Absentee ownership correlates with reduced operational attention and exit readiness' },
-  { name: 'Owner Age 65+', pts: '+10 pts', desc: 'Retirement-age owners show elevated disposition intent and estate planning needs' },
-]
-
-export default function Home() {
   return (
-    <>
-      <Head>
-        <title>YEM Acquisitions — Self-Storage Investment & Acquisition Platform</title>
-        <meta name="description" content="We acquire and operate self-storage facilities in growth and supply-constrained markets across the United States. Disciplined underwriting, operational excellence, long-term value." />
-      </Head>
+    <div className="relative group">
+      <button
+        className="flex items-center gap-1 select-none font-sans uppercase tracking-widest transition-colors duration-200"
+        style={{
+          fontSize: '0.72rem',
+          letterSpacing: '0.1em',
+          color: isActive ? '#c9a84c' : '#b0aa9f',
+          fontWeight: isActive ? 600 : 400,
+        }}
+      >
+        {item.label}
+        <svg
+          className="w-2.5 h-2.5 opacity-50 transition-transform duration-150 group-hover:rotate-180 mt-px"
+          fill="none" viewBox="0 0 10 6" stroke="currentColor" strokeWidth="1.5"
+        >
+          <path d="M1 1l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
 
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <section style={{ backgroundColor: '#1a1a1a', minHeight: '92vh' }} className="relative flex flex-col justify-center">
-        <div className="relative z-10 mx-auto w-full px-6 lg:px-12 py-24" style={{ maxWidth: '1100px' }}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div
+        className="absolute top-[calc(100%+12px)] left-1/2 -translate-x-1/2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-150 z-50"
+        style={{
+          background: '#242424',
+          border: '1px solid #3a3a3a',
+          minWidth: '190px',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+        }}
+      >
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-2 overflow-hidden">
+          <div style={{ width: '12px', height: '12px', background: '#242424', border: '1px solid #3a3a3a', transform: 'rotate(45deg) translateY(6px)', margin: '0 auto' }} />
+        </div>
+        {item.dropdown.map((d, i) => (
+          <Link
+            key={`${d.href}-${i}`}
+            href={d.href}
+            className="block font-sans uppercase tracking-widest transition-colors duration-100"
+            style={{
+              padding: '12px 20px',
+              fontSize: '0.7rem',
+              letterSpacing: '0.1em',
+              borderBottom: i < item.dropdown.length - 1 ? '1px solid #3a3a3a' : 'none',
+              color: router.pathname === d.href ? '#c9a84c' : '#b0aa9f',
+              backgroundColor: router.pathname === d.href ? '#2e2e2e' : 'transparent',
+            }}
+          >
+            {d.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
 
-            {/* Left */}
-            <div>
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-8 h-px" style={{ backgroundColor: '#c9a84c' }} />
-                <span className="font-sans text-xs uppercase tracking-[0.18em]" style={{ color: '#c9a84c' }}>
-                  Self-Storage · Private Acquisition Firm
-                </span>
-              </div>
-              <h1
-                className="font-serif font-medium leading-[1.05] mb-6"
-                style={{ fontSize: 'clamp(3rem, 6vw, 5.5rem)', color: '#f5f0e8' }}
-              >
-                Self-Storage.<br />
-                Off-Market.<br />
-                <em style={{ color: '#c9a84c' }}>Systematically.</em>
-              </h1>
-              <p className="leading-relaxed mb-10" style={{ color: '#b0aa9f', fontSize: '1rem', maxWidth: '480px' }}>
-                YEM Acquisitions targets motivated sellers before they reach the market — using
-                institutional underwriting, proprietary distress scoring, and direct
-                principal-to-owner execution.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/pipeline" className="btn-gold">View Acquisition Pipeline</Link>
-                <Link href="/submit-deal" style={{
-                  display: 'inline-block',
-                  border: '1px solid #c9a84c',
-                  color: '#c9a84c',
-                  padding: '12px 28px',
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  fontFamily: 'var(--font-jost)',
-                  fontWeight: 500,
-                  transition: 'all 0.2s',
-                }}>
-                  Submit Your Facility
-                </Link>
-              </div>
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.8)' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: '#242424', border: '1px solid #3a3a3a', padding: '2rem', width: '100%', maxWidth: '380px' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#c9a84c', letterSpacing: '0.14em' }}>Change Password</div>
+            <p style={{ color: '#888880', fontSize: '0.8rem', marginTop: '4px' }}>Set a new platform password.</p>
+          </div>
+          <button onClick={onClose} style={{ color: '#888880', fontSize: '1.2rem', lineHeight: 1 }}>✕</button>
+        </div>
+        <ChangePasswordForm onSuccess={onClose} />
+      </div>
+    </div>
+  )
+}
+
+export default function Layout({ children }: { children: ReactNode }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [authed, setAuthed] = useState(false)
+  const [showChangePw, setShowChangePw] = useState(false)
+  const router = useRouter()
+  const isPipeline = router.pathname === '/pipeline'
+
+  useEffect(() => {
+    setAuthed(isAuthenticated())
+  }, [router.pathname])
+
+  const handleLogout = () => {
+    clearAuth()
+    setAuthed(false)
+    router.push('/')
+  }
+
+  return (
+    <div className="min-h-screen font-sans" style={{ background: '#1a1a1a', color: '#f5f0e8' }}>
+      {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
+
+      {/* Ticker */}
+      <div className="overflow-hidden" style={{ background: '#c9a84c', height: '32px', display: 'flex', alignItems: 'center' }}>
+        <div className="ticker-track">
+          {[...tickerItems, ...tickerItems].map((item, i) => (
+            <span
+              key={i}
+              className="font-sans uppercase whitespace-nowrap"
+              style={{ fontSize: '0.65rem', letterSpacing: '0.12em', color: '#1a1a1a', fontWeight: 500, padding: '0 2.5rem' }}
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav
+        className="sticky top-0 z-50"
+        style={{ background: '#1a1a1a', borderBottom: '1px solid #3a3a3a' }}
+      >
+        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
+          <div className="flex items-center justify-between" style={{ height: '68px' }}>
+
+            <Link href="/" className="flex-shrink-0 hover:opacity-80 transition-opacity duration-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Logo.png" alt="YEM Acquisitions" className="site-logo" style={{ filter: 'brightness(0) invert(1)' }} />
+            </Link>
+
+            {/* Desktop nav */}
+            <div className="hidden md:flex items-center gap-7">
+              {navItems.map((item) =>
+                item.dropdown ? (
+                  <DropdownMenu key={item.label} item={item} />
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href!}
+                    className="font-sans uppercase tracking-widest transition-colors duration-200"
+                    style={{
+                      fontSize: '0.72rem',
+                      letterSpacing: '0.1em',
+                      color: router.pathname === item.href ? '#c9a84c' : item.dot ? '#c9a84c' : '#b0aa9f',
+                      fontWeight: router.pathname === item.href ? 600 : 400,
+                    }}
+                  >
+                    {item.label}
+                    {item.dot && (
+                      <span className="ml-1.5 inline-block w-2 h-2 rounded-full align-middle" style={{ background: '#c9a84c' }} />
+                    )}
+                  </Link>
+                )
+              )}
+
+              {authed && (
+                <div className="flex items-center gap-3 pl-5 ml-2" style={{ borderLeft: '1px solid #3a3a3a' }}>
+                  <button
+                    onClick={() => setShowChangePw(true)}
+                    className="font-sans uppercase tracking-widest transition-colors"
+                    style={{ fontSize: '0.65rem', color: '#888880' }}
+                  >
+                    Password
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="font-sans uppercase tracking-widest transition-colors"
+                    style={{ fontSize: '0.65rem', color: '#888880' }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Right — Stats Panel */}
-            <div style={{
-              background: '#242424',
-              border: '1px solid #3a3a3a',
-              padding: '2rem',
-            }}>
-              {stats.map((s, i) => (
-                <div
-                  key={s.label}
-                  style={{
-                    padding: '1.25rem 0',
-                    borderBottom: i < stats.length - 1 ? '1px solid #3a3a3a' : 'none',
-                  }}
-                >
-                  <div className="font-serif" style={{ fontSize: '3rem', color: '#c9a84c', lineHeight: '1', fontWeight: 500 }}>
-                    {s.value}
+            {/* Mobile hamburger */}
+            <button
+              className="md:hidden p-1 transition-colors"
+              style={{ color: '#b0aa9f' }}
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              <div className="w-5 flex flex-col gap-1.5">
+                <span className={`h-px bg-current transition-all duration-200 ${mobileOpen ? 'rotate-45 translate-y-2' : ''}`} />
+                <span className={`h-px bg-current transition-all duration-200 ${mobileOpen ? 'opacity-0' : ''}`} />
+                <span className={`h-px bg-current transition-all duration-200 ${mobileOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        {mobileOpen && (
+          <div style={{ background: '#242424', borderTop: '1px solid #3a3a3a' }}>
+            <div className="px-6 py-6 flex flex-col gap-4">
+              {navItems.map((item) =>
+                item.dropdown ? (
+                  <div key={item.label}>
+                    <div className="font-sans uppercase tracking-widest mb-2" style={{ fontSize: '0.6rem', color: '#888880', letterSpacing: '0.14em' }}>{item.label}</div>
+                    {item.dropdown.map((d, i) => (
+                      <Link
+                        key={`${d.href}-${i}`}
+                        href={d.href}
+                        className="block pl-3 py-1.5 font-sans uppercase tracking-widest"
+                        style={{ fontSize: '0.72rem', color: '#b0aa9f' }}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {d.label}
+                      </Link>
+                    ))}
                   </div>
-                  <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#888880', marginTop: '0.25rem' }}>
-                    {s.label}
-                  </div>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href!}
+                    className="font-sans uppercase tracking-widest"
+                    style={{ fontSize: '0.72rem', color: item.dot ? '#c9a84c' : '#b0aa9f' }}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {item.label}
+                    {item.dot && <span className="ml-1.5 inline-block w-2 h-2 rounded-full align-middle" style={{ background: '#c9a84c' }} />}
+                  </Link>
+                )
+              )}
+              {authed && (
+                <div className="flex gap-4 pt-2" style={{ borderTop: '1px solid #3a3a3a' }}>
+                  <button onClick={() => { setMobileOpen(false); setShowChangePw(true) }} className="font-sans uppercase tracking-widest" style={{ fontSize: '0.65rem', color: '#888880' }}>Change Password</button>
+                  <button onClick={handleLogout} className="font-sans uppercase tracking-widest" style={{ fontSize: '0.65rem', color: '#888880' }}>Logout</button>
                 </div>
-              ))}
+              )}
             </div>
-
           </div>
-        </div>
-      </section>
+        )}
+      </nav>
 
-      {/* ── Process ──────────────────────────────────────────── */}
-      <section style={{ backgroundColor: '#1a1a1a', borderTop: '1px solid #3a3a3a', borderBottom: '1px solid #3a3a3a' }}>
-        <div className="mx-auto px-6 lg:px-12 py-20" style={{ maxWidth: '1100px' }}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-px" style={{ backgroundColor: '#c9a84c' }} />
-            <span className="font-sans text-xs uppercase tracking-[0.18em]" style={{ color: '#c9a84c' }}>Our Process</span>
-          </div>
-          <h2 className="font-serif font-medium mb-14" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: '#f5f0e8', lineHeight: '1.1' }}>
-            From first contact to <em style={{ color: '#c9a84c' }}>closed transaction.</em>
-          </h2>
+      <main>{children}</main>
 
-          {/* 5-col grid with dividers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1px', background: '#3a3a3a' }}>
-            {process.map((p) => (
-              <div key={p.num} style={{ background: '#1a1a1a', padding: '1.75rem 1.5rem' }}>
-                <div className="font-serif" style={{ fontSize: '3.5rem', color: '#3a3a3a', lineHeight: '1', marginBottom: '1rem', fontWeight: 400 }}>
-                  {p.num}
+      {!isPipeline && (
+        <footer style={{ background: '#111111', borderTop: '1px solid #3a3a3a' }} className="py-16 mt-0">
+          <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+              <div className="md:col-span-2">
+                <div className="mb-5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/Logo.png" alt="YEM Acquisitions" className="site-logo" style={{ filter: 'brightness(0) invert(1)', opacity: 0.85 }} />
                 </div>
-                <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#c9a84c', fontWeight: 500, marginBottom: '0.5rem', letterSpacing: '0.1em' }}>
-                  {p.title}
-                </div>
-                <p style={{ fontSize: '0.82rem', color: '#888880', lineHeight: '1.65' }}>{p.body}</p>
+                <p className="leading-relaxed max-w-xs" style={{ color: '#888880', fontSize: '0.85rem' }}>
+                  Private acquisition firm focused exclusively on self-storage real estate.
+                  Systematic sourcing. Institutional execution.
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Distress Scoring ─────────────────────────────────── */}
-      <section style={{ backgroundColor: '#242424', borderBottom: '1px solid #3a3a3a' }}>
-        <div className="mx-auto px-6 lg:px-12 py-20" style={{ maxWidth: '1100px' }}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-
-            {/* Left */}
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-px" style={{ backgroundColor: '#c9a84c' }} />
-                <span className="font-sans text-xs uppercase tracking-[0.18em]" style={{ color: '#c9a84c' }}>Distress Intelligence</span>
-              </div>
-              <h2 className="font-serif font-medium mb-4" style={{ fontSize: 'clamp(1.8rem, 3vw, 2.6rem)', color: '#f5f0e8', lineHeight: '1.1' }}>
-                We score every property <em style={{ color: '#c9a84c' }}>before we reach out.</em>
-              </h2>
-              <p style={{ fontSize: '0.9rem', color: '#888880', lineHeight: '1.75', marginBottom: '2rem' }}>
-                Our 100-point motivation model surfaces the highest-probability acquisitions —
-                owners facing the conditions that drive off-market decisions.
-              </p>
-              {/* Score bar */}
               <div>
-                <div className="flex justify-between font-sans uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.1em', color: '#888880', marginBottom: '0.5rem' }}>
-                  <span>Low Intent</span><span>High Intent</span>
+                <div className="font-sans uppercase tracking-widest mb-4" style={{ fontSize: '0.7rem', color: '#c9a84c', letterSpacing: '0.14em' }}>Platform</div>
+                <div className="flex flex-col gap-3">
+                  {[
+                    { href: '/pipeline', label: 'Acquisition Pipeline' },
+                    { href: '/underwrite', label: 'Underwrite' },
+                    { href: '/acquisitions', label: 'Acquisitions' },
+                    { href: '/education', label: 'Education' },
+                  ].map(l => (
+                    <Link key={l.href} href={l.href} className="transition-colors duration-200" style={{ color: '#888880', fontSize: '0.85rem' }}>{l.label}</Link>
+                  ))}
                 </div>
-                <div style={{ height: '3px', background: '#3a3a3a' }}>
-                  <div style={{ height: '3px', width: '72%', background: '#c9a84c' }} />
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#888880', marginTop: '0.5rem' }}>Avg Pipeline Score: 72 / 100</div>
               </div>
-              <div className="mt-8">
-                <Link href="/pipeline" className="btn-gold">Open Acquisition Pipeline</Link>
+              <div>
+                <div className="font-sans uppercase tracking-widest mb-4" style={{ fontSize: '0.7rem', color: '#c9a84c', letterSpacing: '0.14em' }}>Connect</div>
+                <div className="flex flex-col gap-3">
+                  <Link href="/submit-deal" className="transition-colors duration-200" style={{ color: '#888880', fontSize: '0.85rem' }}>Sell Your Facility</Link>
+                  <Link href="/invest" className="transition-colors duration-200" style={{ color: '#888880', fontSize: '0.85rem' }}>Investor Relations</Link>
+                  <a href="mailto:joshuaernst@gmail.com" className="transition-colors duration-200" style={{ color: '#888880', fontSize: '0.85rem' }}>joshuaernst@gmail.com</a>
+                </div>
               </div>
             </div>
-
-            {/* Right — score factors */}
-            <div>
-              {scoreFactors.map((f, i) => (
-                <div
-                  key={f.name}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    padding: '1rem 0',
-                    borderBottom: i < scoreFactors.length - 1 ? '1px solid #3a3a3a' : 'none',
-                    gap: '1rem',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: '0.9rem', color: '#f5f0e8', marginBottom: '0.2rem' }}>{f.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#888880' }}>{f.desc}</div>
-                  </div>
-                  <div className="font-serif" style={{ fontSize: '1.3rem', color: '#c9a84c', whiteSpace: 'nowrap', fontWeight: 500 }}>{f.pts}</div>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ── Markets ──────────────────────────────────────────── */}
-      <section style={{ backgroundColor: '#1a1a1a', borderBottom: '1px solid #3a3a3a' }}>
-        <div className="mx-auto px-6 lg:px-12 py-20" style={{ maxWidth: '1100px' }}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-px" style={{ backgroundColor: '#c9a84c' }} />
-            <span className="font-sans text-xs uppercase tracking-[0.18em]" style={{ color: '#c9a84c' }}>Target Markets</span>
-          </div>
-          <h2 className="font-serif font-medium mb-12" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: '#f5f0e8', lineHeight: '1.1' }}>
-            Sun Belt <em style={{ color: '#c9a84c' }}>coverage.</em>
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: '#3a3a3a' }}>
-            {markets.map((m) => (
-              <div key={m.state} style={{ background: '#1a1a1a', padding: '1.5rem' }}>
-                <div className="font-serif" style={{ fontSize: '2.5rem', color: '#c9a84c', lineHeight: '1', marginBottom: '0.5rem', fontWeight: 500 }}>
-                  {m.state}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#888880', lineHeight: '1.7' }}>{m.cities}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Dual CTA ─────────────────────────────────────────── */}
-      <section style={{ backgroundColor: '#1a1a1a' }}>
-        <div className="mx-auto px-6 lg:px-12 py-20" style={{ maxWidth: '1100px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: '#3a3a3a' }}>
-
-            <div style={{ background: '#1a1a1a', padding: '2.5rem', border: '1px solid #3a3a3a' }}>
-              <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#888880', marginBottom: '1rem', letterSpacing: '0.15em' }}>For Sellers</div>
-              <h3 className="font-serif font-medium mb-3" style={{ fontSize: '1.8rem', color: '#f5f0e8' }}>Selling your facility?</h3>
-              <p style={{ fontSize: '0.88rem', color: '#888880', lineHeight: '1.75', marginBottom: '2rem' }}>
-                Get a confidential, no-obligation review. We move in 5 days and close in 30–45.
-                No brokers. No listing. Direct and private.
+            <div className="mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4" style={{ borderTop: '1px solid #3a3a3a' }}>
+              <p style={{ color: '#555550', fontSize: '0.8rem' }}>
+                © 2025 YEM Acquisitions LLC · Woodmere, New York · joshuaernst@gmail.com · 516.305.2484
               </p>
-              <Link href="/submit-deal" className="btn-gold">Submit a Deal</Link>
+              <p className="uppercase tracking-widest" style={{ color: '#555550', fontSize: '0.75rem' }}>Private &amp; Confidential</p>
             </div>
-
-            <div style={{ background: '#1a1a1a', padding: '2.5rem', border: '1px solid #3a3a3a', borderLeft: 'none' }}>
-              <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#888880', marginBottom: '1rem', letterSpacing: '0.15em' }}>For Investors</div>
-              <h3 className="font-serif font-medium mb-3" style={{ fontSize: '1.8rem', color: '#f5f0e8' }}>Investing in storage?</h3>
-              <p style={{ fontSize: '0.88rem', color: '#888880', lineHeight: '1.75', marginBottom: '2rem' }}>
-                Co-invest alongside YEM Acquisitions on curated off-market acquisitions.
-                Accredited investors only. 15–20% target IRR.
-              </p>
-              <Link href="/invest" style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.8rem',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: '#c9a84c',
-                fontFamily: 'var(--font-jost)',
-                textDecoration: 'none',
-              }}>
-                Investor Inquiry →
-              </Link>
-            </div>
-
           </div>
-        </div>
-      </section>
-    </>
+        </footer>
+      )}
+    </div>
   )
 }
