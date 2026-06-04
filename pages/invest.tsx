@@ -39,29 +39,29 @@ export default function Invest() {
         <meta name="description" content="Co-invest alongside YEM Acquisitions in off-market self-storage acquisitions. Accredited investors only." />
       </Head>
 
+      {/* Hero */}
       <section className="page-hero border-b border-dark-border">
         <div className="section-label">Investor Relations</div>
-        <h1 className="display-heading text-6xl md:text-8xl max-w-4xl mb-8">
-          Own what<br />institutions<br />
-          <em className="text-gold">buy quietly.</em>
+        <h1 className="display-heading max-w-4xl mb-8" style={{ fontSize: 'clamp(3rem, 6vw, 5rem)' }}>
+          Own what institutions<br /><em className="text-gold">buy quietly.</em>
         </h1>
-        <p className="text-dark-muted text-lg max-w-xl leading-relaxed">
+        <p className="leading-relaxed" style={{ fontSize: '1.15rem', color: '#6B6860', maxWidth: '520px' }}>
           YEM Acquisitions offers accredited investors direct co-investment access to
           off-market self-storage acquisitions underwritten to institutional standards.
         </p>
       </section>
 
       {/* Thesis */}
-      <section className="py-24">
+      <section className="py-20">
         <div className="section-container">
           <div className="section-label">Investment Thesis</div>
-          <h2 className="display-heading text-5xl mb-16 max-w-2xl">Why self-storage. Why now.</h2>
+          <h2 className="display-heading mb-14 max-w-2xl">Why self-storage. Why now.</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {thesis.map(t => (
               <div key={t.title} className="border border-dark-border bg-dark-surface p-8">
                 <div className="gold-divider mb-5" />
-                <h3 className="font-serif text-2xl font-light text-[#1B2B5E] mb-3">{t.title}</h3>
-                <p className="text-dark-muted text-sm leading-relaxed">{t.body}</p>
+                <h3 className="font-serif font-light text-[#1B2B5E] mb-3" style={{ fontSize: '1.4rem' }}>{t.title}</h3>
+                <p className="leading-relaxed" style={{ fontSize: '1rem', color: '#6B6860' }}>{t.body}</p>
               </div>
             ))}
           </div>
@@ -69,36 +69,37 @@ export default function Invest() {
       </section>
 
       {/* Returns */}
-      <section className="py-24 bg-dark-surface border-y border-dark-border">
+      <section className="py-20 bg-dark-surface border-y border-dark-border">
         <div className="section-container">
           <div className="section-label">Return Profile</div>
-          <h2 className="display-heading text-5xl mb-16">Target metrics</h2>
+          <h2 className="display-heading mb-14">Target metrics</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
             {metrics.map(m => (
-              <div key={m.label} className="border border-dark-border p-5 bg-dark-bg">
-                <div className="text-xs uppercase tracking-widest text-dark-muted mb-2">{m.label}</div>
-                <div className="font-serif text-2xl font-light text-gold leading-tight">{m.value}</div>
+              <div key={m.label} className="border border-dark-border p-5 bg-white">
+                <div className="uppercase tracking-widest mb-2" style={{ fontSize: '0.8rem', color: '#6B6860' }}>{m.label}</div>
+                <div className="font-serif text-gold leading-tight" style={{ fontSize: '1.5rem', fontWeight: 300 }}>{m.value}</div>
               </div>
             ))}
           </div>
-          <p className="text-dark-muted text-xs max-w-lg leading-relaxed">
+          <p className="leading-relaxed max-w-lg" style={{ fontSize: '0.875rem', color: '#6B6860' }}>
             Returns shown are targets, not guarantees. Past performance is not indicative of future results. All real estate investments involve risk including loss of principal. Offered only to accredited investors as defined under SEC Regulation D.
           </p>
         </div>
       </section>
 
       {/* Inquiry */}
-      <section className="py-24">
+      <section className="py-20">
         <div className="section-container">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+
             <div>
               <div className="section-label">Get Started</div>
-              <h2 className="display-heading text-5xl mb-6">Investor inquiry</h2>
-              <p className="text-dark-muted leading-relaxed mb-8">
+              <h2 className="display-heading mb-6">Investor inquiry</h2>
+              <p className="leading-relaxed mb-8" style={{ fontSize: '1.05rem', color: '#6B6860' }}>
                 We review all inquiries and schedule introductory calls within 3 business days.
                 All conversations are strictly confidential.
               </p>
-              <div className="space-y-4 text-sm text-dark-muted">
+              <div className="space-y-4">
                 {[
                   'Access to deal-level underwriting and financial models',
                   'Deal-by-deal co-investment or programmatic capital relationships',
@@ -106,8 +107,8 @@ export default function Invest() {
                   'Quarterly reporting and transparent portfolio updates',
                 ].map(item => (
                   <div key={item} className="flex gap-3">
-                    <div className="w-0.5 bg-gold flex-shrink-0 mt-1" />
-                    <p>{item}</p>
+                    <div className="w-0.5 bg-gold flex-shrink-0 mt-1.5" />
+                    <p style={{ fontSize: '1rem', color: '#6B6860' }}>{item}</p>
                   </div>
                 ))}
               </div>
@@ -117,55 +118,70 @@ export default function Invest() {
               {submitted ? (
                 <div className="border border-dark-border bg-dark-surface p-12 text-center">
                   <div className="gold-divider mx-auto mb-8" />
-                  <h3 className="font-serif text-3xl font-light text-[#1B2B5E] mb-4">Inquiry received.</h3>
-                  <p className="text-dark-muted text-sm leading-relaxed">
+                  <h3 className="font-serif font-light text-[#1B2B5E] mb-4" style={{ fontSize: '2rem' }}>Inquiry received.</h3>
+                  <p className="leading-relaxed" style={{ fontSize: '1rem', color: '#6B6860' }}>
                     Our investor relations team will be in touch within 3 business days.
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div><label className="label-text">Full Name</label>
-                    <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="Jane Smith" required /></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="label-text">Email</label>
-                      <input className="input-field" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="jane@example.com" required /></div>
-                    <div><label className="label-text">Phone</label>
-                      <input className="input-field" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(555) 000-0000" /></div>
+                <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+                  <div>
+                    <label className="label-text">Full Name</label>
+                    <input className="input-field" value={form.name} onChange={e => set('name', e.target.value)} placeholder="Jane Smith" required autoComplete="off" />
                   </div>
-                  <div><label className="label-text">Accredited Investor Status</label>
-                    <select className="input-field" value={form.accredited} onChange={e => set('accredited', e.target.value)} required>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="label-text">Email</label>
+                      <input className="input-field" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="jane@example.com" required autoComplete="off" />
+                    </div>
+                    <div>
+                      <label className="label-text">Phone</label>
+                      <input className="input-field" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="(555) 000-0000" autoComplete="off" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label-text">Accredited Investor Status</label>
+                    <select className="input-field" value={form.accredited} onChange={e => set('accredited', e.target.value)} required autoComplete="off">
                       <option value="">Select...</option>
                       <option value="individual">Yes — individual ($1M+ net worth or $200K+ income)</option>
                       <option value="entity">Yes — investing through an entity</option>
                       <option value="no">Not accredited / unsure</option>
-                    </select></div>
-                  <div><label className="label-text">Investment Capacity</label>
-                    <select className="input-field" value={form.capacity} onChange={e => set('capacity', e.target.value)}>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-text">Investment Capacity</label>
+                    <select className="input-field" value={form.capacity} onChange={e => set('capacity', e.target.value)} autoComplete="off">
                       <option value="">Select...</option>
                       <option value="250-500k">$250K – $500K</option>
                       <option value="500k-1m">$500K – $1M</option>
                       <option value="1m-5m">$1M – $5M</option>
                       <option value="5m+">$5M+</option>
-                    </select></div>
-                  <div><label className="label-text">Investment Timeline</label>
-                    <select className="input-field" value={form.timeline} onChange={e => set('timeline', e.target.value)}>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-text">Investment Timeline</label>
+                    <select className="input-field" value={form.timeline} onChange={e => set('timeline', e.target.value)} autoComplete="off">
                       <option value="">Select...</option>
                       <option value="now">Ready to invest now</option>
                       <option value="q1">3–6 months</option>
                       <option value="q2">6–12 months</option>
                       <option value="exploring">Exploring / no timeline</option>
-                    </select></div>
-                  <div><label className="label-text">Anything else?</label>
-                    <textarea className="input-field resize-none" rows={3} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Prior real estate experience, questions, investment preferences..." /></div>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-text">Anything else?</label>
+                    <textarea className="input-field resize-none" rows={3} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Prior real estate experience, questions, investment preferences..." autoComplete="off" />
+                  </div>
                   <button type="submit" disabled={loading} className="btn-gold w-full disabled:opacity-50">
                     {loading ? 'Sending...' : 'Submit Inquiry'}
                   </button>
-                  <p className="text-dark-muted text-xs text-center">
+                  <p className="text-center" style={{ fontSize: '0.875rem', color: '#6B6860' }}>
                     By submitting you confirm you are an accredited investor or are exploring that status.
                   </p>
                 </form>
               )}
             </div>
+
           </div>
         </div>
       </section>
