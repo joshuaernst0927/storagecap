@@ -20,12 +20,18 @@ type NavItem =
   | { label: string; dropdown: { href: string; label: string }[]; href?: never; dot?: never }
 
 const navItems: NavItem[] = [
-  { href: '/about', label: 'About' },
+  { href: '/', label: 'Home' },
+  {
+    label: 'About Us',
+    dropdown: [
+      { href: '/about', label: 'About YEM' },
+      { href: '/acquisitions', label: 'Our Criteria' },
+    ],
+  },
   { href: '/leads', label: 'Leads', dot: true },
   {
     label: 'Acquisitions',
     dropdown: [
-      { href: '/acquisitions', label: 'Our Criteria' },
       { href: '/submit-deal', label: 'Sell Your Facility' },
       { href: '/upload-deal', label: 'Import Deal' },
     ],
@@ -74,8 +80,8 @@ function DropdownMenu({ item }: { item: Extract<NavItem, { dropdown: unknown }> 
         </div>
         {item.dropdown.map((d, i) => (
           <Link key={`${d.href}-${i}`} href={d.href}
-            className="block px-5 py-3 text-xs uppercase tracking-widest font-sans transition-colors duration-100 border-b border-dark-border last:border-b-0"
-            style={{ color: router.pathname === d.href ? '#D4A843' : '#1B2B5E' }}
+            className="block px-5 py-3 font-sans uppercase tracking-widest transition-colors duration-100 border-b border-dark-border last:border-b-0"
+            style={{ fontSize: '0.75rem', color: router.pathname === d.href ? '#D4A843' : '#1B2B5E' }}
           >
             {d.label}
           </Link>
@@ -123,7 +129,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-white text-[#1a1a18] font-sans">
       {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
 
-      {/* Ticker — gold bar */}
+      {/* Ticker */}
       <div className="overflow-hidden" style={{ background: '#D4A843', height: '32px', display: 'flex', alignItems: 'center' }}>
         <div className="ticker-track">
           {[...tickerItems, ...tickerItems].map((item, i) => (
@@ -135,7 +141,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* Nav — white bg */}
+      {/* Nav */}
       <nav className="sticky top-0 z-50 bg-white border-b border-dark-border" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
           <div className="flex items-center justify-between" style={{ height: '72px' }}>
@@ -145,19 +151,21 @@ export default function Layout({ children }: { children: ReactNode }) {
               <img src="/Logo.png" alt="YEM Acquisitions" className="site-logo" />
             </Link>
 
-            <div className="hidden md:flex items-center gap-7">
+            {/* Desktop nav */}
+            <div className="hidden md:flex items-center gap-6">
               {navItems.map((item) =>
                 item.dropdown ? (
                   <DropdownMenu key={item.label} item={item} />
                 ) : (
                   <Link key={item.href} href={item.href!}
-                    className={`nav-link ${router.pathname === item.href ? '!text-[#1a1a18] !font-bold' : ''} ${item.dot ? '!text-gold' : ''}`}
+                    className={`nav-link ${router.pathname === item.href ? '!text-gold !font-semibold' : ''} ${item.dot ? '!text-gold' : ''}`}
                   >
                     {item.label}
                     {item.dot && <span className="ml-1.5 inline-block w-2.5 h-2.5 bg-gold rounded-full align-middle" />}
                   </Link>
                 )
               )}
+
               {authed && (
                 <div className="flex items-center gap-3 pl-5 ml-2 border-l border-dark-border">
                   <button onClick={() => setShowChangePw(true)}
@@ -172,6 +180,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               )}
             </div>
 
+            {/* Mobile hamburger */}
             <button className="md:hidden text-dark-muted hover:text-[#1a1a18] transition-colors p-1"
               onClick={() => setMobileOpen(!mobileOpen)}>
               <div className="w-5 flex flex-col gap-1.5">
@@ -183,6 +192,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
+        {/* Mobile menu */}
         {mobileOpen && (
           <div className="md:hidden border-t border-dark-border bg-dark-surface">
             <div className="px-6 py-6 flex flex-col gap-4">
@@ -223,26 +233,25 @@ export default function Layout({ children }: { children: ReactNode }) {
       <main>{children}</main>
 
       {!isPipeline && (
-        <footer style={{ backgroundColor: '#1B2B5E' }} className="mt-0 py-16">
+        <footer style={{ backgroundColor: '#1B2B5E' }} className="mt-0 py-14">
           <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
               <div className="md:col-span-2">
-                <div className="mb-5" style={{ background: 'white', display: 'inline-block', padding: '8px 14px', borderRadius: '4px' }}>
+                <div className="mb-4" style={{ background: 'white', display: 'inline-block', padding: '8px 14px', borderRadius: '4px' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/Logo.png" alt="YEM Acquisitions" className="site-logo" />
                 </div>
-                <p className="leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
-                  Private acquisition firm focused exclusively on self-storage real estate.
-                  Systematic sourcing. Institutional execution.
+                <p className="leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem' }}>
+                  Private acquisition firm focused exclusively on self-storage real estate. Systematic sourcing. Institutional execution.
                 </p>
               </div>
               <div>
                 <div className="section-label">Platform</div>
                 <div className="flex flex-col gap-3">
+                  <Link href="/" className="footer-link">Home</Link>
                   <Link href="/pipeline" className="footer-link">Acquisition Pipeline</Link>
                   <Link href="/underwrite" className="footer-link">Underwrite</Link>
                   <Link href="/acquisitions" className="footer-link">Acquisitions</Link>
-                  <Link href="/education" className="footer-link">Education</Link>
                 </div>
               </div>
               <div>
@@ -254,14 +263,12 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </div>
-            <div className="mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4"
+            <div className="mt-10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4"
               style={{ borderTop: '1px solid rgba(255,255,255,0.15)' }}>
               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
                 © 2025 YEM Acquisitions LLC · Woodmere, New York · joshuaernst@gmail.com · 516.305.2484
               </p>
-              <p className="tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
-                Private &amp; Confidential
-              </p>
+              <p className="uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>Private &amp; Confidential</p>
             </div>
           </div>
         </footer>
