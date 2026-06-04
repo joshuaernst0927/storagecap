@@ -160,24 +160,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       // Map frontend field names to DO API field names
       const payload = {
-        purchase_price:       inputs.purchasePrice       ?? null,
-        closing_costs_pct:    inputs.closingCostsPct     ?? null,
-        initial_repairs:      inputs.initialRepairs      ?? null,
-        acquisition_fee_pct:  inputs.acquisitionFeePct   ?? null,
-        start_occupancy:      inputs.startOccupancy      ?? null,
-        stabilized_occupancy: inputs.stabilizedOccupancy ?? null,
-        months_to_stabilize:  inputs.monthsToStabilization ?? null,
-        rent_growth:          inputs.annualRentGrowth    ?? null,
-        other_income_month:   (inputs.otherIncomeMonth as number) ?? 0,
-        initial_ltv:          inputs.initialLTV          ?? null,
-        initial_rate:         inputs.initialRate         ?? null,
-        refi_ltv:             inputs.refiLTV             ?? null,
-        refi_rate:            inputs.refiRate            ?? null,
-        exit_cap_rate:        inputs.exitCapRate         ?? null,
-        exit_month:           inputs.exitMonth           ?? null,
-        unlevered:            'No',
-        // Unit mix for GPR calculation
-        unit_mix:             inputs.unitMix             ?? null,
+        // Strip nulls — DO API rejects null for numeric fields
+const raw: Record<string, unknown> = {
+  purchase_price:       inputs.purchasePrice,
+  closing_costs_pct:    inputs.closingCostsPct,
+  initial_repairs:      inputs.initialRepairs,
+  acquisition_fee_pct:  inputs.acquisitionFeePct,
+  start_occupancy:      inputs.startOccupancy,
+  stabilized_occupancy: inputs.stabilizedOccupancy,
+  months_to_stabilize:  inputs.monthsToStabilization,
+  rent_growth:          inputs.annualRentGrowth,
+  other_income_month:   inputs.otherIncomeMonth ?? 0,
+  initial_ltv:          inputs.initialLTV,
+  initial_rate:         inputs.initialRate,
+  refi_ltv:             inputs.refiLTV,
+  refi_rate:            inputs.refiRate,
+  exit_cap_rate:        inputs.exitCapRate,
+  exit_month:           inputs.exitMonth,
+  unlevered:            'No',
+  unit_mix:             inputs.unitMix ?? undefined,
+}
+const payload = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== null && v !== undefined))
       }
 
       const doRes = await fetch(`${DO_API}/run-model`, {
