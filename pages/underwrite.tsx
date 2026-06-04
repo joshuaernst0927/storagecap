@@ -683,7 +683,34 @@ export default function Underwrite() {
   className="btn-gold text-sm px-6 py-2.5"
 >
   ↓ Download Excel
+<button
+  onClick={async () => {
+    const payload = buildPayload(inputs, unitMix)
+    const res = await fetch('/api/underwrite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'download', inputs: payload }),
+    })
+    if (res.ok) {
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${inputs.propertyName || 'YEM'}_UW.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+  }}
+  className="btn-gold text-sm px-6 py-2.5"
+>
+  ↓ Download Excel
 </button>
+<button
+  onClick={() => window.print()}
+  className="text-xs uppercase tracking-widest border border-dark-border px-5 py-2.5 hover:border-gold/40 hover:text-gold transition-colors"
+>
+  Print / Save PDF
+</button></button>
                       Print / Save PDF
                     </button>
                   </div>
