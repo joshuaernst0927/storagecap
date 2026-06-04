@@ -7,7 +7,7 @@
     background-color: #FFFFFF;
     color: #1A1A18;
     font-size: 1.1rem;
-    line-height: 1.7;
+    line-height: 1.6;
   }
 
   * {
@@ -27,7 +27,7 @@
     @apply inline-block bg-gold font-sans font-semibold uppercase tracking-widest cursor-pointer select-none;
     color: #1A1A18;
     font-size: 0.95rem;
-    padding: 14px 32px;
+    padding: 11px 26px;
     letter-spacing: 0.08em;
     border-radius: 4px;
     transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
@@ -42,7 +42,7 @@
     @apply inline-block bg-gold font-sans font-semibold uppercase tracking-widest cursor-pointer select-none;
     color: #1A1A18;
     font-size: 0.9rem;
-    padding: 10px 22px;
+    padding: 8px 18px;
     letter-spacing: 0.08em;
     border-radius: 4px;
     transition: filter 0.15s ease, transform 0.15s ease;
@@ -57,7 +57,7 @@
     color: #D4A843;
     border: 1.5px solid #D4A843;
     font-size: 0.95rem;
-    padding: 14px 32px;
+    padding: 11px 26px;
     letter-spacing: 0.08em;
     border-radius: 4px;
     transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
@@ -73,7 +73,7 @@
     background-color: #1B2B5E;
     color: #FFFFFF;
     font-size: 0.95rem;
-    padding: 14px 32px;
+    padding: 11px 26px;
     letter-spacing: 0.08em;
     border-radius: 4px;
     transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
@@ -89,7 +89,7 @@
     color: rgba(255,255,255,0.85);
     border: 1.5px solid rgba(255,255,255,0.4);
     font-size: 0.95rem;
-    padding: 14px 32px;
+    padding: 11px 26px;
     letter-spacing: 0.08em;
     border-radius: 4px;
     transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
@@ -105,7 +105,7 @@
     border: 1px solid #E0DDD4;
     color: #6B6860;
     font-size: 0.9rem;
-    padding: 10px 22px;
+    padding: 8px 18px;
     letter-spacing: 0.08em;
     border-radius: 4px;
     transition: border-color 0.15s ease, color 0.15s ease;
@@ -117,7 +117,7 @@
 
   /* ── Labels ── */
   .section-label {
-    @apply font-sans font-semibold uppercase mb-3;
+    @apply font-sans font-semibold uppercase mb-2;
     color: #D4A843;
     font-size: 0.85rem;
     letter-spacing: 0.14em;
@@ -131,9 +131,9 @@
   }
 
   .label-text {
-    @apply font-sans font-medium uppercase mb-2 block;
+    @apply font-sans font-medium uppercase mb-1.5 block;
     color: #6B6860;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     letter-spacing: 0.08em;
   }
 
@@ -141,7 +141,7 @@
   .display-heading {
     @apply font-serif font-light leading-[1.05];
     color: #1B2B5E;
-    font-size: clamp(2.2rem, 4vw, 3.8rem);
+    font-size: clamp(2rem, 4vw, 3.2rem);
   }
 
   /* ── Nav ── */
@@ -151,27 +151,20 @@
     font-size: 1rem;
     letter-spacing: 0.06em;
   }
-  .nav-link:hover {
-    color: #D4A843;
-  }
-  .nav-link.active {
-    color: #D4A843;
-    font-weight: 600;
-  }
+  .nav-link:hover { color: #D4A843; }
+  .nav-link.active { color: #D4A843; font-weight: 600; }
 
-  /* ── Footer (navy bg) ── */
+  /* ── Footer ── */
   .footer-link {
     @apply font-sans transition-colors duration-200;
     color: rgba(255,255,255,0.55);
     font-size: 0.95rem;
   }
-  .footer-link:hover {
-    color: #D4A843;
-  }
+  .footer-link:hover { color: #D4A843; }
 
   /* ── Forms ── */
   .input-field {
-    @apply w-full bg-white font-sans px-4 py-3 focus:outline-none transition-colors duration-200;
+    @apply w-full bg-white font-sans px-4 py-2.5 focus:outline-none transition-colors duration-200;
     border: 1px solid #E0DDD4;
     border-radius: 4px;
     color: #1A1A18;
@@ -181,9 +174,7 @@
     border-color: #D4A843;
     box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.1);
   }
-  .input-field::placeholder {
-    color: #9B9890;
-  }
+  .input-field::placeholder { color: #9B9890; }
 
   .input-field-sm {
     @apply w-full bg-white font-sans px-3 py-2 focus:outline-none transition-colors duration-200;
@@ -192,16 +183,12 @@
     color: #1A1A18;
     font-size: 0.95rem;
   }
-  .input-field-sm:focus {
-    border-color: #D4A843;
-  }
-  .input-field-sm::placeholder {
-    color: #9B9890;
-  }
+  .input-field-sm:focus { border-color: #D4A843; }
+  .input-field-sm::placeholder { color: #9B9890; }
 
   /* ── Layout ── */
   .page-hero {
-    @apply pt-14 pb-12 px-6 lg:px-12 mx-auto;
+    @apply pt-10 pb-8 px-6 lg:px-12 mx-auto;
     max-width: 1100px;
   }
 
@@ -210,16 +197,14 @@
     max-width: 1100px;
   }
 
-  .gold-divider {
-    @apply w-12 h-px bg-gold;
-  }
+  .gold-divider { @apply w-12 h-px bg-gold; }
 
   /* ── Cards ── */
   .card {
     background: #FFFFFF;
     border: 1px solid #E0DDD4;
     border-radius: 8px;
-    padding: 22px;
+    padding: 20px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
@@ -231,7 +216,7 @@
   .card-dark {
     background: #FFFFFF;
     border: 1px solid #E0DDD4;
-    padding: 22px;
+    padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -248,67 +233,31 @@
     letter-spacing: 0.08em;
     border-radius: 3px;
   }
-
-  .tag-red {
-    @apply tag;
-    color: #b91c1c;
-    border-color: rgba(185, 28, 28, 0.35);
-    background-color: rgba(185, 28, 28, 0.06);
-  }
-
-  .tag-amber {
-    @apply tag;
-    color: #92400e;
-    border-color: rgba(146, 64, 14, 0.35);
-    background-color: rgba(146, 64, 14, 0.06);
-  }
-
-  .tag-blue {
-    @apply tag;
-    color: #1e40af;
-    border-color: rgba(30, 64, 175, 0.35);
-    background-color: rgba(30, 64, 175, 0.06);
-  }
-
-  .tag-green {
-    @apply tag;
-    color: #2D6A4F;
-    border-color: rgba(45, 106, 79, 0.4);
-    background-color: rgba(45, 106, 79, 0.07);
-  }
-
-  .tag-muted {
-    @apply tag;
-    color: #6B6860;
-    border-color: #E0DDD4;
-    background-color: #F4F6F9;
-  }
+  .tag-red { @apply tag; color: #b91c1c; border-color: rgba(185,28,28,0.35); background-color: rgba(185,28,28,0.06); }
+  .tag-amber { @apply tag; color: #92400e; border-color: rgba(146,64,14,0.35); background-color: rgba(146,64,14,0.06); }
+  .tag-blue { @apply tag; color: #1e40af; border-color: rgba(30,64,175,0.35); background-color: rgba(30,64,175,0.06); }
+  .tag-green { @apply tag; color: #2D6A4F; border-color: rgba(45,106,79,0.4); background-color: rgba(45,106,79,0.07); }
+  .tag-muted { @apply tag; color: #6B6860; border-color: #E0DDD4; background-color: #F4F6F9; }
 
   /* ── Pipeline Table ── */
-  .pipeline-row {
-    @apply border-b border-dark-border transition-colors duration-150 cursor-pointer;
-  }
-  .pipeline-row:nth-child(even) {
-    background-color: #F4F6F9;
-  }
-  .pipeline-row:hover {
-    background-color: #EEF1F7 !important;
-  }
+  .pipeline-row { @apply border-b border-dark-border transition-colors duration-150 cursor-pointer; }
+  .pipeline-row:nth-child(even) { background-color: #F4F6F9; }
+  .pipeline-row:hover { background-color: #EEF1F7 !important; }
 
   .pipeline-th {
-    @apply text-left font-sans font-semibold uppercase pb-3 pr-6 whitespace-nowrap border-b border-dark-border;
+    @apply text-left font-sans font-semibold uppercase pb-2 pr-6 whitespace-nowrap border-b border-dark-border;
     color: #6B6860;
     font-size: 0.85rem;
     letter-spacing: 0.1em;
-    padding-top: 12px;
+    padding-top: 10px;
   }
 
   .pipeline-td {
     @apply pr-4 align-middle;
     font-size: 1rem;
     color: #1A1A18;
-    padding-top: 14px;
-    padding-bottom: 14px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
 }
 
@@ -316,23 +265,18 @@
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-
 .ticker-track {
   animation: ticker 35s linear infinite;
   display: flex;
   width: max-content;
 }
-.ticker-track:hover {
-  animation-play-state: paused;
-}
+.ticker-track:hover { animation-play-state: paused; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fade-in {
-  animation: fadeIn 0.25s ease-out forwards;
-}
+.fade-in { animation: fadeIn 0.25s ease-out forwards; }
 
 .site-logo {
   height: 60px !important;
