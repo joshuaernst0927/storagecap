@@ -17,7 +17,7 @@ const process = [
   {
     num: '02',
     title: 'Score',
-    body: 'Our 175-point distress model ranks every property by owner motivation — tax delinquency, fire code violations, occupancy trends, ownership patterns.',
+    body: 'Our 100-point distress model ranks every property by owner motivation — tax delinquency, fire code violations, occupancy trends, ownership patterns.',
   },
   {
     num: '03',
@@ -37,14 +37,23 @@ const process = [
 ]
 
 const markets = [
-  { state: 'TX', city: 'Dallas · Lubbock · San Antonio' },
-  { state: 'GA', city: 'Atlanta · Macon · Savannah' },
-  { state: 'SC', city: 'Columbia · Greenville · Charleston' },
-  { state: 'TN', city: 'Nashville · Chattanooga · Memphis' },
-  { state: 'AZ', city: 'Phoenix · Tucson · Mesa' },
-  { state: 'FL', city: 'Tampa · Jacksonville · Pensacola' },
-  { state: 'AL', city: 'Huntsville · Birmingham · Montgomery' },
-  { state: 'MS', city: 'Jackson · Biloxi · Hattiesburg' },
+  { state: 'TX', cities: 'Dallas · Lubbock · San Antonio' },
+  { state: 'GA', cities: 'Atlanta · Macon · Savannah' },
+  { state: 'SC', cities: 'Columbia · Greenville · Charleston' },
+  { state: 'TN', cities: 'Nashville · Chattanooga · Memphis' },
+  { state: 'AZ', cities: 'Phoenix · Tucson · Mesa' },
+  { state: 'FL', cities: 'Tampa · Jacksonville · Pensacola' },
+  { state: 'AL', cities: 'Huntsville · Birmingham · Montgomery' },
+  { state: 'MS', cities: 'Jackson · Biloxi · Hattiesburg' },
+]
+
+const scoreFactors = [
+  { name: 'Tax Delinquency', pts: '+25 pts', desc: 'Strongest distress indicator — owner unable or unwilling to pay property taxes' },
+  { name: 'Lis Pendens', pts: '+20 pts', desc: 'Active litigation against the property signals financial distress or ownership dispute' },
+  { name: 'Fire Code Violations', pts: '+15 pts', desc: 'Unresolved violations signal deferred maintenance and disengaged ownership' },
+  { name: 'Declining Occupancy', pts: '+10 pts', desc: 'Falling occupancy over 12 months without intervention signals operational neglect' },
+  { name: 'Out-of-State Owner', pts: '+10 pts', desc: 'Absentee ownership correlates with reduced operational attention and exit readiness' },
+  { name: 'Owner Age 65+', pts: '+10 pts', desc: 'Retirement-age owners show elevated disposition intent and estate planning needs' },
 ]
 
 export default function Home() {
@@ -56,271 +65,226 @@ export default function Home() {
       </Head>
 
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section
-        className="relative flex flex-col justify-center overflow-hidden"
-        style={{ backgroundColor: '#1B2B5E', minHeight: '90vh' }}
-      >
-        {/* Background image overlay */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=1600)',
-            opacity: 0.18,
-          }}
-        />
-
+      <section style={{ backgroundColor: '#1a1a1a', minHeight: '92vh' }} className="relative flex flex-col justify-center">
         <div className="relative z-10 mx-auto w-full px-6 lg:px-12 py-24" style={{ maxWidth: '1100px' }}>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-8 h-px bg-gold" />
-            <span className="font-sans text-xs uppercase tracking-[0.14em] font-semibold text-gold">
-              Sun Belt · Self-Storage · Off-Market
-            </span>
-          </div>
-
-          <h1
-            className="font-serif font-light text-white leading-[1.0] mb-5"
-            style={{ fontSize: 'clamp(3.5rem, 7vw, 6rem)' }}
-          >
-            Self-Storage Investment<br />&amp; Acquisition Platform
-          </h1>
-
-          <p className="font-serif text-2xl font-light italic mb-6" style={{ color: '#D4A843' }}>
-            Building Value. Unit By Unit.
-          </p>
-
-          <p className="text-lg leading-relaxed max-w-2xl mb-12" style={{ color: 'rgba(255,255,255,0.72)' }}>
-            We acquire and operate self-storage facilities in growth and supply-constrained markets
-            across the United States. Through disciplined underwriting, operational excellence,
-            and strategic improvements, we create stable cash flow and long-term value for our investors.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link href="/pipeline" className="btn-gold">
-              View Acquisition Pipeline
-            </Link>
-            <Link href="/submit-deal" className="btn-white-outline">
-              Submit Your Facility
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Stats ────────────────────────────────────────────── */}
-      <section className="border-b border-dark-border bg-white py-12">
-        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((s) => (
-              <div key={s.label} className="text-center">
-                <div
-                  className="font-serif font-light mb-1"
-                  style={{ fontSize: '3.5rem', lineHeight: '1', color: '#1B2B5E' }}
-                >
-                  {s.value}
-                </div>
-                <div className="text-dark-muted text-xs uppercase tracking-widest font-sans mt-2">
-                  {s.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── About Strip ──────────────────────────────────────── */}
-      <section className="py-20 border-b border-dark-border">
-        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+            {/* Left */}
             <div>
-              <div className="section-label">About YEM Acquisitions</div>
-              <h2
-                className="font-serif font-light text-[#1B2B5E] leading-[1.05] mb-6"
-                style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-8 h-px" style={{ backgroundColor: '#c9a84c' }} />
+                <span className="font-sans text-xs uppercase tracking-[0.18em]" style={{ color: '#c9a84c' }}>
+                  Self-Storage · Private Acquisition Firm
+                </span>
+              </div>
+              <h1
+                className="font-serif font-medium leading-[1.05] mb-6"
+                style={{ fontSize: 'clamp(3rem, 6vw, 5.5rem)', color: '#f5f0e8' }}
               >
-                Off-market sourcing.<br />
-                <em className="text-gold">Systematically.</em>
-              </h2>
-              <p className="text-dark-muted leading-relaxed mb-8" style={{ fontSize: '1.05rem' }}>
-                The best self-storage deals never list publicly. They come from owners facing
-                life transitions — retirement, health issues, financial distress, partnership
-                disputes — who haven&apos;t decided to sell yet. We find them first, before
-                any broker or competitor knows they exist.
+                Self-Storage.<br />
+                Off-Market.<br />
+                <em style={{ color: '#c9a84c' }}>Systematically.</em>
+              </h1>
+              <p className="leading-relaxed mb-10" style={{ color: '#b0aa9f', fontSize: '1rem', maxWidth: '480px' }}>
+                YEM Acquisitions targets motivated sellers before they reach the market — using
+                institutional underwriting, proprietary distress scoring, and direct
+                principal-to-owner execution.
               </p>
-              <div className="flex gap-4">
-                <Link href="/about" className="btn-navy">About Us</Link>
-                <Link href="/acquisitions" className="btn-ghost">Our Criteria</Link>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/pipeline" className="btn-gold">View Acquisition Pipeline</Link>
+                <Link href="/submit-deal" style={{
+                  display: 'inline-block',
+                  border: '1px solid #c9a84c',
+                  color: '#c9a84c',
+                  padding: '12px 28px',
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  fontFamily: 'var(--font-jost)',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                }}>
+                  Submit Your Facility
+                </Link>
               </div>
             </div>
-            <div className="overflow-hidden rounded" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?w=800"
-                alt="Self-storage facility"
-                className="w-full h-72 object-cover"
-              />
+
+            {/* Right — Stats Panel */}
+            <div style={{
+              background: '#242424',
+              border: '1px solid #3a3a3a',
+              padding: '2rem',
+            }}>
+              {stats.map((s, i) => (
+                <div
+                  key={s.label}
+                  style={{
+                    padding: '1.25rem 0',
+                    borderBottom: i < stats.length - 1 ? '1px solid #3a3a3a' : 'none',
+                  }}
+                >
+                  <div className="font-serif" style={{ fontSize: '3rem', color: '#c9a84c', lineHeight: '1', fontWeight: 500 }}>
+                    {s.value}
+                  </div>
+                  <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#888880', marginTop: '0.25rem' }}>
+                    {s.label}
+                  </div>
+                </div>
+              ))}
             </div>
+
           </div>
         </div>
       </section>
 
       {/* ── Process ──────────────────────────────────────────── */}
-      <section className="py-20" style={{ backgroundColor: '#1B2B5E' }}>
-        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
-          <div className="section-label mb-2" style={{ color: '#D4A843' }}>Our Process</div>
-          <h2
-            className="font-serif font-light text-white leading-[1.05] mb-14"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            From First Contact to<br />
-            <em style={{ color: '#D4A843' }}>Closed Transaction</em>
+      <section style={{ backgroundColor: '#1a1a1a', borderTop: '1px solid #3a3a3a', borderBottom: '1px solid #3a3a3a' }}>
+        <div className="mx-auto px-6 lg:px-12 py-20" style={{ maxWidth: '1100px' }}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-px" style={{ backgroundColor: '#c9a84c' }} />
+            <span className="font-sans text-xs uppercase tracking-[0.18em]" style={{ color: '#c9a84c' }}>Our Process</span>
+          </div>
+          <h2 className="font-serif font-medium mb-14" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: '#f5f0e8', lineHeight: '1.1' }}>
+            From first contact to <em style={{ color: '#c9a84c' }}>closed transaction.</em>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+
+          {/* 5-col grid with dividers */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1px', background: '#3a3a3a' }}>
             {process.map((p) => (
-              <div key={p.num} className="flex flex-col gap-4">
-                <div className="font-serif font-light" style={{ fontSize: '3rem', color: 'rgba(212,168,67,0.35)', lineHeight: '1' }}>
+              <div key={p.num} style={{ background: '#1a1a1a', padding: '1.75rem 1.5rem' }}>
+                <div className="font-serif" style={{ fontSize: '3.5rem', color: '#3a3a3a', lineHeight: '1', marginBottom: '1rem', fontWeight: 400 }}>
                   {p.num}
                 </div>
-                <div className="w-8 h-px" style={{ backgroundColor: '#D4A843' }} />
-                <div className="font-sans text-sm uppercase tracking-widest font-semibold" style={{ color: '#D4A843' }}>
+                <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#c9a84c', fontWeight: 500, marginBottom: '0.5rem', letterSpacing: '0.1em' }}>
                   {p.title}
                 </div>
-                <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                  {p.body}
-                </p>
+                <p style={{ fontSize: '0.82rem', color: '#888880', lineHeight: '1.65' }}>{p.body}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Distress Scoring ─────────────────────────────────── */}
+      <section style={{ backgroundColor: '#242424', borderBottom: '1px solid #3a3a3a' }}>
+        <div className="mx-auto px-6 lg:px-12 py-20" style={{ maxWidth: '1100px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+
+            {/* Left */}
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-px" style={{ backgroundColor: '#c9a84c' }} />
+                <span className="font-sans text-xs uppercase tracking-[0.18em]" style={{ color: '#c9a84c' }}>Distress Intelligence</span>
+              </div>
+              <h2 className="font-serif font-medium mb-4" style={{ fontSize: 'clamp(1.8rem, 3vw, 2.6rem)', color: '#f5f0e8', lineHeight: '1.1' }}>
+                We score every property <em style={{ color: '#c9a84c' }}>before we reach out.</em>
+              </h2>
+              <p style={{ fontSize: '0.9rem', color: '#888880', lineHeight: '1.75', marginBottom: '2rem' }}>
+                Our 100-point motivation model surfaces the highest-probability acquisitions —
+                owners facing the conditions that drive off-market decisions.
+              </p>
+              {/* Score bar */}
+              <div>
+                <div className="flex justify-between font-sans uppercase" style={{ fontSize: '0.7rem', letterSpacing: '0.1em', color: '#888880', marginBottom: '0.5rem' }}>
+                  <span>Low Intent</span><span>High Intent</span>
+                </div>
+                <div style={{ height: '3px', background: '#3a3a3a' }}>
+                  <div style={{ height: '3px', width: '72%', background: '#c9a84c' }} />
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#888880', marginTop: '0.5rem' }}>Avg Pipeline Score: 72 / 100</div>
+              </div>
+              <div className="mt-8">
+                <Link href="/pipeline" className="btn-gold">Open Acquisition Pipeline</Link>
+              </div>
+            </div>
+
+            {/* Right — score factors */}
+            <div>
+              {scoreFactors.map((f, i) => (
+                <div
+                  key={f.name}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    padding: '1rem 0',
+                    borderBottom: i < scoreFactors.length - 1 ? '1px solid #3a3a3a' : 'none',
+                    gap: '1rem',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '0.9rem', color: '#f5f0e8', marginBottom: '0.2rem' }}>{f.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#888880' }}>{f.desc}</div>
+                  </div>
+                  <div className="font-serif" style={{ fontSize: '1.3rem', color: '#c9a84c', whiteSpace: 'nowrap', fontWeight: 500 }}>{f.pts}</div>
+                </div>
+              ))}
+            </div>
+
           </div>
         </div>
       </section>
 
       {/* ── Markets ──────────────────────────────────────────── */}
-      <section className="py-20 border-b border-dark-border" style={{ backgroundColor: '#F4F6F9' }}>
-        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
-          <div className="section-label">Target Markets</div>
-          <h2
-            className="display-heading mb-12"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            Sun Belt coverage
+      <section style={{ backgroundColor: '#1a1a1a', borderBottom: '1px solid #3a3a3a' }}>
+        <div className="mx-auto px-6 lg:px-12 py-20" style={{ maxWidth: '1100px' }}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-px" style={{ backgroundColor: '#c9a84c' }} />
+            <span className="font-sans text-xs uppercase tracking-[0.18em]" style={{ color: '#c9a84c' }}>Target Markets</span>
+          </div>
+          <h2 className="font-serif font-medium mb-12" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: '#f5f0e8', lineHeight: '1.1' }}>
+            Sun Belt <em style={{ color: '#c9a84c' }}>coverage.</em>
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: '#3a3a3a' }}>
             {markets.map((m) => (
-              <div
-                key={m.state}
-                className="bg-white border border-dark-border p-5 hover:border-gold/50 transition-all duration-200 rounded"
-                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-              >
-                <div className="font-serif font-light mb-2" style={{ fontSize: '2rem', color: '#1B2B5E' }}>{m.state}</div>
-                <div className="text-dark-muted leading-relaxed" style={{ fontSize: '0.8rem' }}>{m.city}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Distress Intelligence ────────────────────────────── */}
-      <section className="py-20 border-b border-dark-border">
-        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
-          <div className="section-label">Distress Intelligence</div>
-          <h2
-            className="display-heading mb-4"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
-          >
-            We score every property<br />
-            <em className="text-gold">before we reach out.</em>
-          </h2>
-          <p className="text-dark-muted leading-relaxed mb-12" style={{ maxWidth: '600px', fontSize: '1.05rem' }}>
-            Our motivation scoring model surfaces the highest-probability acquisitions — owners
-            facing tax delinquency, code violations, declining occupancy, and personal life transitions.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-            {[
-              { signal: 'Tax Delinquency', points: '+25 pts', desc: 'Strongest distress indicator — owner unable or unwilling to pay property taxes', color: 'tag-red' },
-              { signal: 'Fire Code Violations', points: '+15 pts', desc: 'Unresolved violations signal deferred maintenance and disengaged ownership', color: 'tag-red' },
-              { signal: 'Lis Pendens', points: '+20 pts', desc: 'Active litigation against the property signals financial distress or ownership dispute', color: 'tag-amber' },
-              { signal: 'Declining Occupancy', points: '+10 pts', desc: 'Falling occupancy over 12 months without intervention signals operational neglect', color: 'tag-amber' },
-              { signal: 'Out-of-State Owner', points: '+10 pts', desc: 'Absentee ownership correlates with reduced operational attention and exit readiness', color: 'tag-muted' },
-              { signal: 'Owner Age 65+', points: '+10 pts', desc: 'Retirement-age owners show elevated disposition intent and estate planning needs', color: 'tag-muted' },
-            ].map((s) => (
-              <div
-                key={s.signal}
-                className="border border-dark-border bg-white p-6 rounded hover:shadow-md transition-shadow duration-200"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className={s.color.includes('red') ? 'tag-red' : s.color.includes('amber') ? 'tag-amber' : 'tag-muted'}>
-                    {s.signal}
-                  </span>
-                  <span className="font-mono text-xs font-bold" style={{ color: '#D4A843' }}>{s.points}</span>
+              <div key={m.state} style={{ background: '#1a1a1a', padding: '1.5rem' }}>
+                <div className="font-serif" style={{ fontSize: '2.5rem', color: '#c9a84c', lineHeight: '1', marginBottom: '0.5rem', fontWeight: 500 }}>
+                  {m.state}
                 </div>
-                <p className="text-dark-muted text-sm leading-relaxed">{s.desc}</p>
+                <div style={{ fontSize: '0.78rem', color: '#888880', lineHeight: '1.7' }}>{m.cities}</div>
               </div>
             ))}
-          </div>
-          <Link href="/pipeline" className="btn-navy">
-            Open Acquisition Pipeline
-          </Link>
-        </div>
-      </section>
-
-      {/* ── CTA ──────────────────────────────────────────────── */}
-      <section className="py-20" style={{ backgroundColor: '#2D6A4F' }}>
-        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
-          <div className="font-sans text-xs uppercase tracking-[0.14em] font-semibold mb-4" style={{ color: 'rgba(255,255,255,0.55)' }}>
-            Get Access
-          </div>
-          <h2
-            className="font-serif font-light text-white leading-[1.05] mb-6"
-            style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)', maxWidth: '700px' }}
-          >
-            Access Off-Market Self-Storage Deals<br />
-            <em style={{ color: '#D4A843' }}>Before They Reach Any List</em>
-          </h2>
-          <p className="leading-relaxed mb-10" style={{ color: 'rgba(255,255,255,0.68)', maxWidth: '560px', fontSize: '1.05rem' }}>
-            We share our active deal pipeline exclusively with verified accredited investors.
-            No brokers. No auction. Direct access to off-market acquisitions at every stage.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link href="/investor-deal-access" className="btn-gold">
-              Request Deal Access
-            </Link>
-            <Link href="/invest" className="btn-white-outline">
-              Investor Relations
-            </Link>
           </div>
         </div>
       </section>
 
       {/* ── Dual CTA ─────────────────────────────────────────── */}
-      <section className="py-20 border-t border-dark-border" style={{ backgroundColor: '#F4F6F9' }}>
-        <div className="mx-auto px-6 lg:px-12" style={{ maxWidth: '1100px' }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div
-              className="bg-white border border-dark-border p-8 rounded hover:shadow-lg transition-all duration-300"
-              style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
-            >
-              <div className="gold-divider mb-6" />
-              <h3 className="font-serif font-light text-[#1B2B5E] mb-3" style={{ fontSize: '1.8rem' }}>
-                Selling your facility?
-              </h3>
-              <p className="text-dark-muted leading-relaxed mb-7" style={{ fontSize: '1rem' }}>
+      <section style={{ backgroundColor: '#1a1a1a' }}>
+        <div className="mx-auto px-6 lg:px-12 py-20" style={{ maxWidth: '1100px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: '#3a3a3a' }}>
+
+            <div style={{ background: '#1a1a1a', padding: '2.5rem', border: '1px solid #3a3a3a' }}>
+              <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#888880', marginBottom: '1rem', letterSpacing: '0.15em' }}>For Sellers</div>
+              <h3 className="font-serif font-medium mb-3" style={{ fontSize: '1.8rem', color: '#f5f0e8' }}>Selling your facility?</h3>
+              <p style={{ fontSize: '0.88rem', color: '#888880', lineHeight: '1.75', marginBottom: '2rem' }}>
                 Get a confidential, no-obligation review. We move in 5 days and close in 30–45.
                 No brokers. No listing. Direct and private.
               </p>
               <Link href="/submit-deal" className="btn-gold">Submit a Deal</Link>
             </div>
-            <div
-              className="bg-white border border-dark-border p-8 rounded hover:shadow-lg transition-all duration-300"
-              style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
-            >
-              <div className="gold-divider mb-6" />
-              <h3 className="font-serif font-light text-[#1B2B5E] mb-3" style={{ fontSize: '1.8rem' }}>
-                Investing in storage?
-              </h3>
-              <p className="text-dark-muted leading-relaxed mb-7" style={{ fontSize: '1rem' }}>
+
+            <div style={{ background: '#1a1a1a', padding: '2.5rem', border: '1px solid #3a3a3a', borderLeft: 'none' }}>
+              <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.7rem', color: '#888880', marginBottom: '1rem', letterSpacing: '0.15em' }}>For Investors</div>
+              <h3 className="font-serif font-medium mb-3" style={{ fontSize: '1.8rem', color: '#f5f0e8' }}>Investing in storage?</h3>
+              <p style={{ fontSize: '0.88rem', color: '#888880', lineHeight: '1.75', marginBottom: '2rem' }}>
                 Co-invest alongside YEM Acquisitions on curated off-market acquisitions.
                 Accredited investors only. 15–20% target IRR.
               </p>
-              <Link href="/invest" className="btn-navy">Investor Inquiry</Link>
+              <Link href="/invest" style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.8rem',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: '#c9a84c',
+                fontFamily: 'var(--font-jost)',
+                textDecoration: 'none',
+              }}>
+                Investor Inquiry →
+              </Link>
             </div>
+
           </div>
         </div>
       </section>
