@@ -95,7 +95,7 @@ export default function Home() {
               <div key={p.num} style={{ background: '#FFFFFF', padding: '1.5rem 1.25rem' }}>
                 <div className="font-serif" style={{ fontSize: '3rem', color: '#E0DDD4', lineHeight: '1', marginBottom: '0.75rem', fontWeight: 400 }}>{p.num}</div>
                 <div className="font-sans uppercase tracking-widest" style={{ fontSize: '0.8rem', color: '#D4A843', fontWeight: 500, marginBottom: '0.5rem' }}>{p.title}</div>
-                <p style={{ fontSize: '0.95rem', color: '#6B6860', lineHeight: '1.6' }}>{p.body}</p>
+                <p style={{ fontSize: '1.05rem', color: '#6B6860', lineHeight: '1.65' }}>{p.body}</p>
               </div>
             ))}
           </div>
@@ -134,7 +134,7 @@ export default function Home() {
                 <div key={f.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '1rem 0', borderBottom: i < scoreFactors.length - 1 ? '1px solid #E0DDD4' : 'none', gap: '1rem' }}>
                   <div>
                     <div style={{ fontSize: '1rem', color: '#1A1A18', marginBottom: '0.2rem', fontWeight: 500 }}>{f.name}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#6B6860' }}>{f.desc}</div>
+                    <div style={{ fontSize: '1rem', color: '#6B6860' }}>{f.desc}</div>
                   </div>
                   <div className="font-serif" style={{ fontSize: '1.2rem', color: '#D4A843', whiteSpace: 'nowrap', fontWeight: 500 }}>{f.pts}</div>
                 </div>
@@ -158,7 +158,7 @@ export default function Home() {
             {markets.map((m) => (
               <div key={m.state} style={{ background: '#FFFFFF', padding: '1.25rem' }}>
                 <div className="font-serif" style={{ fontSize: '2.2rem', color: '#1B2B5E', lineHeight: '1', marginBottom: '0.4rem', fontWeight: 500 }}>{m.state}</div>
-                <div style={{ fontSize: '0.9rem', color: '#6B6860', lineHeight: '1.6' }}>{m.cities}</div>
+                <div style={{ fontSize: '1.05rem', color: '#6B6860', lineHeight: '1.65' }}>{m.cities}</div>
               </div>
             ))}
           </div>
