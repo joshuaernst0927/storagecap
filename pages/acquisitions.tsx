@@ -26,42 +26,42 @@ export default function Acquisitions() {
         <title>Acquisitions — YEM Acquisitions</title>
       </Head>
 
+      {/* Hero */}
       <section className="relative overflow-hidden border-b border-dark-border" style={{ backgroundColor: '#1B2B5E' }}>
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200)', opacity: 0.18 }}
-        />
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200)', opacity: 0.18 }} />
         <div className="relative z-10 page-hero">
           <div className="section-label" style={{ color: '#D4A843' }}>Acquisitions</div>
           <h1 className="font-serif font-light text-white leading-[1.05] max-w-3xl mb-6" style={{ fontSize: 'clamp(3rem, 6vw, 5.5rem)' }}>
-            Off-market.<br />
-            <em style={{ color: '#D4A843' }}>Every time.</em>
+            Off-market.<br /><em style={{ color: '#D4A843' }}>Every time.</em>
           </h1>
-          <p className="text-lg max-w-xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          <p className="max-w-xl leading-relaxed" style={{ fontSize: '1.15rem', color: 'rgba(255,255,255,0.7)' }}>
             We source exclusively through systematic distress intelligence — county records,
             tax rolls, code enforcement, and court filings. We don&apos;t wait for listings.
           </p>
         </div>
       </section>
 
-      <section className="py-24">
+      {/* Criteria + Why Us */}
+      <section className="py-20">
         <div className="section-container">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+
             <div>
               <div className="section-label">Acquisition Criteria</div>
-              <h2 className="display-heading text-5xl mb-10">What we target</h2>
+              <h2 className="display-heading mb-10">What we target</h2>
               <div className="grid grid-cols-2 gap-3">
                 {criteria.map(c => (
                   <div key={c.label} className="border border-dark-border p-5 bg-dark-surface">
-                    <div className="text-xs uppercase tracking-widest text-dark-muted mb-2">{c.label}</div>
-                    <div className="font-serif text-xl font-light text-gold">{c.value}</div>
+                    <div className="uppercase tracking-widest font-sans mb-2" style={{ fontSize: '0.8rem', color: '#6B6860' }}>{c.label}</div>
+                    <div className="font-serif text-gold" style={{ fontSize: '1.4rem', fontWeight: 300 }}>{c.value}</div>
                   </div>
                 ))}
               </div>
             </div>
+
             <div>
               <div className="section-label">Why Sellers Choose Us</div>
-              <h2 className="display-heading text-5xl mb-10">A direct buyer</h2>
+              <h2 className="display-heading mb-10">A direct buyer</h2>
               <div className="space-y-5">
                 {[
                   ['No Brokers Required', 'You work directly with our principals. No commissions, no intermediaries.'],
@@ -72,27 +72,29 @@ export default function Acquisitions() {
                   <div key={t} className="flex gap-5 border-b border-dark-border pb-5">
                     <div className="w-1 bg-gold flex-shrink-0 mt-1" />
                     <div>
-                      <div className="text-[#1a1a18] text-sm font-medium mb-1">{t}</div>
-                      <div className="text-dark-muted text-sm leading-relaxed">{d}</div>
+                      <div className="font-medium mb-1" style={{ fontSize: '1rem', color: '#1a1a18' }}>{t}</div>
+                      <div className="leading-relaxed" style={{ fontSize: '1rem', color: '#6B6860' }}>{d}</div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
+
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-dark-surface border-y border-dark-border">
+      {/* Distress Signals */}
+      <section className="py-20 bg-dark-surface border-y border-dark-border">
         <div className="section-container">
           <div className="section-label">Distress Intelligence</div>
-          <h2 className="display-heading text-5xl mb-16 max-w-2xl">How we find motivated sellers</h2>
+          <h2 className="display-heading mb-14 max-w-2xl">How we find motivated sellers</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {signals.map(s => (
-              <div key={s.title} className="border border-dark-border p-6 bg-dark-bg">
+              <div key={s.title} className="border border-dark-border p-6 bg-white">
                 <div className="gold-divider mb-5" />
-                <h3 className="font-serif text-xl font-light text-[#1B2B5E] mb-3">{s.title}</h3>
-                <p className="text-dark-muted text-sm leading-relaxed">{s.desc}</p>
+                <h3 className="font-serif font-light text-[#1B2B5E] mb-3" style={{ fontSize: '1.3rem' }}>{s.title}</h3>
+                <p className="leading-relaxed" style={{ fontSize: '1rem', color: '#6B6860' }}>{s.desc}</p>
               </div>
             ))}
           </div>
@@ -102,12 +104,13 @@ export default function Acquisitions() {
         </div>
       </section>
 
-      <section className="py-24">
+      {/* CTA */}
+      <section className="py-20">
         <div className="section-container">
-          <div className="border border-gold/30 p-12 md:p-20 text-center">
+          <div className="border p-12 md:p-20 text-center" style={{ borderColor: 'rgba(212,168,67,0.3)' }}>
             <div className="section-label">Own a facility?</div>
-            <h2 className="display-heading text-5xl mb-6">Get a confidential review.</h2>
-            <p className="text-dark-muted max-w-sm mx-auto mb-10 leading-relaxed">
+            <h2 className="display-heading mb-6">Get a confidential review.</h2>
+            <p className="mx-auto mb-10 leading-relaxed" style={{ fontSize: '1.05rem', color: '#6B6860', maxWidth: '420px' }}>
               No broker required. No obligation. Response within 5 business days.
             </p>
             <Link href="/submit-deal" className="btn-gold">Submit Your Facility</Link>
