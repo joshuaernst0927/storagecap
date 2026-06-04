@@ -158,8 +158,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!inputs) return res.status(400).json({ error: 'Missing inputs' })
 
     try {
-      // Map frontend field names to DO API field names
-  
 const raw: Record<string, unknown> = {
   purchase_price:       inputs.purchasePrice,
   closing_costs_pct:    inputs.closingCostsPct,
