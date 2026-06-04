@@ -9,24 +9,38 @@ import DealScoreBadge from '@/components/DealScoreBadge'
 
 type UWInputs = {
   propertyName: string; address: string
-  // Acquisition
   purchasePrice: string; closingCostsPct: string; initialRepairs: string
   acquisitionFeePct: string; assetMgmtFeePct: string; dispositionFeePct: string
-  // Operations
   startOccupancy: string; stabilizedOccupancy: string; monthsToStabilization: string
   annualRentGrowth: string; opexGrowth: string
-  // Debt
   initialLTV: string; initialRate: string; initialAmortYears: string
   ioPeriodMonths: string; minDSCR: string
   refiMonth: string; refiLTV: string; refiRate: string; refiAmortYears: string
-  // Exit
   exitCapRate: string; exitMonth: string; sellingCostsPct: string
-  // GP/LP
   preferredReturn: string; lpCatchUp: string; gpCatchUp: string
   lpResidual: string; gpResidual: string
 }
 
 type UnitMixRow = { type: string; units: string; sqft: string; currentRent: string; marketRent: string }
+
+type ModelResults = {
+  purchase_price: number
+  total_project_cost: number
+  equity_required: number
+  year1_noi: number
+  year5_noi: number
+  levered_irr: number
+  equity_multiple: number
+  avg_coc: number
+  exit_value: number
+  unlevered_irr: number
+  lp_equity_multiple: number
+  moic: number
+  going_in_cap: number
+  stabilized_cap: number
+  price_per_unit: number
+  price_per_sf: number
+}
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -54,7 +68,6 @@ const DEFAULT_MIX: UnitMixRow[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Claude returns decimals (0.08); form shows percentages (8). */
 function fromExtracted(data: Record<string, unknown>): { inputs: UWInputs; unitMix: UnitMixRow[] } {
   const p = (v: unknown, fallback = '') =>
     v != null ? String(Math.round((v as number) * 10000) / 100) : fallback
@@ -109,15 +122,12 @@ function fromExtracted(data: Record<string, unknown>): { inputs: UWInputs; unitM
   return { inputs, unitMix }
 }
 
-/** Convert form display values (%) → Python decimals for model inputs. */
 function buildPayload(inputs: UWInputs, unitMix: UnitMixRow[]) {
   const pct = (s: string) => s !== '' ? parseFloat(s) / 100 : null
   const num = (s: string) => s !== '' ? parseFloat(s) : null
   const int = (s: string) => s !== '' ? parseInt(s, 10) : null
 
   return {
-    propertyName: inputs.propertyName || null,
-    address: inputs.address || null,
     purchasePrice:          num(inputs.purchasePrice),
     closingCostsPct:        pct(inputs.closingCostsPct),
     initialRepairs:         num(inputs.initialRepairs),
@@ -141,7 +151,6 @@ function buildPayload(inputs: UWInputs, unitMix: UnitMixRow[]) {
     exitCapRate:            pct(inputs.exitCapRate),
     exitMonth:              int(inputs.exitMonth),
     sellingCostsPct:        pct(inputs.sellingCostsPct),
-    lpReturnOfCapital:      1,
     preferredReturn:        pct(inputs.preferredReturn),
     lpCatchUp:              pct(inputs.lpCatchUp),
     gpCatchUp:              pct(inputs.gpCatchUp),
@@ -151,12 +160,32 @@ function buildPayload(inputs: UWInputs, unitMix: UnitMixRow[]) {
       .filter(r => r.units || r.currentRent || r.marketRent)
       .map(r => ({
         type: r.type.toLowerCase(),
-        units:       r.units       ? parseInt(r.units, 10)   : null,
-        sqft:        r.sqft        ? parseFloat(r.sqft)      : null,
+        units:       r.units       ? parseInt(r.units, 10)     : null,
+        sqft:        r.sqft        ? parseFloat(r.sqft)        : null,
         currentRent: r.currentRent ? parseFloat(r.currentRent) : null,
         marketRent:  r.marketRent  ? parseFloat(r.marketRent)  : null,
       })),
   }
+}
+
+// ─── Formatting ───────────────────────────────────────────────────────────────
+
+const fmt$ = (n: number) => n >= 1_000_000
+  ? `$${(n / 1_000_000).toFixed(2)}M`
+  : `$${n.toLocaleString()}`
+
+const fmtPct = (n: number) => `${(n * 100).toFixed(1)}%`
+const fmtX = (n: number) => `${n.toFixed(2)}x`
+
+// ─── Result Card ──────────────────────────────────────────────────────────────
+
+function ResultCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`border p-5 ${highlight ? 'border-gold bg-gold/5' : 'border-dark-border'}`}>
+      <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">{label}</div>
+      <div className={`font-serif text-2xl font-light ${highlight ? 'text-gold' : 'text-[#1a1a18]'}`}>{value}</div>
+    </div>
+  )
 }
 
 // ─── Small UI Helpers ─────────────────────────────────────────────────────────
@@ -193,22 +222,16 @@ function SectionHead({ title }: { title: string }) {
 type Source = 'pipeline' | 'upload' | 'manual'
 
 export default function Underwrite() {
-  // Source selection
   const [source, setSource] = useState<Source>('upload')
   const [pipelineDeals, setPipelineDeals] = useState<PipelineProperty[]>([])
   const [selectedDealId, setSelectedDealId] = useState('')
-
-  // File upload
   const [files, setFiles] = useState<UploadFile[]>([])
-
-  // State machine
   const [step, setStep] = useState<'source' | 'form'>('source')
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState('')
-  const [building, setBuilding] = useState(false)
-  const [buildError, setBuildError] = useState('')
-
-  // Form data
+  const [running, setRunning] = useState(false)
+  const [runError, setRunError] = useState('')
+  const [results, setResults] = useState<ModelResults | null>(null)
   const [inputs, setInputs] = useState<UWInputs>(EMPTY)
   const [unitMix, setUnitMix] = useState<UnitMixRow[]>(DEFAULT_MIX)
 
@@ -216,7 +239,6 @@ export default function Underwrite() {
   const setMix = (i: number, k: keyof UnitMixRow, v: string) =>
     setUnitMix(prev => prev.map((r, idx) => idx === i ? { ...r, [k]: v } : r))
 
-  // Load pipeline deals on mount
   useEffect(() => {
     fetch('/api/pipeline-ingest')
       .then(r => r.ok ? r.json() : [])
@@ -232,7 +254,6 @@ export default function Underwrite() {
     const occ = deal.occupancy > 1 ? deal.occupancy / 100 : deal.occupancy
     const askPrice = deal.askingPrice ?? deal.estimatedValue ?? 0
     const exitCap = (deal.noi && askPrice) ? deal.noi / askPrice : null
-
     setInputs({
       ...EMPTY,
       propertyName: deal.facilityName,
@@ -242,12 +263,14 @@ export default function Underwrite() {
       exitCapRate: exitCap ? String(Math.round(exitCap * 10000) / 100) : '',
     })
     setUnitMix(DEFAULT_MIX)
+    setResults(null)
     setStep('form')
   }
 
   function handleManual() {
     setInputs(EMPTY)
     setUnitMix(DEFAULT_MIX)
+    setResults(null)
     setStep('form')
   }
 
@@ -267,7 +290,6 @@ export default function Underwrite() {
           return { fileName: file.name, mimeType: mime, data: base64 }
         })
       )
-
       const res = await fetch('/api/underwrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -281,6 +303,7 @@ export default function Underwrite() {
       const { inputs: newInputs, unitMix: newMix } = fromExtracted(data)
       setInputs(newInputs)
       setUnitMix(newMix)
+      setResults(null)
       setStep('form')
     } catch (err) {
       setExtractError(String(err))
@@ -289,35 +312,33 @@ export default function Underwrite() {
     }
   }
 
-  // ── Build handler ────────────────────────────────────────────────────────
+  // ── Run Model ────────────────────────────────────────────────────────────
 
-  async function handleBuild() {
-    setBuilding(true)
-    setBuildError('')
+  async function handleRun() {
+    setRunning(true)
+    setRunError('')
+    setResults(null)
     try {
       const payload = buildPayload(inputs, unitMix)
       const res = await fetch('/api/underwrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'build', inputs: payload, propertyAddress: inputs.address || inputs.propertyName }),
+        body: JSON.stringify({ action: 'run', inputs: payload }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.detail ?? err.error ?? `HTTP ${res.status}`)
       }
-      // Trigger file download
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      const name = (inputs.address || inputs.propertyName || 'underwrite').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 60)
-      a.href = url
-      a.download = `${name}_UW.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
+      const data: ModelResults = await res.json()
+      setResults(data)
+      // Scroll to results
+      setTimeout(() => {
+        document.getElementById('uw-results')?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
     } catch (err) {
-      setBuildError(String(err))
+      setRunError(String(err))
     } finally {
-      setBuilding(false)
+      setRunning(false)
     }
   }
 
@@ -336,11 +357,11 @@ export default function Underwrite() {
         <div className="section-label">Underwrite</div>
         <h1 className="display-heading text-5xl md:text-7xl max-w-3xl mb-6">
           Load a deal.<br />
-          <em className="text-gold">Build the model.</em>
+          <em className="text-gold">Run the model.</em>
         </h1>
         <p className="text-dark-muted text-lg max-w-xl leading-relaxed">
-          Select a pipeline deal or upload a rent roll / T12 / OM. Claude extracts the inputs,
-          you review and edit, then download a pre-populated acquisition model.
+          Upload a rent roll, T12, or OM. Claude extracts every input.
+          Review, edit, and run the model — IRR, MOIC, NOI, and exit value back in seconds.
         </p>
       </section>
 
@@ -350,7 +371,6 @@ export default function Underwrite() {
           {/* ── Step 1: Source ── */}
           {step === 'source' && (
             <>
-              {/* Source tabs */}
               <div className="flex gap-2 mb-8 border-b border-dark-border pb-4">
                 {(['upload', 'pipeline', 'manual'] as Source[]).map(s => (
                   <button
@@ -366,7 +386,6 @@ export default function Underwrite() {
                 ))}
               </div>
 
-              {/* Upload */}
               {source === 'upload' && (
                 <div>
                   <FileDropZone files={files} onChange={setFiles} disabled={extracting} />
@@ -383,7 +402,6 @@ export default function Underwrite() {
                 </div>
               )}
 
-              {/* Pipeline */}
               {source === 'pipeline' && (
                 <div>
                   {pipelineDeals.length === 0 ? (
@@ -420,7 +438,6 @@ export default function Underwrite() {
                 </div>
               )}
 
-              {/* Manual */}
               {source === 'manual' && (
                 <div className="p-8 border border-dark-border bg-dark-surface text-center">
                   <p className="font-serif text-xl font-light text-[#1B2B5E] mb-2">Enter inputs manually</p>
@@ -437,9 +454,9 @@ export default function Underwrite() {
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <div className="section-label-sm mb-0.5">Underwriting Inputs</div>
-                  <p className="text-dark-muted text-sm">Review and adjust before building the model.</p>
+                  <p className="text-dark-muted text-sm">Review and adjust — then run the model.</p>
                 </div>
-                <button onClick={() => setStep('source')} className="text-dark-muted text-xs uppercase tracking-widest hover:text-[#1a1a18]">
+                <button onClick={() => { setStep('source'); setResults(null) }} className="text-dark-muted text-xs uppercase tracking-widest hover:text-[#1a1a18]">
                   ← Change source
                 </button>
               </div>
@@ -527,12 +544,20 @@ export default function Underwrite() {
                           {['Unit Type', '# Units', 'Avg SF', 'Current Rent/Mo', 'Market Rent/Mo'].map(h => (
                             <th key={h} className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4">{h}</th>
                           ))}
+                          <th className="pb-3" />
                         </tr>
                       </thead>
                       <tbody>
                         {unitMix.map((row, i) => (
-                          <tr key={row.type} className="border-b border-dark-border/50 last:border-0">
-                            <td className="py-2 pr-4 font-mono text-sm text-dark-muted w-20">{row.type}</td>
+                          <tr key={i} className="border-b border-dark-border/50 last:border-0">
+                            <td className="py-2 pr-4 w-24">
+                              <input
+                                className="input-field py-1.5 text-sm font-mono"
+                                type="text"
+                                value={row.type}
+                                onChange={e => setMix(i, 'type', e.target.value)}
+                              />
+                            </td>
                             {(['units', 'sqft', 'currentRent', 'marketRent'] as (keyof UnitMixRow)[]).map(k => (
                               <td key={k} className="py-2 pr-4">
                                 <input
@@ -542,35 +567,107 @@ export default function Underwrite() {
                                   min="0"
                                   value={row[k]}
                                   onChange={e => setMix(i, k, e.target.value)}
-                                  placeholder={k === 'sqft' ? row.sqft || '—' : '—'}
+                                  placeholder="—"
                                 />
                               </td>
                             ))}
+                            <td className="py-2">
+                              <button
+                                onClick={() => setUnitMix(prev => prev.filter((_, idx) => idx !== i))}
+                                className="text-dark-muted hover:text-red-500 text-xs px-2"
+                              >✕</button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-dark-muted text-xs mt-3">Leave rows blank to keep template defaults.</p>
+                  <button
+                    onClick={() => setUnitMix(prev => [...prev, { type: '', units: '', sqft: '', currentRent: '', marketRent: '' }])}
+                    className="mt-3 text-xs uppercase tracking-widest text-dark-muted border border-dark-border px-4 py-2 hover:border-gold/40 hover:text-gold transition-colors"
+                  >
+                    + Add Row
+                  </button>
                 </div>
 
               </div>
 
-              {/* Build button */}
+              {/* Run button */}
               <div className="mt-10 pt-8 border-t border-dark-border">
-                {buildError && (
-                  <div className="mb-5 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{buildError}</div>
+                {runError && (
+                  <div className="mb-5 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{runError}</div>
                 )}
                 <div className="flex items-center gap-5">
-                  <button onClick={handleBuild} disabled={building} className="btn-gold disabled:opacity-60 text-base px-8 py-3">
-                    {building ? 'Building model...' : 'Build Model & Download'}
+                  <button onClick={handleRun} disabled={running} className="btn-gold disabled:opacity-60 text-base px-8 py-3">
+                    {running ? 'Running model...' : 'Run Model'}
                   </button>
                   <p className="text-dark-muted text-xs leading-relaxed max-w-xs">
-                    Downloads a pre-populated Excel acquisition model.
-                    Formulas remain live — open in Excel to recalculate.
+                    Results appear below instantly. Adjust any input and run again.
                   </p>
                 </div>
               </div>
+
+              {/* ── Results Dashboard ── */}
+              {results && (
+                <div id="uw-results" className="mt-14 pt-10 border-t-2 border-gold/30">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <div className="section-label-sm text-gold mb-1">Model Output</div>
+                      <h2 className="font-serif text-3xl font-light text-[#1a1a18]">
+                        {inputs.propertyName || 'Underwriting Results'}
+                      </h2>
+                      {inputs.address && <p className="text-dark-muted text-sm mt-1">{inputs.address}</p>}
+                    </div>
+                    <button
+                      onClick={handleRun}
+                      disabled={running}
+                      className="text-xs uppercase tracking-widest border border-dark-border px-4 py-2 hover:border-gold/40 hover:text-gold transition-colors disabled:opacity-50"
+                    >
+                      ↺ Re-run
+                    </button>
+                  </div>
+
+                  {/* Primary metrics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <ResultCard label="Levered IRR" value={fmtPct(results.levered_irr)} highlight />
+                    <ResultCard label="Equity Multiple" value={fmtX(results.equity_multiple)} highlight />
+                    <ResultCard label="LP Multiple" value={fmtX(results.lp_equity_multiple)} highlight />
+                    <ResultCard label="Avg Cash-on-Cash" value={fmtPct(results.avg_coc)} highlight />
+                  </div>
+
+                  {/* NOI row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <ResultCard label="Year 1 NOI" value={fmt$(results.year1_noi)} />
+                    <ResultCard label="Year 5 NOI" value={fmt$(results.year5_noi)} />
+                    <ResultCard label="Exit Value" value={fmt$(results.exit_value)} />
+                    <ResultCard label="Total Project Cost" value={fmt$(results.total_project_cost)} />
+                  </div>
+
+                  {/* Diagnostics row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <ResultCard label="Going-In Cap" value={fmtPct(results.going_in_cap)} />
+                    <ResultCard label="Stabilized Cap" value={fmtPct(results.stabilized_cap)} />
+                    <ResultCard label="Price / Unit" value={fmt$(results.price_per_unit)} />
+                    <ResultCard label="Price / SF" value={`$${results.price_per_sf}`} />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-8 flex gap-3 flex-wrap">
+                    <a
+                      href={`/generate-loi?price=${inputs.purchasePrice}&irr=${(results.levered_irr * 100).toFixed(1)}&moic=${results.moic}&exitCap=${inputs.exitCapRate}&property=${encodeURIComponent(inputs.propertyName)}&address=${encodeURIComponent(inputs.address)}`}
+                      className="btn-gold text-sm px-6 py-2.5"
+                    >
+                      → Generate LOI
+                    </a>
+                    <button
+                      onClick={() => window.print()}
+                      className="text-xs uppercase tracking-widest border border-dark-border px-5 py-2.5 hover:border-gold/40 hover:text-gold transition-colors"
+                    >
+                      Print / Save PDF
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
