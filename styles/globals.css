@@ -6,8 +6,8 @@
   body {
     background-color: #FFFFFF;
     color: #1A1A18;
-    font-size: 1.05rem;
-    line-height: 1.8;
+    font-size: 1.1rem;
+    line-height: 1.7;
   }
 
   * {
@@ -26,7 +26,7 @@
   .btn-gold {
     @apply inline-block bg-gold font-sans font-semibold uppercase tracking-widest cursor-pointer select-none;
     color: #1A1A18;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     padding: 14px 32px;
     letter-spacing: 0.08em;
     border-radius: 4px;
@@ -41,7 +41,7 @@
   .btn-gold-sm {
     @apply inline-block bg-gold font-sans font-semibold uppercase tracking-widest cursor-pointer select-none;
     color: #1A1A18;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     padding: 10px 22px;
     letter-spacing: 0.08em;
     border-radius: 4px;
@@ -56,7 +56,7 @@
     @apply inline-block font-sans font-semibold uppercase tracking-widest cursor-pointer select-none;
     color: #D4A843;
     border: 1.5px solid #D4A843;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     padding: 14px 32px;
     letter-spacing: 0.08em;
     border-radius: 4px;
@@ -72,7 +72,7 @@
     @apply inline-block font-sans font-semibold uppercase tracking-widest cursor-pointer select-none;
     background-color: #1B2B5E;
     color: #FFFFFF;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     padding: 14px 32px;
     letter-spacing: 0.08em;
     border-radius: 4px;
@@ -88,7 +88,7 @@
     @apply inline-block font-sans font-semibold uppercase tracking-widest cursor-pointer select-none;
     color: rgba(255,255,255,0.85);
     border: 1.5px solid rgba(255,255,255,0.4);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     padding: 14px 32px;
     letter-spacing: 0.08em;
     border-radius: 4px;
@@ -104,7 +104,7 @@
     @apply inline-block font-sans font-medium uppercase tracking-widest cursor-pointer select-none;
     border: 1px solid #E0DDD4;
     color: #6B6860;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     padding: 10px 22px;
     letter-spacing: 0.08em;
     border-radius: 4px;
@@ -117,23 +117,23 @@
 
   /* ── Labels ── */
   .section-label {
-    @apply font-sans font-semibold uppercase mb-4;
+    @apply font-sans font-semibold uppercase mb-3;
     color: #D4A843;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     letter-spacing: 0.14em;
   }
 
   .section-label-sm {
     @apply font-sans font-semibold uppercase;
     color: #D4A843;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     letter-spacing: 0.14em;
   }
 
   .label-text {
     @apply font-sans font-medium uppercase mb-2 block;
     color: #6B6860;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     letter-spacing: 0.08em;
   }
 
@@ -141,13 +141,14 @@
   .display-heading {
     @apply font-serif font-light leading-[1.05];
     color: #1B2B5E;
+    font-size: clamp(2.2rem, 4vw, 3.8rem);
   }
 
   /* ── Nav ── */
   .nav-link {
     @apply font-sans font-medium uppercase transition-all duration-200;
     color: #1B2B5E;
-    font-size: 0.95rem;
+    font-size: 1rem;
     letter-spacing: 0.06em;
   }
   .nav-link:hover {
@@ -162,7 +163,7 @@
   .footer-link {
     @apply font-sans transition-colors duration-200;
     color: rgba(255,255,255,0.55);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
   .footer-link:hover {
     color: #D4A843;
@@ -174,14 +175,14 @@
     border: 1px solid #E0DDD4;
     border-radius: 4px;
     color: #1A1A18;
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
   .input-field:focus {
     border-color: #D4A843;
     box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.1);
   }
   .input-field::placeholder {
-    color: #6B6860;
+    color: #9B9890;
   }
 
   .input-field-sm {
@@ -189,18 +190,18 @@
     border: 1px solid #E0DDD4;
     border-radius: 4px;
     color: #1A1A18;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
   .input-field-sm:focus {
     border-color: #D4A843;
   }
   .input-field-sm::placeholder {
-    color: #6B6860;
+    color: #9B9890;
   }
 
   /* ── Layout ── */
   .page-hero {
-    @apply pt-20 pb-16 px-6 lg:px-12 mx-auto;
+    @apply pt-14 pb-12 px-6 lg:px-12 mx-auto;
     max-width: 1100px;
   }
 
@@ -218,7 +219,7 @@
     background: #FFFFFF;
     border: 1px solid #E0DDD4;
     border-radius: 8px;
-    padding: 28px;
+    padding: 22px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
@@ -230,7 +231,7 @@
   .card-dark {
     background: #FFFFFF;
     border: 1px solid #E0DDD4;
-    padding: 28px;
+    padding: 22px;
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -243,7 +244,7 @@
   /* ── Tags ── */
   .tag {
     @apply inline-flex items-center gap-1.5 font-sans font-semibold uppercase px-2 py-1 border;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     letter-spacing: 0.08em;
     border-radius: 3px;
   }
@@ -297,18 +298,17 @@
   .pipeline-th {
     @apply text-left font-sans font-semibold uppercase pb-3 pr-6 whitespace-nowrap border-b border-dark-border;
     color: #6B6860;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     letter-spacing: 0.1em;
     padding-top: 12px;
   }
 
   .pipeline-td {
     @apply pr-4 align-middle;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: #1A1A18;
-    padding-top: 16px;
-    padding-bottom: 16px;
-    min-height: 54px;
+    padding-top: 14px;
+    padding-bottom: 14px;
   }
 }
 
