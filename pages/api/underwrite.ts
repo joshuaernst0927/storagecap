@@ -168,7 +168,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         stabilized_occupancy: inputs.stabilizedOccupancy ?? null,
         months_to_stabilize:  inputs.monthsToStabilization ?? null,
         rent_growth:          inputs.annualRentGrowth    ?? null,
-        other_income_month:   inputs.otherIncomeMonth    ?? null,
+        other_income_month:   (inputs.otherIncomeMonth as number) ?? 0,
         initial_ltv:          inputs.initialLTV          ?? null,
         initial_rate:         inputs.initialRate         ?? null,
         refi_ltv:             inputs.refiLTV             ?? null,
