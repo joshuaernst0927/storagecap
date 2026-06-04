@@ -159,8 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
       // Map frontend field names to DO API field names
-      const payload = {
-        // Strip nulls — DO API rejects null for numeric fields
+  
 const raw: Record<string, unknown> = {
   purchase_price:       inputs.purchasePrice,
   closing_costs_pct:    inputs.closingCostsPct,
