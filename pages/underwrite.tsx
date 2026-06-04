@@ -9,14 +9,21 @@ import DealScoreBadge from '@/components/DealScoreBadge'
 
 type UWInputs = {
   propertyName: string; address: string
+  // Deal Criteria
+  minTargetIRR: string; maxOfferPrice: string; gpEquityPct: string; lpEquityPct: string
+  // Acquisition
   purchasePrice: string; closingCostsPct: string; initialRepairs: string
   acquisitionFeePct: string; assetMgmtFeePct: string; dispositionFeePct: string
+  // Operations
   startOccupancy: string; stabilizedOccupancy: string; monthsToStabilization: string
   annualRentGrowth: string; opexGrowth: string
+  // Debt
   initialLTV: string; initialRate: string; initialAmortYears: string
   ioPeriodMonths: string; minDSCR: string
   refiMonth: string; refiLTV: string; refiRate: string; refiAmortYears: string
+  // Exit
   exitCapRate: string; exitMonth: string; sellingCostsPct: string
+  // GP/LP
   preferredReturn: string; lpCatchUp: string; gpCatchUp: string
   lpResidual: string; gpResidual: string
 }
@@ -46,6 +53,7 @@ type ModelResults = {
 
 const EMPTY: UWInputs = {
   propertyName: '', address: '',
+  minTargetIRR: '15', maxOfferPrice: '', gpEquityPct: '10', lpEquityPct: '90',
   purchasePrice: '', closingCostsPct: '3', initialRepairs: '0',
   acquisitionFeePct: '2', assetMgmtFeePct: '1.5', dispositionFeePct: '1',
   startOccupancy: '', stabilizedOccupancy: '90', monthsToStabilization: '18',
@@ -76,6 +84,7 @@ function fromExtracted(data: Record<string, unknown>): { inputs: UWInputs; unitM
   const inputs: UWInputs = {
     propertyName: String(data.propertyName ?? ''),
     address: String(data.address ?? ''),
+    minTargetIRR: '15', maxOfferPrice: '', gpEquityPct: '10', lpEquityPct: '90',
     purchasePrice:         n(data.purchasePrice),
     closingCostsPct:       p(data.closingCostsPct, '3'),
     initialRepairs:        n(data.initialRepairs, '0'),
@@ -173,17 +182,45 @@ function buildPayload(inputs: UWInputs, unitMix: UnitMixRow[]) {
 const fmt$ = (n: number) => n >= 1_000_000
   ? `$${(n / 1_000_000).toFixed(2)}M`
   : `$${n.toLocaleString()}`
-
 const fmtPct = (n: number) => `${(n * 100).toFixed(1)}%`
 const fmtX = (n: number) => `${n.toFixed(2)}x`
 
 // ─── Result Card ──────────────────────────────────────────────────────────────
 
-function ResultCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function ResultCard({ label, value, highlight, pass, fail }: {
+  label: string; value: string; highlight?: boolean; pass?: boolean; fail?: boolean
+}) {
+  const border = fail ? 'border-red-400 bg-red-50' : pass ? 'border-green-500 bg-green-50' : highlight ? 'border-gold bg-gold/5' : 'border-dark-border'
+  const color = fail ? 'text-red-600' : pass ? 'text-green-700' : highlight ? 'text-gold' : 'text-[#1a1a18]'
   return (
-    <div className={`border p-5 ${highlight ? 'border-gold bg-gold/5' : 'border-dark-border'}`}>
+    <div className={`border p-5 ${border}`}>
       <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">{label}</div>
-      <div className={`font-serif text-2xl font-light ${highlight ? 'text-gold' : 'text-[#1a1a18]'}`}>{value}</div>
+      <div className={`font-serif text-2xl font-light ${color}`}>{value}</div>
+    </div>
+  )
+}
+
+// ─── Verdict Banner ───────────────────────────────────────────────────────────
+
+function VerdictBanner({ results, minIRR }: { results: ModelResults; minIRR: number }) {
+  const passes = results.levered_irr >= minIRR / 100
+  const spread = ((results.levered_irr - minIRR / 100) * 100).toFixed(1)
+
+  return (
+    <div className={`p-5 border-2 mb-6 flex items-center justify-between ${passes ? 'border-green-500 bg-green-50' : 'border-red-400 bg-red-50'}`}>
+      <div>
+        <div className={`text-lg font-semibold ${passes ? 'text-green-700' : 'text-red-600'}`}>
+          {passes ? '✅ Deal Passes' : '❌ Deal Fails'}
+        </div>
+        <div className="text-sm text-dark-muted mt-0.5">
+          {passes
+            ? `IRR of ${fmtPct(results.levered_irr)} exceeds your ${minIRR}% minimum by ${spread}%`
+            : `IRR of ${fmtPct(results.levered_irr)} is below your ${minIRR}% minimum by ${Math.abs(parseFloat(spread))}%`}
+        </div>
+      </div>
+      <div className={`text-3xl font-serif font-light ${passes ? 'text-green-700' : 'text-red-600'}`}>
+        {fmtPct(results.levered_irr)}
+      </div>
     </div>
   )
 }
@@ -245,8 +282,6 @@ export default function Underwrite() {
       .then((d: PipelineProperty[]) => setPipelineDeals(d))
       .catch(() => {})
   }, [])
-
-  // ── Source handlers ──────────────────────────────────────────────────────
 
   function handleLoadDeal() {
     const deal = pipelineDeals.find(d => d.id === selectedDealId)
@@ -312,8 +347,6 @@ export default function Underwrite() {
     }
   }
 
-  // ── Run Model ────────────────────────────────────────────────────────────
-
   async function handleRun() {
     setRunning(true)
     setRunError('')
@@ -331,7 +364,6 @@ export default function Underwrite() {
       }
       const data: ModelResults = await res.json()
       setResults(data)
-      // Scroll to results
       setTimeout(() => {
         document.getElementById('uw-results')?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
@@ -342,7 +374,35 @@ export default function Underwrite() {
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  async function handleDownload() {
+    try {
+      const payload = buildPayload(inputs, unitMix)
+      const res = await fetch('/api/underwrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'download', inputs: payload }),
+      })
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${inputs.propertyName || 'YEM'}_UW.xlsx`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch (err) {
+      console.error('download error', err)
+    }
+  }
+
+  // Computed equity split
+  const totalEquity = results ? results.equity_required : 0
+  const gpPct = parseFloat(inputs.gpEquityPct) / 100 || 0
+  const lpPct = parseFloat(inputs.lpEquityPct) / 100 || 0
+  const gpEquity = totalEquity * gpPct
+  const lpEquity = totalEquity * lpPct
+  const minIRR = parseFloat(inputs.minTargetIRR) || 15
 
   return (
     <AuthGate>
@@ -352,7 +412,6 @@ export default function Underwrite() {
         <meta name="description" content="Populate the acquisition model from a deal document or pipeline property." />
       </Head>
 
-      {/* Hero */}
       <section className="page-hero border-b border-dark-border">
         <div className="section-label">Underwrite</div>
         <h1 className="display-heading text-5xl md:text-7xl max-w-3xl mb-6">
@@ -368,7 +427,6 @@ export default function Underwrite() {
       <section className="py-14">
         <div className="section-container max-w-4xl">
 
-          {/* ── Step 1: Source ── */}
           {step === 'source' && (
             <>
               <div className="flex gap-2 mb-8 border-b border-dark-border pb-4">
@@ -394,9 +452,7 @@ export default function Underwrite() {
                   )}
                   <div className="mt-5">
                     <button onClick={handleExtract} disabled={files.length === 0 || extracting} className="btn-gold disabled:opacity-60">
-                      {extracting
-                        ? `Extracting ${files.length} file${files.length !== 1 ? 's' : ''} with Claude...`
-                        : 'Extract & Populate'}
+                      {extracting ? `Extracting ${files.length} file${files.length !== 1 ? 's' : ''} with Claude...` : 'Extract & Populate'}
                     </button>
                   </div>
                 </div>
@@ -448,7 +504,6 @@ export default function Underwrite() {
             </>
           )}
 
-          {/* ── Step 2: Form ── */}
           {step === 'form' && (
             <>
               <div className="flex items-center justify-between mb-8">
@@ -470,6 +525,18 @@ export default function Underwrite() {
                     <Field label="Property Name" value={inputs.propertyName} onChange={v => set('propertyName', v)} type="text" />
                     <Field label="Address" value={inputs.address} onChange={v => set('address', v)} type="text" />
                   </div>
+                </div>
+
+                {/* Deal Criteria */}
+                <div className="border-2 border-gold/40 p-7 bg-gold/5">
+                  <SectionHead title="Deal Criteria" />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Field label="Min Target IRR" value={inputs.minTargetIRR} onChange={v => set('minTargetIRR', v)} suffix="%" step="0.5" />
+                    <Field label="Max Offer Price" value={inputs.maxOfferPrice} onChange={v => set('maxOfferPrice', v)} suffix="$" />
+                    <Field label="GP Equity" value={inputs.gpEquityPct} onChange={v => set('gpEquityPct', v)} suffix="%" step="1" />
+                    <Field label="LP Equity" value={inputs.lpEquityPct} onChange={v => set('lpEquityPct', v)} suffix="%" step="1" />
+                  </div>
+                  <p className="text-dark-muted text-xs mt-3">These criteria are used to flag Go / No-Go in results. Max Offer Price is for reference only.</p>
                 </div>
 
                 {/* Acquisition */}
@@ -607,10 +674,10 @@ export default function Underwrite() {
                 </div>
               </div>
 
-              {/* ── Results Dashboard ── */}
+              {/* Results */}
               {results && (
                 <div id="uw-results" className="mt-14 pt-10 border-t-2 border-gold/30">
-                  <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center justify-between mb-6">
                     <div>
                       <div className="section-label-sm text-gold mb-1">Model Output</div>
                       <h2 className="font-serif text-3xl font-light text-[#1a1a18]">
@@ -627,9 +694,26 @@ export default function Underwrite() {
                     </button>
                   </div>
 
+                  {/* Verdict */}
+                  <VerdictBanner results={results} minIRR={minIRR} />
+
+                  {/* Equity Split */}
+                  {totalEquity > 0 && (
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="border border-dark-border p-5">
+                        <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">GP Equity ({inputs.gpEquityPct}%)</div>
+                        <div className="font-serif text-2xl font-light text-[#1a1a18]">{fmt$(gpEquity)}</div>
+                      </div>
+                      <div className="border border-dark-border p-5">
+                        <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">LP Equity ({inputs.lpEquityPct}%)</div>
+                        <div className="font-serif text-2xl font-light text-[#1a1a18]">{fmt$(lpEquity)}</div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Primary metrics */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                    <ResultCard label="Levered IRR" value={fmtPct(results.levered_irr)} highlight />
+                    <ResultCard label="Levered IRR" value={fmtPct(results.levered_irr)} pass={results.levered_irr >= minIRR / 100} fail={results.levered_irr < minIRR / 100} />
                     <ResultCard label="Equity Multiple" value={fmtX(results.equity_multiple)} highlight />
                     <ResultCard label="LP Multiple" value={fmtX(results.lp_equity_multiple)} highlight />
                     <ResultCard label="Avg Cash-on-Cash" value={fmtPct(results.avg_coc)} highlight />
@@ -643,13 +727,22 @@ export default function Underwrite() {
                     <ResultCard label="Total Project Cost" value={fmt$(results.total_project_cost)} />
                   </div>
 
-                  {/* Diagnostics row */}
+                  {/* Diagnostics */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                     <ResultCard label="Going-In Cap" value={fmtPct(results.going_in_cap)} />
                     <ResultCard label="Stabilized Cap" value={fmtPct(results.stabilized_cap)} />
                     <ResultCard label="Price / Unit" value={fmt$(results.price_per_unit)} />
                     <ResultCard label="Price / SF" value={`$${results.price_per_sf}`} />
                   </div>
+
+                  {/* Max offer note */}
+                  {inputs.maxOfferPrice && (
+                    <div className={`p-4 border mt-3 text-sm ${parseFloat(inputs.purchasePrice) <= parseFloat(inputs.maxOfferPrice) ? 'border-green-400 bg-green-50 text-green-700' : 'border-red-400 bg-red-50 text-red-700'}`}>
+                      {parseFloat(inputs.purchasePrice) <= parseFloat(inputs.maxOfferPrice)
+                        ? `✅ Purchase price of ${fmt$(parseFloat(inputs.purchasePrice))} is within your max offer of ${fmt$(parseFloat(inputs.maxOfferPrice))}`
+                        : `❌ Purchase price of ${fmt$(parseFloat(inputs.purchasePrice))} exceeds your max offer of ${fmt$(parseFloat(inputs.maxOfferPrice))}`}
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="mt-8 flex gap-3 flex-wrap">
@@ -659,58 +752,13 @@ export default function Underwrite() {
                     >
                       → Generate LOI
                     </a>
+                    <button onClick={handleDownload} className="btn-gold text-sm px-6 py-2.5">
+                      ↓ Download Excel
+                    </button>
                     <button
                       onClick={() => window.print()}
                       className="text-xs uppercase tracking-widest border border-dark-border px-5 py-2.5 hover:border-gold/40 hover:text-gold transition-colors"
-                    ><button
-  onClick={async () => {
-    const payload = buildPayload(inputs, unitMix)
-    const res = await fetch('/api/underwrite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'download', inputs: payload }),
-    })
-    if (res.ok) {
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${inputs.propertyName || 'YEM'}_UW.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
-    }
-  }}
-  className="btn-gold text-sm px-6 py-2.5"
->
-  ↓ Download Excel
-<button
-  onClick={async () => {
-    const payload = buildPayload(inputs, unitMix)
-    const res = await fetch('/api/underwrite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'download', inputs: payload }),
-    })
-    if (res.ok) {
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${inputs.propertyName || 'YEM'}_UW.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
-    }
-  }}
-  className="btn-gold text-sm px-6 py-2.5"
->
-  ↓ Download Excel
-</button>
-<button
-  onClick={() => window.print()}
-  className="text-xs uppercase tracking-widest border border-dark-border px-5 py-2.5 hover:border-gold/40 hover:text-gold transition-colors"
->
-  Print / Save PDF
-</button></button>
+                    >
                       Print / Save PDF
                     </button>
                   </div>
