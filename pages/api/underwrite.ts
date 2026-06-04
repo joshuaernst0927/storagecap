@@ -1,24 +1,21 @@
 /**
  * /api/underwrite
  *
- * POST { action: 'extract', fileName, mimeType, data (base64) }
- *   → Calls Claude to extract UW inputs from a document.
+ * POST { action: 'extract', files: FileInput[] }
+ *   → Calls Claude to extract UW inputs from documents.
  *   → Returns JSON with all underwriting fields (decimals for %).
  *
- * POST { action: 'build', inputs: object, propertyAddress: string }
- *   → Spawns backend/underwrite.py, returns populated .xlsx as download.
- *
- * Note: 'build' requires Python in PATH and runs only in local dev.
+ * POST { action: 'run', inputs: object }
+ *   → Calls DigitalOcean /run-model API.
+ *   → Returns JSON results (IRR, NOI, MOIC, exit value, etc.)
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Anthropic from '@anthropic-ai/sdk'
-import { execFileSync } from 'child_process'
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+const DO_API = 'http://157.230.186.240:8000'
 
 const EXTRACTION_PROMPT = `You are analyzing a self-storage acquisition document (rent roll, T12 P&L, offering memorandum, or deal memo).
 Extract all available inputs for a financial underwriting model.
@@ -127,7 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { action } = req.body as { action: string }
 
-  // ── Extract: call Claude to parse one or more documents ────────────────
+  // ── Extract: call Claude to parse documents ──────────────────────────────
   if (action === 'extract') {
     const { files } = req.body as { files: FileInput[] }
     if (!files?.length) return res.status(400).json({ error: 'No files provided' })
@@ -155,43 +152,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Build: populate Excel template via Python ────────────────────────────
-  if (action === 'build') {
-    const { inputs, propertyAddress } = req.body as { inputs: UWData; propertyAddress?: string }
+  // ── Run: call DigitalOcean model API ─────────────────────────────────────
+  if (action === 'run') {
+    const { inputs } = req.body as { inputs: UWData }
     if (!inputs) return res.status(400).json({ error: 'Missing inputs' })
 
-    const ts = Date.now()
-    const tmpDir = os.tmpdir()
-    const inputsFile = path.join(tmpDir, `uw_in_${ts}.json`)
-    const outputFile = path.join(tmpDir, `uw_out_${ts}.xlsx`)
-
     try {
-      fs.writeFileSync(inputsFile, JSON.stringify(inputs), 'utf-8')
+      // Map frontend field names to DO API field names
+      const payload = {
+        purchase_price:       inputs.purchasePrice       ?? null,
+        closing_costs_pct:    inputs.closingCostsPct     ?? null,
+        initial_repairs:      inputs.initialRepairs      ?? null,
+        acquisition_fee_pct:  inputs.acquisitionFeePct   ?? null,
+        start_occupancy:      inputs.startOccupancy      ?? null,
+        stabilized_occupancy: inputs.stabilizedOccupancy ?? null,
+        months_to_stabilize:  inputs.monthsToStabilization ?? null,
+        rent_growth:          inputs.annualRentGrowth    ?? null,
+        other_income_month:   inputs.otherIncomeMonth    ?? null,
+        initial_ltv:          inputs.initialLTV          ?? null,
+        initial_rate:         inputs.initialRate         ?? null,
+        refi_ltv:             inputs.refiLTV             ?? null,
+        refi_rate:            inputs.refiRate            ?? null,
+        exit_cap_rate:        inputs.exitCapRate         ?? null,
+        exit_month:           inputs.exitMonth           ?? null,
+        unlevered:            'No',
+        // Unit mix for GPR calculation
+        unit_mix:             inputs.unitMix             ?? null,
+      }
 
-      const script = path.join(process.cwd(), 'backend', 'underwrite.py')
-      execFileSync('python', [script, '--inputs-file', inputsFile, '--output', outputFile], {
-        timeout: 30_000,
-        encoding: 'utf-8',
+      const doRes = await fetch(`${DO_API}/run-model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
 
-      const buffer = fs.readFileSync(outputFile)
-      const safeName = (propertyAddress || 'underwrite')
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '_')
-        .slice(0, 60)
-
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      res.setHeader('Content-Disposition', `attachment; filename="${safeName}_UW.xlsx"`)
-      return res.end(buffer)
-    } catch (err) {
-      console.error('underwrite build error:', err)
-      return res.status(500).json({ error: 'Model build failed', detail: String(err) })
-    } finally {
-      for (const f of [inputsFile, outputFile]) {
-        try { fs.unlinkSync(f) } catch { /* ignore */ }
+      if (!doRes.ok) {
+        const err = await doRes.text()
+        throw new Error(`DO API error ${doRes.status}: ${err}`)
       }
+
+      const results = await doRes.json()
+      return res.status(200).json(results)
+    } catch (err) {
+      console.error('underwrite run error:', err)
+      return res.status(500).json({ error: 'Model run failed', detail: String(err) })
     }
   }
 
-  return res.status(400).json({ error: 'Unknown action. Use "extract" or "build".' })
+  return res.status(400).json({ error: 'Unknown action. Use "extract" or "run".' })
 }
