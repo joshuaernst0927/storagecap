@@ -425,10 +425,10 @@ export default function Underwrite() {
         })
       )
 
-      const res = await fetch('/api/underwrite', {
+      const res = await fetch('http://157.230.186.240:8000/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'extract', files: filePayloads }),
+        body: JSON.stringify({ files: filePayloads }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
