@@ -352,10 +352,10 @@ export default function Underwrite() {
         selling_costs_pct: 0.02,
       }
 
-      const res = await fetch('http://157.230.186.240:8000/max-offer', {
+      const res = await fetch('/api/underwrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ action: 'max-offer', ...body }),
       })
       if (!res.ok) throw new Error('Server error')
       const data = await res.json()
