@@ -465,7 +465,14 @@ export default function Proforma() {
     if (router.query.data) {
       try {
         const data = JSON.parse(decodeURIComponent(router.query.data as string))
-        setInputs(prev => ({ ...prev, ...data }))
+        // Safely merge — ensure nested objects like sellerY1/Y2/Y3 are handled
+        setInputs(prev => ({
+          ...prev,
+          ...data,
+          sellerY1: { ...prev.sellerY1, ...(data.sellerY1 ?? {}) },
+          sellerY2: { ...prev.sellerY2, ...(data.sellerY2 ?? {}) },
+          sellerY3: { ...prev.sellerY3, ...(data.sellerY3 ?? {}) },
+        }))
       } catch { /* ignore */ }
     }
   }, [router.query.data])
