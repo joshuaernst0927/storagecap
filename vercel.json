@@ -20,6 +20,19 @@
     },
     "pages/api/upload-deal.ts": {
       "maxDuration": 60
+    },
+    "pages/api/underwrite.ts": {
+      "maxDuration": 60
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/api/underwrite",
+      "dest": "/api/underwrite",
+      "methods": ["POST"],
+      "headers": {
+        "x-vercel-body-parser-size-limit": "50mb"
+      }
+    }
+  ]
 }
