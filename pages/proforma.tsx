@@ -479,14 +479,14 @@ export default function Proforma() {
 
   // Auto-set haircut defaults when deal type changes
   useEffect(() => {
-    const defaults = HAIRCUT_DEFAULTS[inputs.dealType]
-    const expDefault = EXPENSE_DEFAULTS[inputs.dealType]
+    const defaults = HAIRCUT_DEFAULTS[inputs.dealType] ?? HAIRCUT_DEFAULTS['value-add']
+    const expDefault = EXPENSE_DEFAULTS[inputs.dealType] ?? EXPENSE_DEFAULTS['value-add']
     setInputs(p => ({
       ...p,
-      haircutY1: defaults.y1,
-      haircutY2: defaults.y2,
-      haircutY3: defaults.y3,
-      expenseRatio: expDefault,
+      haircutY1: defaults?.y1 ?? '18',
+      haircutY2: defaults?.y2 ?? '12',
+      haircutY3: defaults?.y3 ?? '7',
+      expenseRatio: expDefault ?? '37',
     }))
   }, [inputs.dealType])
 
