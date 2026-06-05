@@ -413,22 +413,12 @@ export default function Underwrite() {
     setExtracting(true)
     setExtractError('')
     try {
-      const filePayloads = await Promise.all(
-        files.map(async ({ file, mime }) => {
-          const base64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onload = () => resolve((reader.result as string).split(',')[1])
-            reader.onerror = reject
-            reader.readAsDataURL(file)
-          })
-          return { fileName: file.name, mimeType: mime, data: base64 }
-        })
-      )
+      const formData = new FormData()
+      files.forEach(({ file }) => formData.append('files', file, file.name))
 
       const res = await fetch('http://157.230.186.240:8000/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: filePayloads }),
+        body: formData,
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
