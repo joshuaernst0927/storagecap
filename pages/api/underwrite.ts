@@ -1,7 +1,26 @@
+/**
+ * /api/underwrite
+ *
+ * POST { action: 'extract', fileName, mimeType, data (base64) }
+ *   → Calls Claude to extract UW inputs from a document.
+ *   → Returns JSON with all underwriting fields (decimals for %).
+ *
+ * POST { action: 'build', inputs: object, propertyAddress: string }
+ *   → Spawns backend/underwrite.py, returns populated .xlsx as download.
+ *
+ * POST { action: 'max-offer', ...params }
+ *   → Proxies to DO server /max-offer endpoint (avoids CORS).
+ */
+
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Anthropic from '@anthropic-ai/sdk'
+import { execFileSync } from 'child_process'
+import fs from 'fs'
+import path from 'path'
+import os from 'os'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
 const DO_API = 'http://157.230.186.240:8000'
 
 const EXTRACTION_PROMPT = `You are analyzing a self-storage acquisition document (rent roll, T12 P&L, offering memorandum, or deal memo).
@@ -44,9 +63,9 @@ Use null for any field you cannot find or infer.
     {
       "type": "5x5" | "5x10" | "10x10" | "10x15" | "10x20" | "other",
       "units": number,
-      "sqft": number,
-      "currentRent": number,
-      "marketRent": number
+      "sqft": number (avg sq ft per unit),
+      "currentRent": number (monthly $/unit),
+      "marketRent": number (monthly $/unit)
     }
   ]
 }`
@@ -104,15 +123,6 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
   return [{ type: 'text', text: `--- File: ${label} ---\n\n${text.slice(0, 25000)}` }]
 }
 
-function cleanPayload(inputs: UWData, fieldMap: Record<string, string>): Record<string, unknown> {
-  const raw: Record<string, unknown> = {}
-  for (const [doKey, uwKey] of Object.entries(fieldMap)) {
-    const v = inputs[uwKey]
-    if (v !== null && v !== undefined) raw[doKey] = v
-  }
-  return raw
-}
-
 export const config = { api: { bodyParser: { sizeLimit: '20mb' } } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -120,7 +130,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { action } = req.body as { action: string }
 
-  // ── Extract ──────────────────────────────────────────────────────────────
+  // ── Max Offer: proxy to DO server ─────────────────────────────────
+  if (action === 'max-offer') {
+    try {
+      const { action: _a, ...params } = req.body
+      const doRes = await fetch(`${DO_API}/max-offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      })
+      if (!doRes.ok) {
+        const err = await doRes.text()
+        return res.status(502).json({ error: 'DO server error', detail: err })
+      }
+      const data = await doRes.json()
+      return res.status(200).json(data)
+    } catch (err) {
+      console.error('max-offer proxy error:', err)
+      return res.status(500).json({ error: 'Max offer calculation failed', detail: String(err) })
+    }
+  }
+
+  // ── Extract: call Claude to parse one or more documents ───────────
   if (action === 'extract') {
     const { files } = req.body as { files: FileInput[] }
     if (!files?.length) return res.status(400).json({ error: 'No files provided' })
@@ -148,86 +179,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Run ───────────────────────────────────────────────────────────────────
-  if (action === 'run') {
-    const { inputs } = req.body as { inputs: UWData }
+  // ── Build: populate Excel template via Python ─────────────────────
+  if (action === 'build') {
+    const { inputs, propertyAddress } = req.body as { inputs: UWData; propertyAddress?: string }
     if (!inputs) return res.status(400).json({ error: 'Missing inputs' })
 
-    try {
-      const payload = cleanPayload(inputs, {
-        purchase_price:       'purchasePrice',
-        closing_costs_pct:    'closingCostsPct',
-        initial_repairs:      'initialRepairs',
-        acquisition_fee_pct:  'acquisitionFeePct',
-        start_occupancy:      'startOccupancy',
-        stabilized_occupancy: 'stabilizedOccupancy',
-        months_to_stabilize:  'monthsToStabilization',
-        rent_growth:          'annualRentGrowth',
-        initial_ltv:          'initialLTV',
-        initial_rate:         'initialRate',
-        refi_ltv:             'refiLTV',
-        refi_rate:            'refiRate',
-        exit_cap_rate:        'exitCapRate',
-        exit_month:           'exitMonth',
-      })
-      payload.unlevered = 'No'
-
-      const doRes = await fetch(`${DO_API}/run-model`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        throw new Error(`DO API error ${doRes.status}: ${err}`)
-      }
-
-      const results = await doRes.json()
-      return res.status(200).json(results)
-    } catch (err) {
-      console.error('underwrite run error:', err)
-      return res.status(500).json({ error: 'Model run failed', detail: String(err) })
-    }
-  }
-
-  // ── Download ──────────────────────────────────────────────────────────────
-  if (action === 'download') {
-    const { inputs } = req.body as { inputs: UWData }
-    if (!inputs) return res.status(400).json({ error: 'Missing inputs' })
+    const ts = Date.now()
+    const tmpDir = os.tmpdir()
+    const inputsFile = path.join(tmpDir, `uw_in_${ts}.json`)
+    const outputFile = path.join(tmpDir, `uw_out_${ts}.xlsx`)
 
     try {
-      const payload = cleanPayload(inputs, {
-        purchase_price:       'purchasePrice',
-        closing_costs_pct:    'closingCostsPct',
-        initial_repairs:      'initialRepairs',
-        acquisition_fee_pct:  'acquisitionFeePct',
-        start_occupancy:      'startOccupancy',
-        stabilized_occupancy: 'stabilizedOccupancy',
-        months_to_stabilize:  'monthsToStabilization',
-        rent_growth:          'annualRentGrowth',
-        initial_ltv:          'initialLTV',
-        initial_rate:         'initialRate',
-        refi_ltv:             'refiLTV',
-        refi_rate:            'refiRate',
-        exit_cap_rate:        'exitCapRate',
-        exit_month:           'exitMonth',
-      })
-      payload.unlevered = 'No'
+      fs.writeFileSync(inputsFile, JSON.stringify(inputs), 'utf-8')
 
-      const doRes = await fetch(`${DO_API}/download-model`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const script = path.join(process.cwd(), 'backend', 'underwrite.py')
+      execFileSync('python', [script, '--inputs-file', inputsFile, '--output', outputFile], {
+        timeout: 30_000,
+        encoding: 'utf-8',
       })
 
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        throw new Error(`DO API error ${doRes.status}: ${err}`)
-      }
-
-      const buffer = Buffer.from(await doRes.arrayBuffer())
-      const safeName = ((inputs.propertyName as string) || (inputs.address as string) || 'underwrite')
+      const buffer = fs.readFileSync(outputFile)
+      const safeName = (propertyAddress || 'underwrite')
         .replace(/[^\w\s-]/g, '')
         .replace(/\s+/g, '_')
         .slice(0, 60)
@@ -236,10 +208,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.setHeader('Content-Disposition', `attachment; filename="${safeName}_UW.xlsx"`)
       return res.end(buffer)
     } catch (err) {
-      console.error('underwrite download error:', err)
-      return res.status(500).json({ error: 'Download failed', detail: String(err) })
+      console.error('underwrite build error:', err)
+      return res.status(500).json({ error: 'Model build failed', detail: String(err) })
+    } finally {
+      for (const f of [inputsFile, outputFile]) {
+        try { fs.unlinkSync(f) } catch { /* ignore */ }
+      }
     }
   }
 
-  return res.status(400).json({ error: 'Unknown action. Use "extract", "run", or "download".' })
+  return res.status(400).json({ error: 'Unknown action. Use "extract", "build", or "max-offer".' })
 }
