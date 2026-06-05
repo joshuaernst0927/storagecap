@@ -416,7 +416,7 @@ export default function Underwrite() {
       const formData = new FormData()
       files.forEach(({ file }) => formData.append('files', file, file.name))
 
-      const res = await fetch('http://157.230.186.240:8000/extract', {
+      const res = await fetch('https://api.yemacquisitions.com/extract', {
         method: 'POST',
         body: formData,
       })
