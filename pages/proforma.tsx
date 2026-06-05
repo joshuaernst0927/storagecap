@@ -491,7 +491,7 @@ export default function Proforma() {
     }))
   }, [inputs.dealType])
 
-  async function handleCalculate() {
+  async function handleCalculate(anchorOverride?: 't12' | 'y1' | 'stabilized') {
     setCalculating(true)
     setCalcError('')
     try {
@@ -503,7 +503,8 @@ export default function Proforma() {
       const y1NOI = years[0]?.noi ?? 0
       const y3NOI = years[2]?.noi ?? y1NOI
       const t12NOIval = parseFloat(inputs.t12NOI) || y1NOI
-      const anchorNOI = maxOfferAnchor === 't12' ? t12NOIval : maxOfferAnchor === 'y1' ? y1NOI : y3NOI
+      const activeAnchor = anchorOverride ?? maxOfferAnchor
+      const anchorNOI = activeAnchor === 't12' ? t12NOIval : activeAnchor === 'y1' ? y1NOI : y3NOI
       const stabNOI = maxOfferAnchor === 'stabilized' ? y3NOI : y3NOI
       const startOcc = n(inputs.currentOccupancy) / 100
       const stabOcc = n(inputs.targetOccupancy, 92) / 100
@@ -725,7 +726,7 @@ export default function Proforma() {
                   ] as const).map(([val, label, desc]) => (
                     <button
                       key={val}
-                      onClick={() => setMaxOfferAnchor(val)}
+                      onClick={() => { setMaxOfferAnchor(val); if (hasCalculated) handleCalculate(val); }}
                       className={`flex-1 p-3 border text-left transition-colors duration-150 ${maxOfferAnchor === val ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
                     >
                       <div className={`text-xs font-semibold mb-0.5 ${maxOfferAnchor === val ? 'text-gold' : 'text-[#1B2B5E]'}`}>{label}</div>
