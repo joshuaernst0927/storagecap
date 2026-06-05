@@ -455,6 +455,7 @@ export default function Proforma() {
   const [calculating, setCalculating] = useState(false)
   const [calcError, setCalcError] = useState('')
   const [hasCalculated, setHasCalculated] = useState(false)
+  const [maxOfferAnchor, setMaxOfferAnchor] = useState<'t12' | 'y1' | 'stabilized'>('y1')
 
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
   const setSeller = (yr: 'sellerY1' | 'sellerY2' | 'sellerY3', v: SellerYear) =>
@@ -498,9 +499,12 @@ export default function Proforma() {
       const years = calcOurProforma(inputs)
       setOurYears(years)
 
-      // Calculate max offer via API
+      // Calculate max offer via API — use selected anchor NOI
       const y1NOI = years[0]?.noi ?? 0
       const y3NOI = years[2]?.noi ?? y1NOI
+      const t12NOIval = parseFloat(inputs.t12NOI) || y1NOI
+      const anchorNOI = maxOfferAnchor === 't12' ? t12NOIval : maxOfferAnchor === 'y1' ? y1NOI : y3NOI
+      const stabNOI = maxOfferAnchor === 'stabilized' ? y3NOI : y3NOI
       const startOcc = n(inputs.currentOccupancy) / 100
       const stabOcc = n(inputs.targetOccupancy, 92) / 100
       const exitCap = n(inputs.exitCapRate, 7.25) / 100
@@ -513,8 +517,8 @@ export default function Proforma() {
         action: 'max-offer',
         target_irr: n(inputs.targetIRR, 15) / 100,
         deal_type: inputs.dealType,
-        in_place_noi: y1NOI,
-        stabilized_noi: y3NOI,
+        in_place_noi: anchorNOI,
+        stabilized_noi: stabNOI,
         start_occupancy: startOcc,
         stabilized_occupancy: stabOcc,
         exit_cap_rate: exitCap,
@@ -711,6 +715,25 @@ export default function Proforma() {
               {calcError && (
                 <div className="mb-4 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{calcError}</div>
               )}
+              <div className="mb-4">
+                <label className="label-text">Anchor max offer to</label>
+                <div className="flex gap-2 mt-2">
+                  {([
+                    ['t12', 'T-12 NOI', 'Conservative'],
+                    ['y1', 'Year 1 NOI', 'Base case'],
+                    ['stabilized', 'Stabilized NOI', 'Aggressive'],
+                  ] as const).map(([val, label, desc]) => (
+                    <button
+                      key={val}
+                      onClick={() => setMaxOfferAnchor(val)}
+                      className={`flex-1 p-3 border text-left transition-colors duration-150 ${maxOfferAnchor === val ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
+                    >
+                      <div className={`text-xs font-semibold mb-0.5 ${maxOfferAnchor === val ? 'text-gold' : 'text-[#1B2B5E]'}`}>{label}</div>
+                      <div className="text-xs text-dark-muted">{desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button
                 onClick={handleCalculate}
                 disabled={calculating}
