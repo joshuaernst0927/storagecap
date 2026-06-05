@@ -736,7 +736,7 @@ export default function Proforma() {
                 </div>
               </div>
               <button
-                onClick={handleCalculate}
+                onClick={() => handleCalculate()}
                 disabled={calculating}
                 className="btn-gold disabled:opacity-60 text-base px-10 py-4 w-full md:w-auto"
               >
