@@ -435,11 +435,44 @@ export default function Underwrite() {
         throw new Error(err.detail ?? err.error ?? `HTTP ${res.status}`)
       }
       const data = await res.json()
-      const { inputs: newInputs, unitMix: newMix } = fromExtracted(data)
-      setInputs(newInputs)
-      setUnitMix(newMix)
-      setMaxOfferResult(null)
-      setStep('form')
+
+      // Build proforma payload from extracted fields and route directly to /proforma
+      const proformaData = {
+        propertyName:          data.propertyName          ?? '',
+        address:               data.address               ?? '',
+        dealType:              data.dealType              ?? 'value-add',
+        totalUnits:            data.totalUnits            != null ? String(data.totalUnits) : '',
+        currentOccupancy:      data.currentOccupancy      != null ? String(data.currentOccupancy) : '',
+        targetOccupancy:       data.projectedStabilizedOccupancy != null ? String(data.projectedStabilizedOccupancy) : '92',
+        monthsToStabilization: data.monthsToStabilization != null ? String(data.monthsToStabilization) : '18',
+        currentAvgRent:        data.currentAvgRentPerUnit != null ? String(data.currentAvgRentPerUnit) : '',
+        marketAvgRent:         data.marketAvgRentPerUnit  != null ? String(data.marketAvgRentPerUnit)  : '',
+        monthsToMarketRent:    '24',
+        t12NOI:                data.t12NOI   != null ? String(data.t12NOI)   : '',
+        t3NOI:                 data.t3NOI    != null ? String(data.t3NOI)    : '',
+        t12Occupancy:          data.currentOccupancy != null ? String(data.currentOccupancy) : '',
+        exitCapRate:           data.exitCapRate != null ? String(parseFloat(String(data.exitCapRate)) * 100) : '7.25',
+        exitMonth:             data.exitMonth  != null ? String(data.exitMonth)  : '60',
+        targetIRR:             '15',
+        sellerY1: {
+          revenue:  data.sellerY1Revenue  != null ? String(data.sellerY1Revenue)  : '',
+          expenses: data.sellerY1Expenses != null ? String(data.sellerY1Expenses) : '',
+          noi:      data.sellerY1NOI      != null ? String(data.sellerY1NOI)      : '',
+        },
+        sellerY2: {
+          revenue:  data.sellerY2Revenue  != null ? String(data.sellerY2Revenue)  : '',
+          expenses: data.sellerY2Expenses != null ? String(data.sellerY2Expenses) : '',
+          noi:      data.sellerY2NOI      != null ? String(data.sellerY2NOI)      : '',
+        },
+        sellerY3: {
+          revenue:  data.sellerY3Revenue  != null ? String(data.sellerY3Revenue)  : '',
+          expenses: data.sellerY3Expenses != null ? String(data.sellerY3Expenses) : '',
+          noi:      data.sellerY3NOI      != null ? String(data.sellerY3NOI)      : '',
+        },
+      }
+
+      window.location.href = `/proforma?data=${encodeURIComponent(JSON.stringify(proformaData))}`
+
     } catch (err) {
       setExtractError(String(err))
     } finally {
