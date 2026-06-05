@@ -157,7 +157,7 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
   return [{ type: 'text', text: `--- File: ${label} ---\n\n${text.slice(0, 25000)}` }]
 }
 
-export const config = { api: { bodyParser: { sizeLimit: '20mb' } } }
+export const config = { api: { bodyParser: { sizeLimit: '50mb' } } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
