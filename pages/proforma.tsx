@@ -456,6 +456,8 @@ export default function Proforma() {
   const [calcError, setCalcError] = useState('')
   const [hasCalculated, setHasCalculated] = useState(false)
   const [maxOfferAnchor, setMaxOfferAnchor] = useState<'t12' | 'y1' | 'stabilized'>('y1')
+  const [capRates, setCapRates] = useState(['6.50', '7.00', '7.50', '8.00'])
+  const setCapRate = (i: number, v: string) => setCapRates(prev => prev.map((c, idx) => idx === i ? v : c))
 
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
   const setSeller = (yr: 'sellerY1' | 'sellerY2' | 'sellerY3', v: SellerYear) =>
@@ -762,10 +764,76 @@ export default function Proforma() {
                   />
                 </div>
 
-                {/* Max Offer */}
+                {/* Offer Matrix */}
+                {ourYears.length > 0 && (
+                  <div className="border border-dark-border p-7">
+                    <SectionHead title="Offer Matrix" subtitle="Our haircutted NOI ÷ cap rate — adjust cap rates to match your market" />
+                    <div className="flex gap-3 mb-4 flex-wrap">
+                      {capRates.map((cr, i) => (
+                        <div key={i} style={{width: 100}}>
+                          <label className="label-text">Cap Rate {i+1}</label>
+                          <div className="flex items-center">
+                            <input
+                              className="input-field text-sm"
+                              type="number"
+                              step="0.25"
+                              value={cr}
+                              onChange={e => setCapRate(i, e.target.value)}
+                            />
+                            <span className="text-dark-muted text-xs ml-1">%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-dark-border">
+                            <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">NOI Year</th>
+                            <th className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Our NOI</th>
+                            {capRates.map((cr, i) => (
+                              <th key={i} className="text-right text-xs uppercase tracking-widest text-gold font-semibold pb-3 px-3">
+                                {cr}% Cap
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-dark-border/40">
+                          {[
+                            ['T-12', parseFloat(inputs.t12NOI) || null],
+                            ['Year 1', ourYears[0]?.noi ?? null],
+                            ['Year 2', ourYears[1]?.noi ?? null],
+                            ['Year 3', ourYears[2]?.noi ?? null],
+                          ].filter(([, noi]) => noi && (noi as number) > 0).map(([label, noi]) => (
+                            <tr key={label as string} className="hover:bg-gold/5 transition-colors">
+                              <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{label as string}</td>
+                              <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">
+                                ${Math.round(noi as number).toLocaleString()}
+                              </td>
+                              {capRates.map((cr, i) => {
+                                const cap = parseFloat(cr) / 100
+                                const offer = cap > 0 ? Math.round((noi as number) / cap) : 0
+                                return (
+                                  <td key={i} className="py-3 px-3 text-right">
+                                    <span className="font-semibold text-[#1B2B5E]">
+                                      ${offer > 0 ? offer.toLocaleString() : '—'}
+                                    </span>
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-dark-muted mt-3">Offer = Our haircutted NOI ÷ cap rate. Use this to anchor your bid — then check IRR below to confirm your return at that price.</p>
+                  </div>
+                )}
+
+                {/* Max Offer — IRR check */}
                 {maxOfferResult && (
                   <div className="border border-dark-border p-7">
-                    <SectionHead title="Max Offer" subtitle="Based on our underwritten NOI at your target IRR" />
+                    <SectionHead title="IRR Check" subtitle="What return do you get at your chosen offer price?" />
                     <MaxOfferBox result={maxOfferResult} />
                   </div>
                 )}
