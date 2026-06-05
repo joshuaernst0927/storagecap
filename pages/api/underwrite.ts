@@ -1,9 +1,9 @@
 /**
  * /api/underwrite
  *
- * POST { action: 'extract', fileName, mimeType, data (base64) }
- *   → Calls Claude to extract UW inputs from a document.
- *   → Returns JSON with all underwriting fields (decimals for %).
+ * POST { action: 'extract', files: [...] }
+ *   → Calls Claude to extract UW inputs + full seller proforma from documents.
+ *   → Returns JSON with all underwriting fields.
  *
  * POST { action: 'build', inputs: object, propertyAddress: string }
  *   → Spawns backend/underwrite.py, returns populated .xlsx as download.
@@ -23,15 +23,49 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const DO_API = 'http://157.230.186.240:8000'
 
-const EXTRACTION_PROMPT = `You are analyzing a self-storage acquisition document (rent roll, T12 P&L, offering memorandum, or deal memo).
-Extract all available inputs for a financial underwriting model.
-Return ONLY a valid JSON object — no markdown fences, no commentary, no extra text.
-Use null for any field you cannot find or infer.
+const EXTRACTION_PROMPT = `You are analyzing self-storage acquisition documents (rent roll, T12 P&L, offering memorandum, proforma, or deal memo).
+
+Extract ALL available inputs for financial underwriting. Return ONLY a valid JSON object — no markdown fences, no commentary, no extra text. Use null for any field you cannot find.
+
+IMPORTANT: Extract the SELLER'S projected numbers exactly as presented. Do not adjust or haircut them — that happens separately.
 
 {
   "propertyName": string,
   "address": string,
-  "purchasePrice": number (dollars),
+  "dealType": "value-add" | "stabilized" | "distressed" | null,
+
+  "totalUnits": number,
+  "currentOccupancy": number (percent, e.g. 85 for 85%),
+  "occupancy12MonthsAgo": number (percent, if available),
+  "occupancy24MonthsAgo": number (percent, if available),
+  "currentAvgRentPerUnit": number (monthly $/unit),
+  "marketAvgRentPerUnit": number (monthly $/unit — from market comparables in doc),
+
+  "t12NOI": number (dollars — trailing 12 month NOI),
+  "t3NOI": number (dollars — last 3 months NOI annualized, i.e. multiply by 4),
+  "t12Revenue": number (dollars — trailing 12 month gross revenue),
+  "t12Expenses": number (dollars — trailing 12 month total expenses),
+  "t12ExpenseRatio": number (decimal, e.g. 0.38 for 38%),
+
+  "sellerY1Revenue": number (dollars — seller projected Year 1 revenue),
+  "sellerY1Expenses": number (dollars — seller projected Year 1 expenses),
+  "sellerY1NOI": number (dollars — seller projected Year 1 NOI),
+  "sellerY2Revenue": number (dollars — seller projected Year 2 revenue),
+  "sellerY2Expenses": number (dollars — seller projected Year 2 expenses),
+  "sellerY2NOI": number (dollars — seller projected Year 2 NOI),
+  "sellerY3Revenue": number (dollars — seller projected Year 3 revenue),
+  "sellerY3Expenses": number (dollars — seller projected Year 3 expenses),
+  "sellerY3NOI": number (dollars — seller projected Year 3 NOI),
+  "sellerY4Revenue": number (dollars — seller projected Year 4 revenue, if available),
+  "sellerY4NOI": number (dollars — seller projected Year 4 NOI, if available),
+  "sellerY5Revenue": number (dollars — seller projected Year 5 revenue, if available),
+  "sellerY5NOI": number (dollars — seller projected Year 5 NOI, if available),
+
+  "monthsToStabilization": number (seller's projected months to stabilization),
+  "projectedStabilizedOccupancy": number (percent — seller's stabilized occupancy target),
+  "projectedStabilizedNOI": number (dollars — seller's stabilized NOI),
+
+  "purchasePrice": number (dollars — asking price),
   "closingCostsPct": number (decimal e.g. 0.03 for 3%),
   "initialRepairs": number (dollars),
   "acquisitionFeePct": number (decimal),
@@ -39,7 +73,6 @@ Use null for any field you cannot find or infer.
   "dispositionFeePct": number (decimal),
   "startOccupancy": number (decimal e.g. 0.85 for 85%),
   "stabilizedOccupancy": number (decimal),
-  "monthsToStabilization": number,
   "annualRentGrowth": number (decimal),
   "opexGrowth": number (decimal),
   "initialLTV": number (decimal),
@@ -59,11 +92,12 @@ Use null for any field you cannot find or infer.
   "gpCatchUp": number (decimal),
   "lpResidual": number (decimal),
   "gpResidual": number (decimal),
+
   "unitMix": [
     {
       "type": "5x5" | "5x10" | "10x10" | "10x15" | "10x20" | "other",
       "units": number,
-      "sqft": number (avg sq ft per unit),
+      "sqft": number,
       "currentRent": number (monthly $/unit),
       "marketRent": number (monthly $/unit)
     }
@@ -151,7 +185,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Extract: call Claude to parse one or more documents ───────────
+  // ── Extract: call Claude to parse documents ────────────────────────
   if (action === 'extract') {
     const { files } = req.body as { files: FileInput[] }
     if (!files?.length) return res.status(400).json({ error: 'No files provided' })
@@ -167,7 +201,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const msg = await client.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
+        max_tokens: 3000,
         messages: [{ role: 'user', content: contentBlocks }],
       })
       const raw = ((msg.content[0] as { type: string; text: string }).text ?? '').trim()
@@ -179,7 +213,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Build: populate Excel template via Python ─────────────────────
+  // ── Build: populate Excel template via Python ──────────────────────
   if (action === 'build') {
     const { inputs, propertyAddress } = req.body as { inputs: UWData; propertyAddress?: string }
     if (!inputs) return res.status(400).json({ error: 'Missing inputs' })
