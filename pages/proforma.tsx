@@ -515,11 +515,11 @@ export default function Proforma() {
         tax_insurance_growth: 0.05,
         mgmt_fee_pct:         0.05,
         occ_schedule: [
-          n(inputs.targetOccupancy, 80) / 100,
-          Math.min((n(inputs.targetOccupancy, 80) + 6) / 100, 0.95),
-          Math.min((n(inputs.targetOccupancy, 80) + 10) / 100, 0.95),
-          Math.min((n(inputs.targetOccupancy, 80) + 11) / 100, 0.95),
-          Math.min((n(inputs.targetOccupancy, 80) + 12) / 100, 0.95),
+          Math.min(n(inputs.targetOccupancy, 80) / 100, 0.92),
+          Math.min((n(inputs.targetOccupancy, 80) + 6) / 100, 0.92),
+          Math.min((n(inputs.targetOccupancy, 80) + 10) / 100, 0.92),
+          Math.min((n(inputs.targetOccupancy, 80) + 11) / 100, 0.92),
+          Math.min((n(inputs.targetOccupancy, 80) + 12) / 100, 0.92),
         ],
       }
 
