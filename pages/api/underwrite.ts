@@ -251,5 +251,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  return res.status(400).json({ error: 'Unknown action. Use "extract", "build", or "max-offer".' })
+  // ── Build Proforma: proxy to DO server ───────────────────────────
+if (action === 'build-proforma') {
+  try {
+    const { action: _a, ...params } = req.body
+    const doRes = await fetch(`${DO_API}/build-proforma`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+    if (!doRes.ok) {
+      const err = await doRes.text()
+      return res.status(502).json({ error: 'DO server error', detail: err })
+    }
+    const data = await doRes.json()
+    return res.status(200).json(data)
+  } catch (err) {
+    console.error('build-proforma proxy error:', err)
+    return res.status(500).json({ error: 'Proforma build failed', detail: String(err) })
+  }
+}
+
+return res.status(400).json({ error: 'Unknown action. Use "extract", "build", "build-proforma", or "max-offer".' })
 }
