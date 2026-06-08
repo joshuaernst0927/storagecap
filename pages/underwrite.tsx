@@ -459,7 +459,24 @@ export default function Underwrite() {
           expenses: data.sellerY3Expenses != null ? String(data.sellerY3Expenses) : '',
           noi:      data.sellerY3NOI      != null ? String(data.sellerY3NOI)      : '',
         },
-      }
+      }sellerY3: {
+          revenue:  data.sellerY3Revenue  != null ? String(data.sellerY3Revenue)  : '',
+          expenses: data.sellerY3Expenses != null ? String(data.sellerY3Expenses) : '',
+          noi:      data.sellerY3NOI      != null ? String(data.sellerY3NOI)      : '',
+        },
+        t12Revenue:             data.t12Revenue            != null ? String(data.t12Revenue)            : '',
+        t12TotalExpenses:       data.t12Expenses           != null ? String(data.t12Expenses)           : '',
+        t12Payroll:             data.t12Payroll            != null ? String(data.t12Payroll)            : '',
+        t12ManagementFees:      data.t12ManagementFees     != null ? String(data.t12ManagementFees)     : '',
+        t12Marketing:           data.t12Marketing          != null ? String(data.t12Marketing)          : '',
+        t12Utilities:           data.t12Utilities          != null ? String(data.t12Utilities)          : '',
+        t12OfficeEmployee:      data.t12OfficeEmployee     != null ? String(data.t12OfficeEmployee)     : '',
+        t12Administrative:      data.t12Administrative     != null ? String(data.t12Administrative)     : '',
+        t12RepairsMaintenance:  data.t12RepairsMaintenance != null ? String(data.t12RepairsMaintenance) : '',
+        t12Tax:                 data.t12Tax                != null ? String(data.t12Tax)                : '',
+        t12Insurance:           data.t12Insurance          != null ? String(data.t12Insurance)          : '',
+        t12OtherExpenses:       data.t12OtherExpenses      != null ? String(data.t12OtherExpenses)      : '',
+      }  // ← same closing brace, just moved down
 
       window.location.href = `/proforma?data=${encodeURIComponent(JSON.stringify(proformaData))}`
 
