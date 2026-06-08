@@ -1,15 +1,5 @@
 /**
  * /api/underwrite
- *
- * POST { action: 'extract', files: [...] }
- *   → Calls Claude to extract UW inputs + full seller proforma from documents.
- *   → Returns JSON with all underwriting fields.
- *
- * POST { action: 'build', inputs: object, propertyAddress: string }
- *   → Spawns backend/underwrite.py, returns populated .xlsx as download.
- *
- * POST { action: 'max-offer', ...params }
- *   → Proxies to DO server /max-offer endpoint (avoids CORS).
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
@@ -196,7 +186,70 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Extract: call Claude to parse documents ────────────────────────
+  // ── Calc IRR at Price: proxy to DO server ─────────────────────────
+  if (action === 'calc-irr') {
+    try {
+      const { action: _a, ...params } = req.body
+      const doRes = await fetch(`${DO_API}/calc-irr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      })
+      if (!doRes.ok) {
+        const err = await doRes.text()
+        return res.status(502).json({ error: 'DO server error', detail: err })
+      }
+      const data = await doRes.json()
+      return res.status(200).json(data)
+    } catch (err) {
+      console.error('calc-irr proxy error:', err)
+      return res.status(500).json({ error: 'IRR calculation failed', detail: String(err) })
+    }
+  }
+
+  // ── Calc IRR v2 (Levered + Unlevered): proxy to DO server ─────────
+  if (action === 'calc-irr-v2') {
+    try {
+      const { action: _a, ...params } = req.body
+      const doRes = await fetch(`${DO_API}/calc-irr-v2`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      })
+      if (!doRes.ok) {
+        const err = await doRes.text()
+        return res.status(502).json({ error: 'DO server error', detail: err })
+      }
+      const data = await doRes.json()
+      return res.status(200).json(data)
+    } catch (err) {
+      console.error('calc-irr-v2 proxy error:', err)
+      return res.status(500).json({ error: 'IRR v2 calculation failed', detail: String(err) })
+    }
+  }
+
+  // ── Build Proforma: proxy to DO server ────────────────────────────
+  if (action === 'build-proforma') {
+    try {
+      const { action: _a, ...params } = req.body
+      const doRes = await fetch(`${DO_API}/build-proforma`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      })
+      if (!doRes.ok) {
+        const err = await doRes.text()
+        return res.status(502).json({ error: 'DO server error', detail: err })
+      }
+      const data = await doRes.json()
+      return res.status(200).json(data)
+    } catch (err) {
+      console.error('build-proforma proxy error:', err)
+      return res.status(500).json({ error: 'Proforma build failed', detail: String(err) })
+    }
+  }
+
+  // ── Extract: call Claude to parse documents ───────────────────────
   if (action === 'extract') {
     const { files } = req.body as { files: FileInput[] }
     if (!files?.length) return res.status(400).json({ error: 'No files provided' })
@@ -224,7 +277,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Build: populate Excel template via Python ──────────────────────
+  // ── Build: populate Excel template via Python ─────────────────────
   if (action === 'build') {
     const { inputs, propertyAddress } = req.body as { inputs: UWData; propertyAddress?: string }
     if (!inputs) return res.status(400).json({ error: 'Missing inputs' })
@@ -261,86 +314,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
   }
-// ── Calc IRR at Price: proxy to DO server ────────────────────────
-  if (action === 'calc-irr') {
-    try {
-      const { action: _a, ...params } = req.body
-      const doRes = await fetch(`${DO_API}/calc-irr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      })
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        return res.status(502).json({ error: 'DO server error', detail: err })
-      }
-      const data = await doRes.json()
-      return res.status(200).json(data)
-    } catch (err) {
-      console.error('calc-irr proxy error:', err)
-      return res.status(500).json({ error: 'IRR calculation failed', detail: String(err) })
-    }
-  }
-    // ── Calc IRR at Price: proxy to DO server ────────────────────────
-  if (action === 'calc-irr') {
-    try {
-      const { action: _a, ...params } = req.body
-      const doRes = await fetch(`${DO_API}/calc-irr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      })
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        return res.status(502).json({ error: 'DO server error', detail: err })
-      }
-      const data = await doRes.json()
-      return res.status(200).json(data)
-    } catch (err) {
-      console.error('calc-irr proxy error:', err)
-      return res.status(500).json({ error: 'IRR calculation failed', detail: String(err) })
-    }
-  }
-  // ── Calc IRR at Price: proxy to DO server ────────────────────────
-  if (action === 'calc-irr') {
-    try {
-      const { action: _a, ...params } = req.body
-      const doRes = await fetch(`${DO_API}/calc-irr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      })
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        return res.status(502).json({ error: 'DO server error', detail: err })
-      }
-      const data = await doRes.json()
-      return res.status(200).json(data)
-    } catch (err) {
-      console.error('calc-irr proxy error:', err)
-      return res.status(500).json({ error: 'IRR calculation failed', detail: String(err) })
-    }
-  }
-  // ── Build Proforma: proxy to DO server ───────────────────────────
-if (action === 'build-proforma') {
-  try {
-    const { action: _a, ...params } = req.body
-    const doRes = await fetch(`${DO_API}/build-proforma`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
-    })
-    if (!doRes.ok) {
-      const err = await doRes.text()
-      return res.status(502).json({ error: 'DO server error', detail: err })
-    }
-    const data = await doRes.json()
-    return res.status(200).json(data)
-  } catch (err) {
-    console.error('build-proforma proxy error:', err)
-    return res.status(500).json({ error: 'Proforma build failed', detail: String(err) })
-  }
-}
 
-return res.status(400).json({ error: 'Unknown action. Use "extract", "build", "build-proforma", or "max-offer".' })
+  return res.status(400).json({ error: 'Unknown action.' })
 }
