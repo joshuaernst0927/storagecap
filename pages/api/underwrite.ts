@@ -47,6 +47,17 @@ IMPORTANT: Extract the SELLER'S projected numbers exactly as presented. Do not a
   "t12Expenses": number (dollars — trailing 12 month total expenses),
   "t12ExpenseRatio": number (decimal, e.g. 0.38 for 38%),
 
+  "t12Payroll": number (dollars — T-12 payroll / labor costs),
+  "t12ManagementFees": number (dollars — T-12 management fees),
+  "t12Marketing": number (dollars — T-12 marketing / advertising),
+  "t12Utilities": number (dollars — T-12 utilities),
+  "t12OfficeEmployee": number (dollars — T-12 office / employee expenses),
+  "t12Administrative": number (dollars — T-12 administrative expenses),
+  "t12RepairsMaintenance": number (dollars — T-12 repairs and maintenance),
+  "t12Tax": number (dollars — T-12 property tax),
+  "t12Insurance": number (dollars — T-12 insurance),
+  "t12OtherExpenses": number (dollars — T-12 any other expenses not listed above),
+
   "sellerY1Revenue": number (dollars — seller projected Year 1 revenue),
   "sellerY1Expenses": number (dollars — seller projected Year 1 expenses),
   "sellerY1NOI": number (dollars — seller projected Year 1 NOI),
