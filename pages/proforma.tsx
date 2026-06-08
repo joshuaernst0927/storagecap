@@ -41,6 +41,19 @@ type ProformaInputs = {
   t12NOI: string
   t3NOI: string
   t12Occupancy: string
+  // T-12 expense line items
+  t12Revenue: string
+  t12TotalExpenses: string
+  t12Payroll: string
+  t12ManagementFees: string
+  t12Marketing: string
+  t12Utilities: string
+  t12OfficeEmployee: string
+  t12Administrative: string
+  t12RepairsMaintenance: string
+  t12Tax: string
+  t12Insurance: string
+  t12OtherExpenses: string
   // Exit
   exitCapRate: string
   exitMonth: string
