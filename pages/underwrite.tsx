@@ -434,7 +434,6 @@ export default function Underwrite() {
           expenses: '',
           noi:      data.sellerY5NOI      != null ? String(data.sellerY5NOI)      : '',
         },
-        },
         t12Revenue:            data.t12Revenue            != null ? String(data.t12Revenue)            : '',
         t12TotalExpenses:      data.t12Expenses           != null ? String(data.t12Expenses)           : '',
         t12Payroll:            data.t12Payroll            != null ? String(data.t12Payroll)            : '',
