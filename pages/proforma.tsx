@@ -472,13 +472,103 @@ export default function Proforma() {
     }))
   }, [inputs.dealType])
 
-  async function handleCalculate(anchorOverride?: string) {
+ async function handleCalculate(anchorOverride?: string) {
     setCalculating(true)
     setCalcError('')
     try {
-      // Calculate our proforma locally
-      const years = calcOurProforma(inputs)
-      setOurYears(years)
+      // ── Call /build-proforma on the server ──────────────────────
+      const t12Data = {
+        total_revenue:        n(inputs.t12Revenue) || n(inputs.t12NOI) / 0.6,
+        payroll:              n(inputs.t12Payroll),
+        management_fees:      n(inputs.t12ManagementFees),
+        marketing:            n(inputs.t12Marketing),
+        utilities:            n(inputs.t12Utilities),
+        office_employee:      n(inputs.t12OfficeEmployee),
+        administrative:       n(inputs.t12Administrative),
+        repairs_maintenance:  n(inputs.t12RepairsMaintenance),
+        tax:                  n(inputs.t12Tax),
+        insurance:            n(inputs.t12Insurance),
+        other_expenses:       n(inputs.t12OtherExpenses),
+        total_expenses:       n(inputs.t12TotalExpenses),
+        noi:                  n(inputs.t12NOI),
+      }
+
+      const assumptions = {
+        total_units:          n(inputs.totalUnits, 100),
+        current_occupancy:    n(inputs.currentOccupancy) / 100,
+        rent_uplift_y1:       0.12,
+        rent_growth:          n(inputs.revenueGrowthPostStab, 3) / 100,
+        opex_growth:          n(inputs.expenseGrowth, 3) / 100,
+        tax_insurance_growth: 0.05,
+        mgmt_fee_pct:         0.06,
+        occ_schedule:         [
+          n(inputs.targetOccupancy, 80) / 100,
+          Math.min((n(inputs.targetOccupancy, 80) + 6) / 100, 0.95),
+          Math.min((n(inputs.targetOccupancy, 80) + 10) / 100, 0.95),
+          Math.min((n(inputs.targetOccupancy, 80) + 11) / 100, 0.95),
+          Math.min((n(inputs.targetOccupancy, 80) + 12) / 100, 0.95),
+        ],
+      }
+
+      const proformaRes = await fetch('/api/underwrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'build-proforma', t12_data: t12Data, assumptions }),
+      })
+      if (!proformaRes.ok) throw new Error('Proforma build failed')
+      const proformaData: ProformaResult = await proformaRes.json()
+      setProformaResult(proformaData)
+      setOurYears(proformaData.years)
+
+      // ── Calculate max offer via API ──────────────────────────────
+      const y1NOI = proformaData.years[0]?.noi ?? 0
+      const y5NOI = proformaData.years[4]?.noi ?? y1NOI
+      const t12NOIval = n(inputs.t12NOI) || proformaData.t12.noi
+      const activeAnchor = anchorOverride ?? maxOfferAnchor ?? 'y1'
+      const anchorNOI = activeAnchor === 't12' ? t12NOIval : activeAnchor === 'stabilized' ? y5NOI : y1NOI
+      const stabNOI = y5NOI
+      const startOcc = n(inputs.currentOccupancy) / 100
+      const stabOcc = n(inputs.targetOccupancy, 92) / 100
+      const exitCap = n(inputs.exitCapRate, 7.25) / 100
+      const exitMonth = n(inputs.exitMonth, 60)
+      const monthsToStab = n(inputs.monthsToStabilization, 18)
+      const rentGrowth = n(inputs.revenueGrowthPostStab, 3) / 100
+      const expGrowth = n(inputs.expenseGrowth, 3) / 100
+
+      const body = {
+        action: 'max-offer',
+        target_irr: n(inputs.targetIRR, 15) / 100,
+        deal_type: inputs.dealType,
+        in_place_noi: anchorNOI,
+        stabilized_noi: stabNOI,
+        start_occupancy: startOcc,
+        stabilized_occupancy: stabOcc,
+        exit_cap_rate: exitCap,
+        exit_month: exitMonth,
+        months_to_stabilization: monthsToStab,
+        rent_growth: rentGrowth,
+        opex_growth: expGrowth,
+        closing_costs_pct: 0.03,
+        acquisition_fee_pct: 0.02,
+        initial_repairs: 0,
+        selling_costs_pct: 0.02,
+      }
+
+      const res = await fetch('/api/underwrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error('Calculation failed')
+      const data = await res.json()
+      setMaxOfferResult(data)
+      setHasCalculated(true)
+    } catch (err) {
+      setCalcError(String(err))
+    } finally {
+      setCalculating(false)
+    }
+  }
 
       // Calculate max offer via API — use selected anchor NOI
       const y1NOI = years[0]?.noi ?? 0
