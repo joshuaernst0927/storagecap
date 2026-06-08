@@ -17,7 +17,6 @@ type ProformaInputs = {
   propertyName: string
   address: string
   dealType: DealType
-  // Unit economics
   totalUnits: string
   currentOccupancy: string
   targetOccupancy: string
@@ -25,23 +24,17 @@ type ProformaInputs = {
   currentAvgRent: string
   marketAvgRent: string
   monthsToMarketRent: string
-  // Expense normalization
   expenseRatio: string
   revenueGrowthPostStab: string
   expenseGrowth: string
-  // Haircuts per year
-  haircutY1: string
-  haircutY2: string
-  haircutY3: string
-  // Seller proforma
   sellerY1: SellerYear
   sellerY2: SellerYear
   sellerY3: SellerYear
-  // T12 / T3
+  sellerY4: SellerYear
+  sellerY5: SellerYear
   t12NOI: string
   t3NOI: string
   t12Occupancy: string
-  // T-12 expense line items
   t12Revenue: string
   t12TotalExpenses: string
   t12Payroll: string
@@ -54,10 +47,10 @@ type ProformaInputs = {
   t12Tax: string
   t12Insurance: string
   t12OtherExpenses: string
-  // Exit
   exitCapRate: string
   exitMonth: string
-  targetIRR: string
+  offerPrice: string
+  manualNOI: string
 }
 
 type OurYear = {
@@ -106,31 +99,17 @@ type ProformaResult = {
   years: OurYear[]
 }
 
-type MaxOfferResult = {
-  max_offer: number
-  deal_type: string
-  method: string
-  in_place_noi: number
-  stabilized_noi: number
+type IRRResult = {
+  irr_at_max: number
   going_in_cap: number
   stabilized_cap: number
-  irr_at_max: number
   target_irr: number
+  in_place_noi: number
+  stabilized_noi: number
+  method: string
 }
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
-
-const HAIRCUT_DEFAULTS: Record<DealType, { y1: string; y2: string; y3: string }> = {
-  'value-add':  { y1: '18', y2: '12', y3: '7' },
-  'stabilized': { y1: '10', y2: '8',  y3: '5' },
-  'distressed': { y1: '28', y2: '20', y3: '12' },
-}
-
-const EXPENSE_DEFAULTS: Record<DealType, string> = {
-  'value-add':  '37',
-  'stabilized': '33',
-  'distressed': '42',
-}
 
 const EMPTY_SELLER: SellerYear = { revenue: '', expenses: '', noi: '' }
 
@@ -145,16 +124,17 @@ const EMPTY: ProformaInputs = {
   expenseRatio: '37',
   revenueGrowthPostStab: '3',
   expenseGrowth: '3',
-  haircutY1: '18', haircutY2: '12', haircutY3: '7',
   sellerY1: { ...EMPTY_SELLER },
   sellerY2: { ...EMPTY_SELLER },
   sellerY3: { ...EMPTY_SELLER },
+  sellerY4: { ...EMPTY_SELLER },
+  sellerY5: { ...EMPTY_SELLER },
   t12NOI: '', t3NOI: '', t12Occupancy: '',
   t12Revenue: '', t12TotalExpenses: '',
   t12Payroll: '', t12ManagementFees: '', t12Marketing: '',
   t12Utilities: '', t12OfficeEmployee: '', t12Administrative: '',
   t12RepairsMaintenance: '', t12Tax: '', t12Insurance: '', t12OtherExpenses: '',
-  exitCapRate: '7.25', exitMonth: '60', targetIRR: '15',
+  exitCapRate: '7.25', exitMonth: '60', offerPrice: '', manualNOI: '',
 }
 
 const DEAL_TYPE_LABELS: Record<DealType, string> = {
@@ -165,13 +145,13 @@ const DEAL_TYPE_LABELS: Record<DealType, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt$(n: number) {
-  if (isNaN(n)) return '—'
-  return '$' + Math.round(n).toLocaleString('en-US')
+function fmt$(v: number) {
+  if (isNaN(v)) return '—'
+  return '$' + Math.round(v).toLocaleString('en-US')
 }
-function fmtPct(n: number, dec = 1) {
-  if (isNaN(n)) return '—'
-  return (n * 100).toFixed(dec) + '%'
+function fmtPct(v: number, dec = 1) {
+  if (isNaN(v)) return '—'
+  return (v * 100).toFixed(dec) + '%'
 }
 function n(s: string, fallback = 0) {
   const v = parseFloat(s)
@@ -180,9 +160,9 @@ function n(s: string, fallback = 0) {
 
 // ─── Small UI Components ──────────────────────────────────────────────────────
 
-function Field({ label, value, onChange, suffix, note, step }: {
+function Field({ label, value, onChange, suffix, note, step, placeholder }: {
   label: string; value: string; onChange: (v: string) => void
-  suffix?: string; note?: string; step?: string
+  suffix?: string; note?: string; step?: string; placeholder?: string
 }) {
   return (
     <div>
@@ -195,6 +175,7 @@ function Field({ label, value, onChange, suffix, note, step }: {
         type="number"
         step={step ?? 'any'}
         value={value}
+        placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
       />
       {note && <p className="text-xs text-dark-muted mt-1">{note}</p>}
@@ -211,64 +192,14 @@ function SectionHead({ title, subtitle }: { title: string; subtitle?: string }) 
   )
 }
 
-function SellerYearFields({ label, value, onChange }: {
-  label: string
-  value: SellerYear
-  onChange: (v: SellerYear) => void
-}) {
-  const autoNOI = (rev: string, exp: string) => {
-    const r = parseFloat(rev)
-    const e = parseFloat(exp)
-    if (!isNaN(r) && !isNaN(e)) onChange({ ...value, revenue: rev, expenses: exp, noi: String(Math.round(r - e)) })
-    else onChange({ ...value, revenue: rev !== undefined ? rev : value.revenue, expenses: exp !== undefined ? exp : value.expenses })
-  }
-  return (
-    <div className="border border-dark-border p-4 bg-dark-surface">
-      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-3">{label}</div>
-      <div className="space-y-3">
-        <div>
-          <label className="label-text">Revenue ($)</label>
-          <input className="input-field" type="number" step="any" value={value.revenue}
-            onChange={e => autoNOI(e.target.value, value.expenses)} />
-        </div>
-        <div>
-          <label className="label-text">Expenses ($)</label>
-          <input className="input-field" type="number" step="any" value={value.expenses}
-            onChange={e => autoNOI(value.revenue, e.target.value)} />
-        </div>
-        <div>
-          <label className="label-text text-dark-muted">NOI ($) — auto-calculated</label>
-          <input className="input-field bg-dark-surface text-dark-muted" type="number" readOnly value={value.noi} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Proforma Table ───────────────────────────────────────────────────────────
 
-function ProformaTable({
-  proformaResult,
-  sellerY1, sellerY2, sellerY3,
-  haircutY1, haircutY2, haircutY3,
-}: {
-  proformaResult: ProformaResult
-  sellerY1: SellerYear; sellerY2: SellerYear; sellerY3: SellerYear
-  haircutY1: string; haircutY2: string; haircutY3: string
-}) {
+function ProformaTable({ proformaResult }: { proformaResult: ProformaResult }) {
   const { t12, years } = proformaResult
-  const sellers = [sellerY1, sellerY2, sellerY3]
-  const haircuts = [n(haircutY1) / 100, n(haircutY2) / 100, n(haircutY3) / 100]
-  const hasSeller = sellers.some(s => s.revenue || s.noi)
   const cols = ['T-12', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5']
 
   function Row({ label, values, bold, gold, indent, pct }: {
-    label: string
-    values: (number | null)[]
-    bold?: boolean
-    gold?: boolean
-    indent?: boolean
-    pct?: boolean
+    label: string; values: (number | null)[]; bold?: boolean; gold?: boolean; indent?: boolean; pct?: boolean
   }) {
     return (
       <tr className={bold ? 'bg-navy/5' : ''}>
@@ -292,9 +223,7 @@ function ProformaTable({
   function Divider({ label }: { label: string }) {
     return (
       <tr className="bg-dark-surface">
-        <td colSpan={7} className="py-1.5 px-3 text-xs uppercase tracking-widest text-dark-muted font-medium">
-          {label}
-        </td>
+        <td colSpan={7} className="py-1.5 px-3 text-xs uppercase tracking-widest text-dark-muted font-medium">{label}</td>
       </tr>
     )
   }
@@ -306,9 +235,7 @@ function ProformaTable({
           <tr className="border-b border-dark-border">
             <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-44">Line Item</th>
             {cols.map(c => (
-              <th key={c} className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">
-                {c}
-              </th>
+              <th key={c} className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">{c}</th>
             ))}
           </tr>
         </thead>
@@ -319,7 +246,7 @@ function ProformaTable({
           <Row label="Total Revenue" bold values={[t12.revenue, ...years.map(y => y.revenue)]} />
           <Divider label="Expenses" />
           <Row label="Payroll" indent values={[t12.expense_breakdown.payroll, ...years.map(y => y.expenses.payroll)]} />
-          <Row label="Mgmt Fees" indent values={[t12.expense_breakdown.management_fees, ...years.map(y => y.expenses.management_fees)]} />
+          <Row label="Mgmt Fees (5% ESMI)" indent values={[t12.expense_breakdown.management_fees, ...years.map(y => y.expenses.management_fees)]} />
           <Row label="Marketing" indent values={[t12.expense_breakdown.marketing, ...years.map(y => y.expenses.marketing)]} />
           <Row label="Utilities" indent values={[t12.expense_breakdown.utilities, ...years.map(y => y.expenses.utilities)]} />
           <Row label="Office/Employee" indent values={[t12.expense_breakdown.office_employee, ...years.map(y => y.expenses.office_employee)]} />
@@ -335,43 +262,170 @@ function ProformaTable({
             t12.revenue > 0 ? t12.noi / t12.revenue : null,
             ...years.map(y => y.noi_margin)
           ]} />
-          {hasSeller && (
-            <>
-              <Divider label="Seller Proforma (haircut applied)" />
-              <Row label="Seller Revenue" values={[null, ...sellers.map(s => s.revenue ? n(s.revenue) : null), null, null]} />
-              <Row label="Haircut" values={[null, ...haircuts.map(h => -(h * 100)), null, null]} />
-              <Row label="Haircutted NOI" values={[null, ...sellers.map((s, i) => {
-                const rev = n(s.revenue)
-                const exp = n(s.expenses)
-                if (rev > 0) return (rev * (1 - haircuts[i])) - exp
-                if (s.noi) return n(s.noi) * (1 - haircuts[i])
-                return null
-              }), null, null]} />
-            </>
-          )}
         </tbody>
       </table>
     </div>
   )
 }
 
-// ─── Max Offer Result Box ─────────────────────────────────────────────────────
+// ─── Broker vs Investor Table ─────────────────────────────────────────────────
 
-function MaxOfferBox({ result }: { result: MaxOfferResult }) {
+function BrokerInvestorTable({
+  proformaResult, sellerYears, revenueHaircut, capRates,
+}: {
+  proformaResult: ProformaResult
+  sellerYears: SellerYear[]
+  revenueHaircut: number
+  capRates: string[]
+}) {
+  const cols = ['T-12', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5']
+  const t12noi = proformaResult.t12.noi
+
+  const brokerNOI: (number | null)[] = [
+    t12noi,
+    ...sellerYears.map(s => {
+      const noi = parseFloat(s.noi)
+      if (!isNaN(noi) && noi > 0) return noi
+      const rev = parseFloat(s.revenue)
+      const exp = parseFloat(s.expenses)
+      if (!isNaN(rev) && !isNaN(exp)) return rev - exp
+      return null
+    })
+  ]
+
+  const investorNOI: (number | null)[] = [
+    t12noi,
+    ...sellerYears.map(s => {
+      const rev = parseFloat(s.revenue)
+      const exp = parseFloat(s.expenses)
+      if (isNaN(rev) || isNaN(exp) || rev === 0) return null
+      return (rev * (1 - revenueHaircut)) - exp
+    })
+  ]
+
+  const gap: (number | null)[] = brokerNOI.map((b, i) => {
+    if (i === 0 || b === null || investorNOI[i] === null) return null
+    return (investorNOI[i] as number) - b
+  })
+
+  const gapPct: (number | null)[] = brokerNOI.map((b, i) => {
+    if (i === 0 || b === null || b === 0 || investorNOI[i] === null) return null
+    return ((investorNOI[i] as number) - b) / b
+  })
+
+  const brokerY5 = brokerNOI[5]
+  const investorY5 = investorNOI[5]
+
+  function Row({ label, values, bold, red, pct }: {
+    label: string; values: (number | null)[]; bold?: boolean; red?: boolean; pct?: boolean
+  }) {
+    return (
+      <tr className={bold ? 'bg-navy/5' : ''}>
+        <td className={`py-2.5 pr-4 text-xs uppercase tracking-widest
+          ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'}`}>
+          {label}
+        </td>
+        {values.map((v, i) => (
+          <td key={i} className={`py-2.5 px-2 text-right text-sm
+            ${bold ? 'font-bold text-[#1B2B5E]' : ''}
+            ${red && v !== null && (v as number) < 0 ? 'text-red-500 font-semibold' : 'text-[#1B2B5E]'}`}>
+            {v === null ? '—' : pct ? fmtPct(v) : fmt$(v)}
+          </td>
+        ))}
+      </tr>
+    )
+  }
+
+  function Divider({ label }: { label: string }) {
+    return (
+      <tr className="bg-dark-surface">
+        <td colSpan={7} className="py-1.5 px-3 text-xs uppercase tracking-widest text-dark-muted font-medium">{label}</td>
+      </tr>
+    )
+  }
+
+  return (
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-dark-border">
+              <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-44">Metric</th>
+              {cols.map(c => (
+                <th key={c} className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-dark-border/40">
+            <Divider label="Broker (OM) Projections" />
+            <Row label="Broker NOI" bold values={brokerNOI} />
+            <Divider label={`Investor Underwrite (−${Math.round(revenueHaircut * 100)}% Revenue Haircut)`} />
+            <Row label="Investor NOI" bold values={investorNOI} />
+            <Divider label="Gap Analysis" />
+            <Row label="NOI Gap ($)" red values={gap} />
+            <Row label="NOI Gap (%)" red pct values={gapPct} />
+          </tbody>
+        </table>
+      </div>
+
+      {brokerY5 !== null && investorY5 !== null && (
+        <div className="mt-6 pt-6 border-t border-dark-border">
+          <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-4">Year 5 Exit Comparison</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-dark-border">
+                  <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">Cap Rate</th>
+                  <th className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Broker Exit Value</th>
+                  <th className="text-right text-xs uppercase tracking-widest text-gold font-semibold pb-3 px-3">Investor Exit Value</th>
+                  <th className="text-right text-xs uppercase tracking-widest text-red-400 font-semibold pb-3 px-3">Valuation Gap</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dark-border/40">
+                {capRates.map((cr, i) => {
+                  const cap = parseFloat(cr) / 100
+                  if (!cap) return null
+                  const brokerExit = (brokerY5 as number) / cap
+                  const investorExit = (investorY5 as number) / cap
+                  const exitGap = investorExit - brokerExit
+                  const exitGapPct = exitGap / brokerExit
+                  return (
+                    <tr key={i} className="hover:bg-gold/5 transition-colors">
+                      <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{cr}% Cap</td>
+                      <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">{fmt$(brokerExit)}</td>
+                      <td className="py-3 px-3 text-right font-semibold text-gold">{fmt$(investorExit)}</td>
+                      <td className="py-3 px-3 text-right font-semibold text-red-500">
+                        {fmt$(exitGap)} ({fmtPct(exitGapPct)})
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-dark-muted mt-3">
+            The valuation gap shows how much less the property is worth at your conservative underwrite vs the broker&apos;s OM.
+            Use this to anchor your offer in negotiations.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── IRR Result Box ───────────────────────────────────────────────────────────
+
+function IRRBox({ result, offerPrice }: { result: IRRResult; offerPrice: string }) {
   return (
     <div className="border-2 border-gold bg-gold/5 p-6">
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="text-xs uppercase tracking-widest text-gold font-medium mb-1">
-            Max Offer — {DEAL_TYPE_LABELS[result.deal_type as DealType]}
+            Your Return at {offerPrice ? '$' + parseInt(offerPrice).toLocaleString() : 'This Offer'}
           </div>
           <div className="font-serif text-5xl font-light text-[#1B2B5E]">
-            {'$' + result.max_offer.toLocaleString('en-US')}
+            {fmtPct(result.irr_at_max, 1)} IRR
           </div>
-        </div>
-        <div className="text-right">
-          <div className="text-xs text-dark-muted uppercase tracking-widest mb-1">Target IRR</div>
-          <div className="text-2xl font-semibold text-[#1B2B5E]">{fmtPct(result.target_irr)}</div>
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gold/30">
@@ -404,17 +458,16 @@ export default function Proforma() {
   const [inputs, setInputs] = useState<ProformaInputs>(EMPTY)
   const [ourYears, setOurYears] = useState<OurYear[]>([])
   const [proformaResult, setProformaResult] = useState<ProformaResult | null>(null)
-  const [maxOfferResult, setMaxOfferResult] = useState<MaxOfferResult | null>(null)
+  const [irrResult, setIrrResult] = useState<IRRResult | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [calcError, setCalcError] = useState('')
   const [hasCalculated, setHasCalculated] = useState(false)
-  const [maxOfferAnchor, setMaxOfferAnchor] = useState<'t12' | 'y1' | 'stabilized'>('y1')
+  const [maxOfferAnchor, setMaxOfferAnchor] = useState<'t12' | 'y1' | 'stabilized' | 'manual'>('y1')
   const [capRates, setCapRates] = useState(['6.50', '7.00', '7.50', '8.00'])
+  const [revenueHaircut, setRevenueHaircut] = useState('8')
   const setCapRate = (i: number, v: string) => setCapRates(prev => prev.map((c, idx) => idx === i ? v : c))
 
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
-  const setSeller = (yr: 'sellerY1' | 'sellerY2' | 'sellerY3', v: SellerYear) =>
-    setInputs(p => ({ ...p, [yr]: v }))
 
   useEffect(() => {
     if (router.query.data) {
@@ -426,22 +479,12 @@ export default function Proforma() {
           sellerY1: { ...prev.sellerY1, ...(data.sellerY1 ?? {}) },
           sellerY2: { ...prev.sellerY2, ...(data.sellerY2 ?? {}) },
           sellerY3: { ...prev.sellerY3, ...(data.sellerY3 ?? {}) },
+          sellerY4: { ...prev.sellerY4, ...(data.sellerY4 ?? {}) },
+          sellerY5: { ...prev.sellerY5, ...(data.sellerY5 ?? {}) },
         }))
       } catch { /* ignore */ }
     }
   }, [router.query.data])
-
-  useEffect(() => {
-    const defaults = HAIRCUT_DEFAULTS[inputs.dealType] ?? HAIRCUT_DEFAULTS['value-add']
-    const expDefault = EXPENSE_DEFAULTS[inputs.dealType] ?? EXPENSE_DEFAULTS['value-add']
-    setInputs(p => ({
-      ...p,
-      haircutY1: defaults?.y1 ?? '18',
-      haircutY2: defaults?.y2 ?? '12',
-      haircutY3: defaults?.y3 ?? '7',
-      expenseRatio: expDefault ?? '37',
-    }))
-  }, [inputs.dealType])
 
   async function handleCalculate(anchorOverride?: string) {
     setCalculating(true)
@@ -470,7 +513,7 @@ export default function Proforma() {
         rent_growth:          n(inputs.revenueGrowthPostStab, 3) / 100,
         opex_growth:          n(inputs.expenseGrowth, 3) / 100,
         tax_insurance_growth: 0.05,
-        mgmt_fee_pct:         0.06,
+        mgmt_fee_pct:         0.05,
         occ_schedule: [
           n(inputs.targetOccupancy, 80) / 100,
           Math.min((n(inputs.targetOccupancy, 80) + 6) / 100, 0.95),
@@ -490,15 +533,23 @@ export default function Proforma() {
       setProformaResult(proformaData)
       setOurYears(proformaData.years)
 
+      const activeAnchor = anchorOverride ?? maxOfferAnchor
       const y1NOI = proformaData.years[0]?.noi ?? 0
       const y5NOI = proformaData.years[4]?.noi ?? y1NOI
       const t12NOIval = n(inputs.t12NOI) || proformaData.t12.noi
-      const activeAnchor = anchorOverride ?? maxOfferAnchor ?? 'y1'
-      const anchorNOI = activeAnchor === 't12' ? t12NOIval : activeAnchor === 'stabilized' ? y5NOI : y1NOI
+      const manualNOIval = n(inputs.manualNOI)
 
-      const body = {
+      let anchorNOI = y1NOI
+      if (activeAnchor === 't12') anchorNOI = t12NOIval
+      else if (activeAnchor === 'stabilized') anchorNOI = y5NOI
+      else if (activeAnchor === 'manual' && manualNOIval > 0) anchorNOI = manualNOIval
+
+      const offerPriceVal = n(inputs.offerPrice)
+
+      const irrBody = {
         action: 'max-offer',
-        target_irr: n(inputs.targetIRR, 15) / 100,
+        target_irr: offerPriceVal > 0 ? null : 0.15,
+        purchase_price: offerPriceVal > 0 ? offerPriceVal : null,
         deal_type: inputs.dealType,
         in_place_noi: anchorNOI,
         stabilized_noi: y5NOI,
@@ -515,14 +566,16 @@ export default function Proforma() {
         selling_costs_pct: 0.02,
       }
 
-      const res = await fetch('/api/underwrite', {
+      const irrRes = await fetch('/api/underwrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(irrBody),
       })
-      if (!res.ok) throw new Error('Calculation failed')
-      const data = await res.json()
-      setMaxOfferResult(data)
+      if (irrRes.ok) {
+        const irrData = await irrRes.json()
+        setIrrResult(irrData)
+      }
+
       setHasCalculated(true)
     } catch (err) {
       setCalcError(String(err))
@@ -550,27 +603,29 @@ export default function Proforma() {
   }
 
   function handleGenerateLOI() {
-    if (!maxOfferResult) return
     const data = {
       propertyName: inputs.propertyName,
       address: inputs.address,
-      purchasePrice: String(maxOfferResult.max_offer),
+      purchasePrice: inputs.offerPrice || String(Math.round((ourYears[0]?.noi ?? 0) / 0.075)),
       year1NOI: String(Math.round(ourYears[0]?.noi ?? 0)),
       year2NOI: String(Math.round(ourYears[1]?.noi ?? 0)),
       year3NOI: String(Math.round(ourYears[2]?.noi ?? 0)),
-      goingInCap: String((maxOfferResult.going_in_cap * 100).toFixed(2)),
-      stabilizedCap: String((maxOfferResult.stabilized_cap * 100).toFixed(2)),
+      goingInCap: irrResult ? String((irrResult.going_in_cap * 100).toFixed(2)) : '',
+      stabilizedCap: irrResult ? String((irrResult.stabilized_cap * 100).toFixed(2)) : '',
       dealType: inputs.dealType,
     }
     router.push(`/generate-loi?data=${encodeURIComponent(JSON.stringify(data))}`)
   }
+
+  const sellerYears = [inputs.sellerY1, inputs.sellerY2, inputs.sellerY3, inputs.sellerY4, inputs.sellerY5]
+  const hasSeller = sellerYears.some(s => s.revenue || s.noi)
 
   return (
     <AuthGate>
       <>
         <Head>
           <title>Proforma Builder — YEM Acquisitions</title>
-          <meta name="description" content="Build a defensible underwritten proforma with lease-up modeling, rent-to-FMV, and seller haircuts." />
+          <meta name="description" content="Build a defensible underwritten proforma with lease-up modeling and broker vs investor analysis." />
         </Head>
 
         <section className="page-hero border-b border-dark-border">
@@ -580,8 +635,8 @@ export default function Proforma() {
             <em className="text-gold">Our underwrite.</em>
           </h1>
           <p className="text-dark-muted text-lg max-w-xl leading-relaxed">
-            Model lease-up, rent-to-FMV, and expense normalization. Apply deal-type haircuts to seller projections.
-            Get a defensible max offer backed by your own numbers.
+            Build a true 5-year proforma from T-12 actuals. Compare broker projections to your conservative underwrite.
+            Enter your offer price and see your actual IRR.
           </p>
         </section>
 
@@ -628,97 +683,97 @@ export default function Proforma() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Field label="T-12 NOI" value={inputs.t12NOI} onChange={v => set('t12NOI', v)} suffix="$" />
                 <Field label="T-3 NOI (annualized)" value={inputs.t3NOI} onChange={v => set('t3NOI', v)} suffix="$"
-                  note="Last 3 months × 4 — shows momentum" />
+                  note="Last 3 months × 4" />
                 <Field label="Current Occupancy" value={inputs.t12Occupancy} onChange={v => set('t12Occupancy', v)} suffix="%" />
               </div>
             </div>
 
             {/* Unit Economics */}
             <div className="border border-dark-border p-7">
-              <SectionHead title="Unit Economics & Lease-Up" subtitle="Drive the revenue build-up from current state to stabilized" />
+              <SectionHead title="Unit Economics & Lease-Up" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Field label="Total Units" value={inputs.totalUnits} onChange={v => set('totalUnits', v)} />
                 <Field label="Current Occupancy" value={inputs.currentOccupancy} onChange={v => set('currentOccupancy', v)} suffix="%" />
                 <Field label="Target Occupancy" value={inputs.targetOccupancy} onChange={v => set('targetOccupancy', v)} suffix="%" />
                 <Field label="Months to Stabilization" value={inputs.monthsToStabilization} onChange={v => set('monthsToStabilization', v)} suffix="mo" />
                 <Field label="Current Avg Rent/Unit" value={inputs.currentAvgRent} onChange={v => set('currentAvgRent', v)} suffix="$/mo" />
-                <Field label="Market Avg Rent/Unit" value={inputs.marketAvgRent} onChange={v => set('marketAvgRent', v)} suffix="$/mo"
-                  note="FMV — what you'll push to" />
-                <Field label="Months to Reach Market Rent" value={inputs.monthsToMarketRent} onChange={v => set('monthsToMarketRent', v)} suffix="mo" />
+                <Field label="Market Avg Rent/Unit" value={inputs.marketAvgRent} onChange={v => set('marketAvgRent', v)} suffix="$/mo" />
               </div>
             </div>
 
-            {/* Expense Normalization */}
+            {/* Growth Assumptions */}
             <div className="border border-dark-border p-7">
-              <SectionHead title="Expense Normalization" subtitle="Applied to EGI each year, then grown at inflation rate" />
+              <SectionHead title="Growth Assumptions" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <Field label="Target Expense Ratio" value={inputs.expenseRatio} onChange={v => set('expenseRatio', v)} suffix="% of EGI"
-                  note="Industry standard: 30-40%" step="0.5" />
                 <Field label="Revenue Growth (post-stab)" value={inputs.revenueGrowthPostStab} onChange={v => set('revenueGrowthPostStab', v)} suffix="% / yr" step="0.5" />
                 <Field label="Expense Growth" value={inputs.expenseGrowth} onChange={v => set('expenseGrowth', v)} suffix="% / yr" step="0.5" />
               </div>
             </div>
 
-            {/* Seller Proforma */}
+            {/* Exit & Offer */}
             <div className="border border-dark-border p-7">
-              <SectionHead title="Seller Proforma" subtitle="Enter their numbers — we apply your haircut and show the difference" />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <SellerYearFields label="Seller Year 1" value={inputs.sellerY1} onChange={v => setSeller('sellerY1', v)} />
-                <SellerYearFields label="Seller Year 2" value={inputs.sellerY2} onChange={v => setSeller('sellerY2', v)} />
-                <SellerYearFields label="Seller Year 3" value={inputs.sellerY3} onChange={v => setSeller('sellerY3', v)} />
-              </div>
-              <div className="border-t border-dark-border pt-5">
-                <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-3">
-                  Revenue Haircut — pre-filled for {DEAL_TYPE_LABELS[inputs.dealType]}, adjust as needed
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <Field label="Year 1 Haircut" value={inputs.haircutY1} onChange={v => set('haircutY1', v)} suffix="%" step="1" />
-                  <Field label="Year 2 Haircut" value={inputs.haircutY2} onChange={v => set('haircutY2', v)} suffix="%" step="1" />
-                  <Field label="Year 3 Haircut" value={inputs.haircutY3} onChange={v => set('haircutY3', v)} suffix="%" step="1" />
-                </div>
-              </div>
-            </div>
-
-            {/* Exit & Return Target */}
-            <div className="border border-dark-border p-7">
-              <SectionHead title="Exit & Return Target" />
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <SectionHead title="Exit & Offer Price" subtitle="Enter your offer price to calculate your actual IRR" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => set('exitCapRate', v)} suffix="%" step="0.25" />
                 <Field label="Hold Period" value={inputs.exitMonth} onChange={v => set('exitMonth', v)} suffix="mo" />
-                <Field label="Target IRR" value={inputs.targetIRR} onChange={v => set('targetIRR', v)} suffix="%" step="0.5" />
+                <div className="md:col-span-2">
+                  <label className="label-text">
+                    Your Offer Price <span className="text-gold text-xs">(enter to see your IRR)</span>
+                  </label>
+                  <input
+                    className="input-field border-gold/50"
+                    type="number"
+                    step="any"
+                    value={inputs.offerPrice}
+                    onChange={e => set('offerPrice', e.target.value)}
+                    placeholder="e.g. 3500000"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Calculate Button */}
+            {/* NOI Anchor + Calculate */}
             <div className="pt-2">
               {calcError && (
                 <div className="mb-4 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{calcError}</div>
               )}
-              <div className="mb-4">
-                <label className="label-text">Anchor max offer to</label>
-                <div className="flex gap-2 mt-2">
+              <div className="mb-6">
+                <label className="label-text mb-2 block">Anchor NOI to</label>
+                <div className="flex gap-2 flex-wrap">
                   {([
                     ['t12', 'T-12 NOI', 'Conservative'],
                     ['y1', 'Year 1 NOI', 'Base case'],
                     ['stabilized', 'Stabilized NOI', 'Aggressive'],
+                    ['manual', 'Manual NOI', 'Custom'],
                   ] as const).map(([val, label, desc]) => (
                     <button
                       key={val}
-                      onClick={() => { setMaxOfferAnchor(val); if (hasCalculated) handleCalculate(val as string); }}
-                      className={`flex-1 p-3 border text-left transition-colors duration-150 ${maxOfferAnchor === val ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
+                      onClick={() => { setMaxOfferAnchor(val); if (hasCalculated) handleCalculate(val); }}
+                      className={`flex-1 p-3 border text-left transition-colors duration-150 min-w-[110px]
+                        ${maxOfferAnchor === val ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
                     >
                       <div className={`text-xs font-semibold mb-0.5 ${maxOfferAnchor === val ? 'text-gold' : 'text-[#1B2B5E]'}`}>{label}</div>
                       <div className="text-xs text-dark-muted">{desc}</div>
                     </button>
                   ))}
                 </div>
+                {maxOfferAnchor === 'manual' && (
+                  <div className="mt-3 max-w-xs">
+                    <Field
+                      label="Manual NOI ($)"
+                      value={inputs.manualNOI}
+                      onChange={v => set('manualNOI', v)}
+                      note="Type any NOI to anchor your analysis to this number"
+                    />
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => handleCalculate()}
                 disabled={calculating}
                 className="btn-gold disabled:opacity-60 text-base px-10 py-4 w-full md:w-auto"
               >
-                {calculating ? 'Calculating...' : 'Apply Haircut & Calculate'}
+                {calculating ? 'Calculating...' : 'Build Proforma & Calculate'}
               </button>
             </div>
 
@@ -726,21 +781,44 @@ export default function Proforma() {
             {hasCalculated && ourYears.length > 0 && (
               <div className="space-y-8">
 
-                {/* Proforma Table */}
+                {/* Our Proforma Table */}
                 <div className="border border-dark-border p-7">
-                  <SectionHead title="Underwritten Proforma" subtitle="Our numbers — T-12 through Year 5" />
-                  {proformaResult && (
-                    <ProformaTable
-                      proformaResult={proformaResult}
-                      sellerY1={inputs.sellerY1}
-                      sellerY2={inputs.sellerY2}
-                      sellerY3={inputs.sellerY3}
-                      haircutY1={inputs.haircutY1}
-                      haircutY2={inputs.haircutY2}
-                      haircutY3={inputs.haircutY3}
-                    />
-                  )}
+                  <SectionHead title="Our Underwritten Proforma" subtitle="T-12 actuals → 5-year projection. ESMI management at 5% of EGI." />
+                  {proformaResult && <ProformaTable proformaResult={proformaResult} />}
                 </div>
+
+                {/* Broker vs Investor */}
+                {hasSeller && proformaResult && (
+                  <div className="border border-dark-border p-7">
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex-1">
+                        <SectionHead
+                          title="Broker vs Investor Analysis"
+                          subtitle="OM projections vs your conservative underwrite — adjust the revenue haircut to stress-test"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 ml-6 mt-1">
+                        <label className="text-xs uppercase tracking-widest text-dark-muted whitespace-nowrap">Revenue Haircut</label>
+                        <input
+                          className="input-field text-sm w-16"
+                          type="number"
+                          step="1"
+                          min="0"
+                          max="30"
+                          value={revenueHaircut}
+                          onChange={e => setRevenueHaircut(e.target.value)}
+                        />
+                        <span className="text-dark-muted text-xs">%</span>
+                      </div>
+                    </div>
+                    <BrokerInvestorTable
+                      proformaResult={proformaResult}
+                      sellerYears={sellerYears}
+                      revenueHaircut={n(revenueHaircut) / 100}
+                      capRates={capRates}
+                    />
+                  </div>
+                )}
 
                 {/* Offer Matrix */}
                 <div className="border border-dark-border p-7">
@@ -805,16 +883,23 @@ export default function Proforma() {
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-xs text-dark-muted mt-3">Offer = Our NOI ÷ cap rate. Use this to anchor your bid — then check IRR below.</p>
+                  <p className="text-xs text-dark-muted mt-3">Offer = Our NOI ÷ cap rate. Use this to anchor your bid.</p>
                 </div>
 
-                {/* Max Offer — IRR check */}
-                {maxOfferResult && (
-                  <div className="border border-dark-border p-7">
-                    <SectionHead title="IRR Check" subtitle="What return do you get at your chosen offer price?" />
-                    <MaxOfferBox result={maxOfferResult} />
-                  </div>
-                )}
+                {/* IRR Result */}
+                <div className="border border-dark-border p-7">
+                  <SectionHead
+                    title="Your IRR"
+                    subtitle="IRR is a result of your offer price — not a target. Enter an offer price above to see your actual return."
+                  />
+                  {irrResult ? (
+                    <IRRBox result={irrResult} offerPrice={inputs.offerPrice} />
+                  ) : (
+                    <div className="p-6 border border-dark-border bg-dark-surface text-center">
+                      <p className="text-dark-muted text-sm">Enter your offer price in the Exit & Offer Price section above, then recalculate.</p>
+                    </div>
+                  )}
+                </div>
 
                 {/* Action Buttons */}
                 <div className="border border-dark-border p-7">
@@ -825,15 +910,14 @@ export default function Proforma() {
                     </button>
                     <button
                       onClick={handleGenerateLOI}
-                      disabled={!maxOfferResult}
-                      className="px-8 py-3 border border-[#1B2B5E] text-[#1B2B5E] text-sm uppercase tracking-widest hover:bg-[#1B2B5E] hover:text-white transition-colors disabled:opacity-40"
+                      className="px-8 py-3 border border-[#1B2B5E] text-[#1B2B5E] text-sm uppercase tracking-widest hover:bg-[#1B2B5E] hover:text-white transition-colors"
                     >
                       Generate LOI →
                     </button>
                   </div>
                   <p className="text-dark-muted text-xs mt-3">
-                    "Continue to Full Model" loads these numbers into the underwriting model and downloads the Excel.
-                    "Generate LOI" pre-fills the LOI with our offer price and key terms.
+                    &ldquo;Continue to Full Model&rdquo; loads these numbers into the underwriting model and downloads the Excel.
+                    &ldquo;Generate LOI&rdquo; pre-fills the LOI with your offer price and key terms.
                   </p>
                 </div>
 
