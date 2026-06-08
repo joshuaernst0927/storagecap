@@ -178,8 +178,6 @@ function n(s: string, fallback = 0) {
   return isNaN(v) ? fallback : v
 }
 
-
-
 // ─── Small UI Components ──────────────────────────────────────────────────────
 
 function Field({ label, value, onChange, suffix, note, step }: {
@@ -262,7 +260,6 @@ function ProformaTable({
   const sellers = [sellerY1, sellerY2, sellerY3]
   const haircuts = [n(haircutY1) / 100, n(haircutY2) / 100, n(haircutY3) / 100]
   const hasSeller = sellers.some(s => s.revenue || s.noi)
-
   const cols = ['T-12', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5']
 
   function Row({ label, values, bold, gold, indent, pct }: {
@@ -316,77 +313,48 @@ function ProformaTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-dark-border/40">
-
-          {/* Occupancy & Rent */}
-          <Row label="Occupancy" pct
-            values={[t12.occupancy, ...years.map(y => y.occupancy)]} />
-          <Row label="Avg Rent/Unit/Mo"
-            values={[t12.avg_rent_mo, ...years.map(y => y.avg_rent_mo)]} />
-
-          {/* Revenue */}
+          <Row label="Occupancy" pct values={[t12.occupancy, ...years.map(y => y.occupancy)]} />
+          <Row label="Avg Rent/Unit/Mo" values={[t12.avg_rent_mo, ...years.map(y => y.avg_rent_mo)]} />
           <Divider label="Revenue" />
-          <Row label="Total Revenue" bold
-            values={[t12.revenue, ...years.map(y => y.revenue)]} />
-
-          {/* Expenses */}
+          <Row label="Total Revenue" bold values={[t12.revenue, ...years.map(y => y.revenue)]} />
           <Divider label="Expenses" />
-          <Row label="Payroll" indent
-            values={[t12.expense_breakdown.payroll, ...years.map(y => y.expenses.payroll)]} />
-          <Row label="Mgmt Fees" indent
-            values={[t12.expense_breakdown.management_fees, ...years.map(y => y.expenses.management_fees)]} />
-          <Row label="Marketing" indent
-            values={[t12.expense_breakdown.marketing, ...years.map(y => y.expenses.marketing)]} />
-          <Row label="Utilities" indent
-            values={[t12.expense_breakdown.utilities, ...years.map(y => y.expenses.utilities)]} />
-          <Row label="Office/Employee" indent
-            values={[t12.expense_breakdown.office_employee, ...years.map(y => y.expenses.office_employee)]} />
-          <Row label="Administrative" indent
-            values={[t12.expense_breakdown.administrative, ...years.map(y => y.expenses.administrative)]} />
-          <Row label="Repairs & Maint" indent
-            values={[t12.expense_breakdown.repairs_maintenance, ...years.map(y => y.expenses.repairs_maintenance)]} />
-          <Row label="Tax" indent
-            values={[t12.expense_breakdown.tax, ...years.map(y => y.expenses.tax)]} />
-          <Row label="Insurance" indent
-            values={[t12.expense_breakdown.insurance, ...years.map(y => y.expenses.insurance)]} />
-          <Row label="Other" indent
-            values={[t12.expense_breakdown.other, ...years.map(y => y.expenses.other)]} />
-          <Row label="Total Expenses" bold
-            values={[t12.expenses, ...years.map(y => y.expenses.total)]} />
-
-          {/* NOI */}
+          <Row label="Payroll" indent values={[t12.expense_breakdown.payroll, ...years.map(y => y.expenses.payroll)]} />
+          <Row label="Mgmt Fees" indent values={[t12.expense_breakdown.management_fees, ...years.map(y => y.expenses.management_fees)]} />
+          <Row label="Marketing" indent values={[t12.expense_breakdown.marketing, ...years.map(y => y.expenses.marketing)]} />
+          <Row label="Utilities" indent values={[t12.expense_breakdown.utilities, ...years.map(y => y.expenses.utilities)]} />
+          <Row label="Office/Employee" indent values={[t12.expense_breakdown.office_employee, ...years.map(y => y.expenses.office_employee)]} />
+          <Row label="Administrative" indent values={[t12.expense_breakdown.administrative, ...years.map(y => y.expenses.administrative)]} />
+          <Row label="Repairs & Maint" indent values={[t12.expense_breakdown.repairs_maintenance, ...years.map(y => y.expenses.repairs_maintenance)]} />
+          <Row label="Tax" indent values={[t12.expense_breakdown.tax, ...years.map(y => y.expenses.tax)]} />
+          <Row label="Insurance" indent values={[t12.expense_breakdown.insurance, ...years.map(y => y.expenses.insurance)]} />
+          <Row label="Other" indent values={[t12.expense_breakdown.other, ...years.map(y => y.expenses.other)]} />
+          <Row label="Total Expenses" bold values={[t12.expenses, ...years.map(y => y.expenses.total)]} />
           <Divider label="Net Operating Income" />
-          <Row label="NOI" bold gold
-            values={[t12.noi, ...years.map(y => y.noi)]} />
-          <Row label="NOI Margin" pct
-            values={[
-              t12.revenue > 0 ? t12.noi / t12.revenue : null,
-              ...years.map(y => y.noi_margin)
-            ]} />
-
-          {/* Seller comparison */}
+          <Row label="NOI" bold gold values={[t12.noi, ...years.map(y => y.noi)]} />
+          <Row label="NOI Margin" pct values={[
+            t12.revenue > 0 ? t12.noi / t12.revenue : null,
+            ...years.map(y => y.noi_margin)
+          ]} />
           {hasSeller && (
             <>
               <Divider label="Seller Proforma (haircut applied)" />
-              <Row label="Seller Revenue"
-                values={[null, ...sellers.map(s => s.revenue ? n(s.revenue) : null), null, null]} />
-              <Row label="Haircut"
-                values={[null, ...haircuts.map(h => -(h * 100)), null, null]} />
-              <Row label="Haircutted NOI"
-                values={[null, ...sellers.map((s, i) => {
-                  const rev = n(s.revenue)
-                  const exp = n(s.expenses)
-                  if (rev > 0) return (rev * (1 - haircuts[i])) - exp
-                  if (s.noi) return n(s.noi) * (1 - haircuts[i])
-                  return null
-                }), null, null]} />
+              <Row label="Seller Revenue" values={[null, ...sellers.map(s => s.revenue ? n(s.revenue) : null), null, null]} />
+              <Row label="Haircut" values={[null, ...haircuts.map(h => -(h * 100)), null, null]} />
+              <Row label="Haircutted NOI" values={[null, ...sellers.map((s, i) => {
+                const rev = n(s.revenue)
+                const exp = n(s.expenses)
+                if (rev > 0) return (rev * (1 - haircuts[i])) - exp
+                if (s.noi) return n(s.noi) * (1 - haircuts[i])
+                return null
+              }), null, null]} />
             </>
           )}
-
         </tbody>
       </table>
     </div>
   )
 }
+
 // ─── Max Offer Result Box ─────────────────────────────────────────────────────
 
 function MaxOfferBox({ result }: { result: MaxOfferResult }) {
@@ -448,12 +416,10 @@ export default function Proforma() {
   const setSeller = (yr: 'sellerY1' | 'sellerY2' | 'sellerY3', v: SellerYear) =>
     setInputs(p => ({ ...p, [yr]: v }))
 
-  // Load from underwrite page if data was passed
   useEffect(() => {
     if (router.query.data) {
       try {
         const data = JSON.parse(decodeURIComponent(router.query.data as string))
-        // Safely merge — ensure nested objects like sellerY1/Y2/Y3 are handled
         setInputs(prev => ({
           ...prev,
           ...data,
@@ -465,7 +431,6 @@ export default function Proforma() {
     }
   }, [router.query.data])
 
-  // Auto-set haircut defaults when deal type changes
   useEffect(() => {
     const defaults = HAIRCUT_DEFAULTS[inputs.dealType] ?? HAIRCUT_DEFAULTS['value-add']
     const expDefault = EXPENSE_DEFAULTS[inputs.dealType] ?? EXPENSE_DEFAULTS['value-add']
@@ -478,25 +443,24 @@ export default function Proforma() {
     }))
   }, [inputs.dealType])
 
- async function handleCalculate(anchorOverride?: string) {
+  async function handleCalculate(anchorOverride?: string) {
     setCalculating(true)
     setCalcError('')
     try {
-      // ── Call /build-proforma on the server ──────────────────────
       const t12Data = {
-        total_revenue:        n(inputs.t12Revenue) || n(inputs.t12NOI) / 0.6,
-        payroll:              n(inputs.t12Payroll),
-        management_fees:      n(inputs.t12ManagementFees),
-        marketing:            n(inputs.t12Marketing),
-        utilities:            n(inputs.t12Utilities),
-        office_employee:      n(inputs.t12OfficeEmployee),
-        administrative:       n(inputs.t12Administrative),
-        repairs_maintenance:  n(inputs.t12RepairsMaintenance),
-        tax:                  n(inputs.t12Tax),
-        insurance:            n(inputs.t12Insurance),
-        other_expenses:       n(inputs.t12OtherExpenses),
-        total_expenses:       n(inputs.t12TotalExpenses),
-        noi:                  n(inputs.t12NOI),
+        total_revenue:       n(inputs.t12Revenue) || n(inputs.t12NOI) / 0.6,
+        payroll:             n(inputs.t12Payroll),
+        management_fees:     n(inputs.t12ManagementFees),
+        marketing:           n(inputs.t12Marketing),
+        utilities:           n(inputs.t12Utilities),
+        office_employee:     n(inputs.t12OfficeEmployee),
+        administrative:      n(inputs.t12Administrative),
+        repairs_maintenance: n(inputs.t12RepairsMaintenance),
+        tax:                 n(inputs.t12Tax),
+        insurance:           n(inputs.t12Insurance),
+        other_expenses:      n(inputs.t12OtherExpenses),
+        total_expenses:      n(inputs.t12TotalExpenses),
+        noi:                 n(inputs.t12NOI),
       }
 
       const assumptions = {
@@ -507,7 +471,7 @@ export default function Proforma() {
         opex_growth:          n(inputs.expenseGrowth, 3) / 100,
         tax_insurance_growth: 0.05,
         mgmt_fee_pct:         0.06,
-        occ_schedule:         [
+        occ_schedule: [
           n(inputs.targetOccupancy, 80) / 100,
           Math.min((n(inputs.targetOccupancy, 80) + 6) / 100, 0.95),
           Math.min((n(inputs.targetOccupancy, 80) + 10) / 100, 0.95),
@@ -526,84 +490,25 @@ export default function Proforma() {
       setProformaResult(proformaData)
       setOurYears(proformaData.years)
 
-      // ── Calculate max offer via API ──────────────────────────────
       const y1NOI = proformaData.years[0]?.noi ?? 0
       const y5NOI = proformaData.years[4]?.noi ?? y1NOI
       const t12NOIval = n(inputs.t12NOI) || proformaData.t12.noi
       const activeAnchor = anchorOverride ?? maxOfferAnchor ?? 'y1'
       const anchorNOI = activeAnchor === 't12' ? t12NOIval : activeAnchor === 'stabilized' ? y5NOI : y1NOI
-      const stabNOI = y5NOI
-      const startOcc = n(inputs.currentOccupancy) / 100
-      const stabOcc = n(inputs.targetOccupancy, 92) / 100
-      const exitCap = n(inputs.exitCapRate, 7.25) / 100
-      const exitMonth = n(inputs.exitMonth, 60)
-      const monthsToStab = n(inputs.monthsToStabilization, 18)
-      const rentGrowth = n(inputs.revenueGrowthPostStab, 3) / 100
-      const expGrowth = n(inputs.expenseGrowth, 3) / 100
 
       const body = {
         action: 'max-offer',
         target_irr: n(inputs.targetIRR, 15) / 100,
         deal_type: inputs.dealType,
         in_place_noi: anchorNOI,
-        stabilized_noi: stabNOI,
-        start_occupancy: startOcc,
-        stabilized_occupancy: stabOcc,
-        exit_cap_rate: exitCap,
-        exit_month: exitMonth,
-        months_to_stabilization: monthsToStab,
-        rent_growth: rentGrowth,
-        opex_growth: expGrowth,
-        closing_costs_pct: 0.03,
-        acquisition_fee_pct: 0.02,
-        initial_repairs: 0,
-        selling_costs_pct: 0.02,
-      }
-
-      const res = await fetch('/api/underwrite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) throw new Error('Calculation failed')
-      const data = await res.json()
-      setMaxOfferResult(data)
-      setHasCalculated(true)
-    } catch (err) {
-      setCalcError(String(err))
-    } finally {
-      setCalculating(false)
-    }
-  }
-
-      // Calculate max offer via API — use selected anchor NOI
-      const y1NOI = proformaResult?.years[0]?.noi ?? 0
-      const y3NOI = proformaResult?.years[4]?.noi ?? y1NOI
-      const t12NOIval = parseFloat(inputs.t12NOI) || y1NOI
-      const activeAnchor = anchorOverride ?? maxOfferAnchor ?? 'y1'
-      const anchorNOI = activeAnchor === 't12' ? t12NOIval : activeAnchor === 'stabilized' ? y3NOI : y1NOI
-      const stabNOI = maxOfferAnchor === 'stabilized' ? y3NOI : y3NOI
-      const startOcc = n(inputs.currentOccupancy) / 100
-      const stabOcc = n(inputs.targetOccupancy, 92) / 100
-      const exitCap = n(inputs.exitCapRate, 7.25) / 100
-      const exitMonth = n(inputs.exitMonth, 60)
-      const monthsToStab = n(inputs.monthsToStabilization, 18)
-      const rentGrowth = n(inputs.revenueGrowthPostStab, 3) / 100
-      const expGrowth = n(inputs.expenseGrowth, 3) / 100
-
-      const body = {
-        action: 'max-offer',
-        target_irr: n(inputs.targetIRR, 15) / 100,
-        deal_type: inputs.dealType,
-        in_place_noi: anchorNOI,
-        stabilized_noi: stabNOI,
-        start_occupancy: startOcc,
-        stabilized_occupancy: stabOcc,
-        exit_cap_rate: exitCap,
-        exit_month: exitMonth,
-        months_to_stabilization: monthsToStab,
-        rent_growth: rentGrowth,
-        opex_growth: expGrowth,
+        stabilized_noi: y5NOI,
+        start_occupancy: n(inputs.currentOccupancy) / 100,
+        stabilized_occupancy: n(inputs.targetOccupancy, 92) / 100,
+        exit_cap_rate: n(inputs.exitCapRate, 7.25) / 100,
+        exit_month: n(inputs.exitMonth, 60),
+        months_to_stabilization: n(inputs.monthsToStabilization, 18),
+        rent_growth: n(inputs.revenueGrowthPostStab, 3) / 100,
+        opex_growth: n(inputs.expenseGrowth, 3) / 100,
         closing_costs_pct: 0.03,
         acquisition_fee_pct: 0.02,
         initial_repairs: 0,
@@ -627,13 +532,12 @@ export default function Proforma() {
   }
 
   function handleContinueToModel() {
-    // Pass proforma results back to underwrite page
     const data = {
       propertyName: inputs.propertyName,
       address: inputs.address,
       dealType: inputs.dealType,
       inPlaceNOI: String(Math.round(ourYears[0]?.noi ?? 0)),
-      stabilizedNOI: String(Math.round(ourYears[2]?.noi ?? 0)),
+      stabilizedNOI: String(Math.round(ourYears[4]?.noi ?? 0)),
       startOccupancy: inputs.currentOccupancy,
       stabilizedOccupancy: inputs.targetOccupancy,
       monthsToStabilization: inputs.monthsToStabilization,
@@ -669,7 +573,6 @@ export default function Proforma() {
           <meta name="description" content="Build a defensible underwritten proforma with lease-up modeling, rent-to-FMV, and seller haircuts." />
         </Head>
 
-        {/* Hero */}
         <section className="page-hero border-b border-dark-border">
           <div className="section-label">Proforma Builder</div>
           <h1 className="display-heading text-5xl md:text-7xl max-w-3xl mb-6">
@@ -764,8 +667,6 @@ export default function Proforma() {
                 <SellerYearFields label="Seller Year 2" value={inputs.sellerY2} onChange={v => setSeller('sellerY2', v)} />
                 <SellerYearFields label="Seller Year 3" value={inputs.sellerY3} onChange={v => setSeller('sellerY3', v)} />
               </div>
-
-              {/* Haircut controls */}
               <div className="border-t border-dark-border pt-5">
                 <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-3">
                   Revenue Haircut — pre-filled for {DEAL_TYPE_LABELS[inputs.dealType]}, adjust as needed
@@ -827,87 +728,85 @@ export default function Proforma() {
 
                 {/* Proforma Table */}
                 <div className="border border-dark-border p-7">
-                  <SectionHead title="Underwritten Proforma" subtitle="Our numbers vs seller — Y1 through Y3" />
-               {proformaResult && (
-                  <ProformaTable
-                    proformaResult={proformaResult}
-                    sellerY1={inputs.sellerY1}
-                    sellerY2={inputs.sellerY2}
-                    sellerY3={inputs.sellerY3}
-                    haircutY1={inputs.haircutY1}
-                    haircutY2={inputs.haircutY2}
-                    haircutY3={inputs.haircutY3}
-                  />
-                )}
+                  <SectionHead title="Underwritten Proforma" subtitle="Our numbers — T-12 through Year 5" />
+                  {proformaResult && (
+                    <ProformaTable
+                      proformaResult={proformaResult}
+                      sellerY1={inputs.sellerY1}
+                      sellerY2={inputs.sellerY2}
+                      sellerY3={inputs.sellerY3}
+                      haircutY1={inputs.haircutY1}
+                      haircutY2={inputs.haircutY2}
+                      haircutY3={inputs.haircutY3}
+                    />
+                  )}
                 </div>
 
                 {/* Offer Matrix */}
-                {ourYears.length > 0 && (
-                  <div className="border border-dark-border p-7">
-                    <SectionHead title="Offer Matrix" subtitle="Our haircutted NOI ÷ cap rate — adjust cap rates to match your market" />
-                    <div className="flex gap-3 mb-4 flex-wrap">
-                      {capRates.map((cr, i) => (
-                        <div key={i} style={{width: 100}}>
-                          <label className="label-text">Cap Rate {i+1}</label>
-                          <div className="flex items-center">
-                            <input
-                              className="input-field text-sm"
-                              type="number"
-                              step="0.25"
-                              value={cr}
-                              onChange={e => setCapRate(i, e.target.value)}
-                            />
-                            <span className="text-dark-muted text-xs ml-1">%</span>
-                          </div>
+                <div className="border border-dark-border p-7">
+                  <SectionHead title="Offer Matrix" subtitle="Our NOI ÷ cap rate — adjust cap rates to match your market" />
+                  <div className="flex gap-3 mb-4 flex-wrap">
+                    {capRates.map((cr, i) => (
+                      <div key={i} style={{ width: 100 }}>
+                        <label className="label-text">Cap Rate {i + 1}</label>
+                        <div className="flex items-center">
+                          <input
+                            className="input-field text-sm"
+                            type="number"
+                            step="0.25"
+                            value={cr}
+                            onChange={e => setCapRate(i, e.target.value)}
+                          />
+                          <span className="text-dark-muted text-xs ml-1">%</span>
                         </div>
-                      ))}
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-dark-border">
-                            <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">NOI Year</th>
-                            <th className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Our NOI</th>
-                            {capRates.map((cr, i) => (
-                              <th key={i} className="text-right text-xs uppercase tracking-widest text-gold font-semibold pb-3 px-3">
-                                {cr}% Cap
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-dark-border/40">
-                        {[
-                            ['T-12', parseFloat(inputs.t12NOI) || proformaResult?.t12.noi || null],
-                            ['Year 1', ourYears[0]?.noi ?? null],
-                            ['Year 2', ourYears[1]?.noi ?? null],
-                            ['Year 3', ourYears[2]?.noi ?? null],
-                            ['Year 4', ourYears[3]?.noi ?? null],
-                            ['Year 5', ourYears[4]?.noi ?? null],
-                          ].filter(([, noi]) => noi && (noi as number) > 0).map(([label, noi]) => (
-                            <tr key={label as string} className="hover:bg-gold/5 transition-colors">
-                              <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{label as string}</td>
-                              <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">
-                                ${Math.round(noi as number).toLocaleString()}
-                              </td>
-                              {capRates.map((cr, i) => {
-                                const cap = parseFloat(cr) / 100
-                                const offer = cap > 0 ? Math.round((noi as number) / cap) : 0
-                                return (
-                                  <td key={i} className="py-3 px-3 text-right">
-                                    <span className="font-semibold text-[#1B2B5E]">
-                                      ${offer > 0 ? offer.toLocaleString() : '—'}
-                                    </span>
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="text-xs text-dark-muted mt-3">Offer = Our haircutted NOI ÷ cap rate. Use this to anchor your bid — then check IRR below to confirm your return at that price.</p>
+                      </div>
+                    ))}
                   </div>
-                )}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-dark-border">
+                          <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">NOI Year</th>
+                          <th className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Our NOI</th>
+                          {capRates.map((cr, i) => (
+                            <th key={i} className="text-right text-xs uppercase tracking-widest text-gold font-semibold pb-3 px-3">
+                              {cr}% Cap
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-dark-border/40">
+                        {[
+                          ['T-12', proformaResult?.t12.noi ?? null],
+                          ['Year 1', ourYears[0]?.noi ?? null],
+                          ['Year 2', ourYears[1]?.noi ?? null],
+                          ['Year 3', ourYears[2]?.noi ?? null],
+                          ['Year 4', ourYears[3]?.noi ?? null],
+                          ['Year 5', ourYears[4]?.noi ?? null],
+                        ].filter(([, noi]) => noi && (noi as number) > 0).map(([label, noi]) => (
+                          <tr key={label as string} className="hover:bg-gold/5 transition-colors">
+                            <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{label as string}</td>
+                            <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">
+                              ${Math.round(noi as number).toLocaleString()}
+                            </td>
+                            {capRates.map((cr, i) => {
+                              const cap = parseFloat(cr) / 100
+                              const offer = cap > 0 ? Math.round((noi as number) / cap) : 0
+                              return (
+                                <td key={i} className="py-3 px-3 text-right">
+                                  <span className="font-semibold text-[#1B2B5E]">
+                                    ${offer > 0 ? offer.toLocaleString() : '—'}
+                                  </span>
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-dark-muted mt-3">Offer = Our NOI ÷ cap rate. Use this to anchor your bid — then check IRR below.</p>
+                </div>
 
                 {/* Max Offer — IRR check */}
                 {maxOfferResult && (
