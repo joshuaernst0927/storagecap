@@ -104,7 +104,6 @@ type ProformaResult = {
     }
   }
   years: OurYear[]
-}expenseRatio: number
 }
 
 type MaxOfferResult = {
