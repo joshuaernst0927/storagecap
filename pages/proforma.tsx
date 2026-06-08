@@ -572,7 +572,15 @@ export default function Proforma() {
       })
       if (irrRes.ok) {
         const irrData = await irrRes.json()
-        setIrrResult(irrData)
+        setIrrResult({
+            irr_at_max: irrData.irr_at_price ?? 0,
+            going_in_cap: irrData.going_in_cap ?? 0,
+            stabilized_cap: irrData.stabilized_cap ?? 0,
+            target_irr: 0,
+            in_place_noi: irrData.in_place_noi ?? 0,
+            stabilized_noi: irrData.stabilized_noi ?? 0,
+            method: '',
+          })
       }
 
       setHasCalculated(true)
