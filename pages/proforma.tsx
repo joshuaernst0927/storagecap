@@ -549,10 +549,8 @@ export default function Proforma() {
       const offerPriceVal = n(inputs.offerPrice)
 
       const irrBody = {
-        action: 'max-offer',
-        target_irr: offerPriceVal > 0 ? null : 0.15,
-        purchase_price: offerPriceVal > 0 ? offerPriceVal : null,
-        deal_type: inputs.dealType,
+        action: 'calc-irr',
+        purchase_price: offerPriceVal,
         in_place_noi: anchorNOI,
         stabilized_noi: y5NOI,
         start_occupancy: n(inputs.currentOccupancy) / 100,
@@ -565,8 +563,7 @@ export default function Proforma() {
         closing_costs_pct: 0.03,
         acquisition_fee_pct: 0.02,
         initial_repairs: 0,
-        selling_costs_pct: 0.02,
-      }
+        selling_costs_pct: 0.02,      }
 
       const irrRes = await fetch('/api/underwrite', {
         method: 'POST',
