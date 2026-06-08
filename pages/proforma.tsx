@@ -3,8 +3,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import AuthGate from '@/components/AuthGate'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type DealType = 'value-add' | 'stabilized' | 'distressed'
 
 type SellerYear = {
@@ -51,6 +49,7 @@ type ProformaInputs = {
   exitMonth: string
   offerPrice: string
   manualNOI: string
+  exitSalePrice: string
 }
 
 type OurYear = {
@@ -109,8 +108,6 @@ type IRRResult = {
   method: string
 }
 
-// ─── Defaults ─────────────────────────────────────────────────────────────────
-
 const EMPTY_SELLER: SellerYear = { revenue: '', expenses: '', noi: '' }
 
 const EMPTY: ProformaInputs = {
@@ -134,7 +131,7 @@ const EMPTY: ProformaInputs = {
   t12Payroll: '', t12ManagementFees: '', t12Marketing: '',
   t12Utilities: '', t12OfficeEmployee: '', t12Administrative: '',
   t12RepairsMaintenance: '', t12Tax: '', t12Insurance: '', t12OtherExpenses: '',
-  exitCapRate: '7.25', exitMonth: '60', offerPrice: '', manualNOI: '',
+  exitCapRate: '7.25', exitMonth: '60', offerPrice: '', manualNOI: '', exitSalePrice: '',
 }
 
 const DEAL_TYPE_LABELS: Record<DealType, string> = {
@@ -142,8 +139,6 @@ const DEAL_TYPE_LABELS: Record<DealType, string> = {
   'stabilized': 'Stabilized',
   'distressed': 'Distressed',
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt$(v: number) {
   if (isNaN(v)) return '—'
@@ -157,8 +152,6 @@ function n(s: string, fallback = 0) {
   const v = parseFloat(s)
   return isNaN(v) ? fallback : v
 }
-
-// ─── Small UI Components ──────────────────────────────────────────────────────
 
 function Field({ label, value, onChange, suffix, note, step, placeholder }: {
   label: string; value: string; onChange: (v: string) => void
@@ -192,8 +185,6 @@ function SectionHead({ title, subtitle }: { title: string; subtitle?: string }) 
   )
 }
 
-// ─── Proforma Table ───────────────────────────────────────────────────────────
-
 function ProformaTable({ proformaResult }: { proformaResult: ProformaResult }) {
   const { t12, years } = proformaResult
   const cols = ['T-12', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5']
@@ -203,16 +194,11 @@ function ProformaTable({ proformaResult }: { proformaResult: ProformaResult }) {
   }) {
     return (
       <tr className={bold ? 'bg-navy/5' : ''}>
-        <td className={`py-2.5 pr-4 text-xs uppercase tracking-widest
-          ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'}
-          ${indent ? 'pl-4' : ''}
-          ${gold ? 'text-gold font-semibold' : ''}`}>
+        <td className={`py-2.5 pr-4 text-xs uppercase tracking-widest ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'} ${indent ? 'pl-4' : ''} ${gold ? 'text-gold font-semibold' : ''}`}>
           {label}
         </td>
         {values.map((v, i) => (
-          <td key={i} className={`py-2.5 px-2 text-right text-sm
-            ${bold ? 'font-bold text-[#1B2B5E]' : 'text-[#1B2B5E]'}
-            ${gold ? 'text-gold font-semibold' : ''}`}>
+          <td key={i} className={`py-2.5 px-2 text-right text-sm ${bold ? 'font-bold text-[#1B2B5E]' : 'text-[#1B2B5E]'} ${gold ? 'text-gold font-semibold' : ''}`}>
             {v === null ? '—' : pct ? fmtPct(v) : fmt$(v)}
           </td>
         ))}
@@ -258,52 +244,36 @@ function ProformaTable({ proformaResult }: { proformaResult: ProformaResult }) {
           <Row label="Total Expenses" bold values={[t12.expenses, ...years.map(y => y.expenses.total)]} />
           <Divider label="Net Operating Income" />
           <Row label="NOI" bold gold values={[t12.noi, ...years.map(y => y.noi)]} />
-          <Row label="NOI Margin" pct values={[
-            t12.revenue > 0 ? t12.noi / t12.revenue : null,
-            ...years.map(y => y.noi_margin)
-          ]} />
+          <Row label="NOI Margin" pct values={[t12.revenue > 0 ? t12.noi / t12.revenue : null, ...years.map(y => y.noi_margin)]} />
         </tbody>
       </table>
     </div>
   )
 }
 
-// ─── Broker vs Investor Table ─────────────────────────────────────────────────
-
-function BrokerInvestorTable({
-  proformaResult, sellerYears, revenueHaircut, capRates,
-}: {
-  proformaResult: ProformaResult
-  sellerYears: SellerYear[]
-  revenueHaircut: number
-  capRates: string[]
+function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capRates }: {
+  proformaResult: ProformaResult; sellerYears: SellerYear[]; revenueHaircut: number; capRates: string[]
 }) {
   const cols = ['T-12', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5']
   const t12noi = proformaResult.t12.noi
 
-  const brokerNOI: (number | null)[] = [
-    t12noi,
-    ...sellerYears.map(s => {
-      const noi = parseFloat(s.noi)
-      if (!isNaN(noi) && noi > 0) return noi
-      const rev = parseFloat(s.revenue)
-      const exp = parseFloat(s.expenses)
-      if (!isNaN(rev) && !isNaN(exp)) return rev - exp
-      return null
-    })
-  ]
+  const brokerNOI: (number | null)[] = [t12noi, ...sellerYears.map(s => {
+    const noi = parseFloat(s.noi)
+    if (!isNaN(noi) && noi > 0) return noi
+    const rev = parseFloat(s.revenue)
+    const exp = parseFloat(s.expenses)
+    if (!isNaN(rev) && !isNaN(exp)) return rev - exp
+    return null
+  })]
 
-  const investorNOI: (number | null)[] = [
-    t12noi,
-    ...sellerYears.map(s => {
-      const rev = parseFloat(s.revenue)
-      const exp = parseFloat(s.expenses)
-      const noi = parseFloat(s.noi)
-      if (!isNaN(rev) && !isNaN(exp) && rev > 0) return (rev * (1 - revenueHaircut)) - exp
-      if (!isNaN(noi) && noi > 0) return noi * (1 - revenueHaircut)
-      return null
-    })
-  ]
+  const investorNOI: (number | null)[] = [t12noi, ...sellerYears.map(s => {
+    const rev = parseFloat(s.revenue)
+    const exp = parseFloat(s.expenses)
+    const noi = parseFloat(s.noi)
+    if (!isNaN(rev) && !isNaN(exp) && rev > 0) return (rev * (1 - revenueHaircut)) - exp
+    if (!isNaN(noi) && noi > 0) return noi * (1 - revenueHaircut)
+    return null
+  })]
 
   const gap: (number | null)[] = brokerNOI.map((b, i) => {
     if (i === 0 || b === null || investorNOI[i] === null) return null
@@ -323,14 +293,9 @@ function BrokerInvestorTable({
   }) {
     return (
       <tr className={bold ? 'bg-navy/5' : ''}>
-        <td className={`py-2.5 pr-4 text-xs uppercase tracking-widest
-          ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'}`}>
-          {label}
-        </td>
+        <td className={`py-2.5 pr-4 text-xs uppercase tracking-widest ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'}`}>{label}</td>
         {values.map((v, i) => (
-          <td key={i} className={`py-2.5 px-2 text-right text-sm
-            ${bold ? 'font-bold text-[#1B2B5E]' : ''}
-            ${red && v !== null && (v as number) < 0 ? 'text-red-500 font-semibold' : 'text-[#1B2B5E]'}`}>
+          <td key={i} className={`py-2.5 px-2 text-right text-sm ${bold ? 'font-bold text-[#1B2B5E]' : ''} ${red && v !== null && (v as number) < 0 ? 'text-red-500 font-semibold' : 'text-[#1B2B5E]'}`}>
             {v === null ? '—' : pct ? fmtPct(v) : fmt$(v)}
           </td>
         ))}
@@ -369,7 +334,6 @@ function BrokerInvestorTable({
           </tbody>
         </table>
       </div>
-
       {brokerY5 !== null && investorY5 !== null && (
         <div className="mt-6 pt-6 border-t border-dark-border">
           <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-4">Year 5 Exit Comparison</div>
@@ -396,26 +360,19 @@ function BrokerInvestorTable({
                       <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{cr}% Cap</td>
                       <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">{fmt$(brokerExit)}</td>
                       <td className="py-3 px-3 text-right font-semibold text-gold">{fmt$(investorExit)}</td>
-                      <td className="py-3 px-3 text-right font-semibold text-red-500">
-                        {fmt$(exitGap)} ({fmtPct(exitGapPct)})
-                      </td>
+                      <td className="py-3 px-3 text-right font-semibold text-red-500">{fmt$(exitGap)} ({fmtPct(exitGapPct)})</td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-dark-muted mt-3">
-            The valuation gap shows how much less the property is worth at your conservative underwrite vs the broker&apos;s OM.
-            Use this to anchor your offer in negotiations.
-          </p>
+          <p className="text-xs text-dark-muted mt-3">The valuation gap shows how much less the property is worth at your conservative underwrite vs the broker&apos;s OM. Use this to anchor your offer in negotiations.</p>
         </div>
       )}
     </div>
   )
 }
-
-// ─── IRR Result Box ───────────────────────────────────────────────────────────
 
 function IRRBox({ result, offerPrice }: { result: IRRResult; offerPrice: string }) {
   return (
@@ -425,9 +382,7 @@ function IRRBox({ result, offerPrice }: { result: IRRResult; offerPrice: string 
           <div className="text-xs uppercase tracking-widest text-gold font-medium mb-1">
             Your Return at {offerPrice ? '$' + parseInt(offerPrice).toLocaleString() : 'This Offer'}
           </div>
-          <div className="font-serif text-5xl font-light text-[#1B2B5E]">
-            {fmtPct(result.irr_at_max, 1)} IRR
-          </div>
+          <div className="font-serif text-5xl font-light text-[#1B2B5E]">{fmtPct(result.irr_at_max, 1)} IRR</div>
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gold/30">
@@ -453,8 +408,6 @@ function IRRBox({ result, offerPrice }: { result: IRRResult; offerPrice: string 
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
 export default function Proforma() {
   const router = useRouter()
   const [inputs, setInputs] = useState<ProformaInputs>(EMPTY)
@@ -468,7 +421,6 @@ export default function Proforma() {
   const [capRates, setCapRates] = useState(['6.50', '7.00', '7.50', '8.00'])
   const [revenueHaircut, setRevenueHaircut] = useState('8')
   const setCapRate = (i: number, v: string) => setCapRates(prev => prev.map((c, idx) => idx === i ? v : c))
-
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
 
   useEffect(() => {
@@ -476,8 +428,7 @@ export default function Proforma() {
       try {
         const data = JSON.parse(decodeURIComponent(router.query.data as string))
         setInputs(prev => ({
-          ...prev,
-          ...data,
+          ...prev, ...data,
           sellerY1: { ...prev.sellerY1, ...(data.sellerY1 ?? {}) },
           sellerY2: { ...prev.sellerY2, ...(data.sellerY2 ?? {}) },
           sellerY3: { ...prev.sellerY3, ...(data.sellerY3 ?? {}) },
@@ -548,31 +499,33 @@ export default function Proforma() {
 
       const offerPriceVal = n(inputs.offerPrice)
 
-      const irrBody = {
-        action: 'calc-irr',
-        purchase_price: offerPriceVal,
-        in_place_noi: anchorNOI,
-        stabilized_noi: y5NOI,
-        start_occupancy: n(inputs.currentOccupancy) / 100,
-        stabilized_occupancy: n(inputs.targetOccupancy, 92) / 100,
-        exit_cap_rate: n(inputs.exitCapRate, 7.25) / 100,
-        exit_month: n(inputs.exitMonth, 60),
-        months_to_stabilization: n(inputs.monthsToStabilization, 18),
-        rent_growth: n(inputs.revenueGrowthPostStab, 3) / 100,
-        opex_growth: n(inputs.expenseGrowth, 3) / 100,
-        closing_costs_pct: 0.03,
-        acquisition_fee_pct: 0.02,
-        initial_repairs: 0,
-        selling_costs_pct: 0.02,      }
+      if (offerPriceVal > 0) {
+        const irrBody = {
+          action: 'calc-irr',
+          purchase_price: offerPriceVal,
+          in_place_noi: anchorNOI,
+          stabilized_noi: y5NOI,
+          start_occupancy: n(inputs.currentOccupancy) / 100,
+          stabilized_occupancy: n(inputs.targetOccupancy, 92) / 100,
+          exit_cap_rate: n(inputs.exitCapRate, 7.25) / 100,
+          exit_month: n(inputs.exitMonth, 60),
+          months_to_stabilization: n(inputs.monthsToStabilization, 18),
+          rent_growth: n(inputs.revenueGrowthPostStab, 3) / 100,
+          opex_growth: n(inputs.expenseGrowth, 3) / 100,
+          closing_costs_pct: 0.03,
+          acquisition_fee_pct: 0.02,
+          initial_repairs: 0,
+          selling_costs_pct: 0.02,
+        }
 
-      const irrRes = await fetch('/api/underwrite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(irrBody),
-      })
-      if (irrRes.ok) {
-        const irrData = await irrRes.json()
-        setIrrResult({
+        const irrRes = await fetch('/api/underwrite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(irrBody),
+        })
+        if (irrRes.ok) {
+          const irrData = await irrRes.json()
+          setIrrResult({
             irr_at_max: irrData.irr_at_price ?? 0,
             going_in_cap: irrData.going_in_cap ?? 0,
             stabilized_cap: irrData.stabilized_cap ?? 0,
@@ -581,6 +534,7 @@ export default function Proforma() {
             stabilized_noi: irrData.stabilized_noi ?? 0,
             method: '',
           })
+        }
       }
 
       setHasCalculated(true)
@@ -650,26 +604,18 @@ export default function Proforma() {
         <section className="py-14">
           <div className="section-container max-w-4xl space-y-10">
 
-            {/* Deal Type */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Deal Type" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {(['value-add', 'stabilized', 'distressed'] as DealType[]).map(dt => (
-                  <button
-                    key={dt}
-                    onClick={() => set('dealType', dt)}
-                    className={`p-4 border text-left transition-colors duration-150
-                      ${inputs.dealType === dt ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
-                  >
-                    <div className={`text-sm font-semibold mb-1 ${inputs.dealType === dt ? 'text-gold' : 'text-[#1B2B5E]'}`}>
-                      {DEAL_TYPE_LABELS[dt]}
-                    </div>
+                  <button key={dt} onClick={() => set('dealType', dt)}
+                    className={`p-4 border text-left transition-colors duration-150 ${inputs.dealType === dt ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}>
+                    <div className={`text-sm font-semibold mb-1 ${inputs.dealType === dt ? 'text-gold' : 'text-[#1B2B5E]'}`}>{DEAL_TYPE_LABELS[dt]}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Property */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Property" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -684,18 +630,15 @@ export default function Proforma() {
               </div>
             </div>
 
-            {/* Historical Data */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Historical Data" subtitle="From T12, T3, and available occupancy records" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Field label="T-12 NOI" value={inputs.t12NOI} onChange={v => set('t12NOI', v)} suffix="$" />
-                <Field label="T-3 NOI (annualized)" value={inputs.t3NOI} onChange={v => set('t3NOI', v)} suffix="$"
-                  note="Last 3 months × 4" />
+                <Field label="T-3 NOI (annualized)" value={inputs.t3NOI} onChange={v => set('t3NOI', v)} suffix="$" note="Last 3 months × 4" />
                 <Field label="Current Occupancy" value={inputs.t12Occupancy} onChange={v => set('t12Occupancy', v)} suffix="%" />
               </div>
             </div>
 
-            {/* Unit Economics */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Unit Economics & Lease-Up" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -708,7 +651,6 @@ export default function Proforma() {
               </div>
             </div>
 
-            {/* Growth Assumptions */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Growth Assumptions" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -717,48 +659,27 @@ export default function Proforma() {
               </div>
             </div>
 
-            {/* Exit & Offer */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Exit & Offer Price" subtitle="Enter your offer price to calculate your actual IRR" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => set('exitCapRate', v)} suffix="%" step="0.25" />
                 <Field label="Hold Period" value={inputs.exitMonth} onChange={v => set('exitMonth', v)} suffix="mo" />
                 <div className="md:col-span-2">
-                  <label className="label-text">
-                    Your Offer Price <span className="text-gold text-xs">(enter to see your IRR)</span>
-                  </label>
-                  <input
-                    className="input-field border-gold/50"
-                    type="number"
-                    step="any"
-                    value={inputs.offerPrice}
-                    onChange={e => set('offerPrice', e.target.value)}
-                    placeholder="e.g. 3500000"
-                  />
+                  <label className="label-text">Your Offer Price <span className="text-gold text-xs">(enter to see your IRR)</span></label>
+                  <input className="input-field border-gold/50" type="number" step="any" value={inputs.offerPrice}
+                    onChange={e => set('offerPrice', e.target.value)} placeholder="e.g. 3500000" />
                 </div>
               </div>
             </div>
 
-            {/* NOI Anchor + Calculate */}
             <div className="pt-2">
-              {calcError && (
-                <div className="mb-4 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{calcError}</div>
-              )}
+              {calcError && <div className="mb-4 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{calcError}</div>}
               <div className="mb-6">
                 <label className="label-text mb-2 block">Anchor NOI to</label>
                 <div className="flex gap-2 flex-wrap">
-                  {([
-                    ['t12', 'T-12 NOI', 'Conservative'],
-                    ['y1', 'Year 1 NOI', 'Base case'],
-                    ['stabilized', 'Stabilized NOI', 'Aggressive'],
-                    ['manual', 'Manual NOI', 'Custom'],
-                  ] as const).map(([val, label, desc]) => (
-                    <button
-                      key={val}
-                      onClick={() => { setMaxOfferAnchor(val); if (hasCalculated) handleCalculate(val); }}
-                      className={`flex-1 p-3 border text-left transition-colors duration-150 min-w-[110px]
-                        ${maxOfferAnchor === val ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
-                    >
+                  {([['t12', 'T-12 NOI', 'Conservative'], ['y1', 'Year 1 NOI', 'Base case'], ['stabilized', 'Stabilized NOI', 'Aggressive'], ['manual', 'Manual NOI', 'Custom']] as const).map(([val, label, desc]) => (
+                    <button key={val} onClick={() => { setMaxOfferAnchor(val); if (hasCalculated) handleCalculate(val); }}
+                      className={`flex-1 p-3 border text-left transition-colors duration-150 min-w-[110px] ${maxOfferAnchor === val ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}>
                       <div className={`text-xs font-semibold mb-0.5 ${maxOfferAnchor === val ? 'text-gold' : 'text-[#1B2B5E]'}`}>{label}</div>
                       <div className="text-xs text-dark-muted">{desc}</div>
                     </button>
@@ -766,68 +687,41 @@ export default function Proforma() {
                 </div>
                 {maxOfferAnchor === 'manual' && (
                   <div className="mt-3 max-w-xs">
-                    <Field
-                      label="Manual NOI ($)"
-                      value={inputs.manualNOI}
-                      onChange={v => set('manualNOI', v)}
-                      note="Type any NOI to anchor your analysis to this number"
-                    />
+                    <Field label="Manual NOI ($)" value={inputs.manualNOI} onChange={v => set('manualNOI', v)} note="Type any NOI to anchor your analysis to this number" />
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => handleCalculate()}
-                disabled={calculating}
-                className="btn-gold disabled:opacity-60 text-base px-10 py-4 w-full md:w-auto"
-              >
+              <button onClick={() => handleCalculate()} disabled={calculating}
+                className="btn-gold disabled:opacity-60 text-base px-10 py-4 w-full md:w-auto">
                 {calculating ? 'Calculating...' : 'Build Proforma & Calculate'}
               </button>
             </div>
 
-            {/* Results */}
             {hasCalculated && ourYears.length > 0 && (
               <div className="space-y-8">
 
-                {/* Our Proforma Table */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Our Underwritten Proforma" subtitle="T-12 actuals → 5-year projection. ESMI management at 5% of EGI." />
                   {proformaResult && <ProformaTable proformaResult={proformaResult} />}
                 </div>
 
-                {/* Broker vs Investor */}
                 {hasSeller && proformaResult && (
                   <div className="border border-dark-border p-7">
                     <div className="flex items-start justify-between mb-1">
                       <div className="flex-1">
-                        <SectionHead
-                          title="Broker vs Investor Analysis"
-                          subtitle="OM projections vs your conservative underwrite — adjust the revenue haircut to stress-test"
-                        />
+                        <SectionHead title="Broker vs Investor Analysis" subtitle="OM projections vs your conservative underwrite — adjust the revenue haircut to stress-test" />
                       </div>
                       <div className="flex items-center gap-2 ml-6 mt-1">
                         <label className="text-xs uppercase tracking-widest text-dark-muted whitespace-nowrap">Revenue Haircut</label>
-                        <input
-                          className="input-field text-sm w-16"
-                          type="number"
-                          step="1"
-                          min="0"
-                          max="30"
-                          value={revenueHaircut}
-                          onChange={e => setRevenueHaircut(e.target.value)}
-                        />
+                        <input className="input-field text-sm w-16" type="number" step="1" min="0" max="30"
+                          value={revenueHaircut} onChange={e => setRevenueHaircut(e.target.value)} />
                         <span className="text-dark-muted text-xs">%</span>
                       </div>
                     </div>
-                    <BrokerInvestorTable
-                      proformaResult={proformaResult}
-                      sellerYears={sellerYears}
-                      revenueHaircut={n(revenueHaircut) / 100}
-                      capRates={capRates}
-                    />
+                    <BrokerInvestorTable proformaResult={proformaResult} sellerYears={sellerYears} revenueHaircut={n(revenueHaircut) / 100} capRates={capRates} />
                   </div>
                 )}
 
-                {/* Offer Matrix */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Offer Matrix" subtitle="Our NOI ÷ cap rate — adjust cap rates to match your market" />
                   <div className="flex gap-3 mb-4 flex-wrap">
@@ -835,13 +729,7 @@ export default function Proforma() {
                       <div key={i} style={{ width: 100 }}>
                         <label className="label-text">Cap Rate {i + 1}</label>
                         <div className="flex items-center">
-                          <input
-                            className="input-field text-sm"
-                            type="number"
-                            step="0.25"
-                            value={cr}
-                            onChange={e => setCapRate(i, e.target.value)}
-                          />
+                          <input className="input-field text-sm" type="number" step="0.25" value={cr} onChange={e => setCapRate(i, e.target.value)} />
                           <span className="text-dark-muted text-xs ml-1">%</span>
                         </div>
                       </div>
@@ -854,9 +742,7 @@ export default function Proforma() {
                           <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">NOI Year</th>
                           <th className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Our NOI</th>
                           {capRates.map((cr, i) => (
-                            <th key={i} className="text-right text-xs uppercase tracking-widest text-gold font-semibold pb-3 px-3">
-                              {cr}% Cap
-                            </th>
+                            <th key={i} className="text-right text-xs uppercase tracking-widest text-gold font-semibold pb-3 px-3">{cr}% Cap</th>
                           ))}
                         </tr>
                       </thead>
@@ -871,17 +757,13 @@ export default function Proforma() {
                         ].filter(([, noi]) => noi && (noi as number) > 0).map(([label, noi]) => (
                           <tr key={label as string} className="hover:bg-gold/5 transition-colors">
                             <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{label as string}</td>
-                            <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">
-                              ${Math.round(noi as number).toLocaleString()}
-                            </td>
+                            <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">${Math.round(noi as number).toLocaleString()}</td>
                             {capRates.map((cr, i) => {
                               const cap = parseFloat(cr) / 100
                               const offer = cap > 0 ? Math.round((noi as number) / cap) : 0
                               return (
                                 <td key={i} className="py-3 px-3 text-right">
-                                  <span className="font-semibold text-[#1B2B5E]">
-                                    ${offer > 0 ? offer.toLocaleString() : '—'}
-                                  </span>
+                                  <span className="font-semibold text-[#1B2B5E]">${offer > 0 ? offer.toLocaleString() : '—'}</span>
                                 </td>
                               )
                             })}
@@ -893,12 +775,8 @@ export default function Proforma() {
                   <p className="text-xs text-dark-muted mt-3">Offer = Our NOI ÷ cap rate. Use this to anchor your bid.</p>
                 </div>
 
-                {/* IRR Result */}
                 <div className="border border-dark-border p-7">
-                  <SectionHead
-                    {/* Exit Value Box */}
-                <div className="border border-dark-border p-7">
-                  <SectionHead title="Exit Value" subtitle="Projected sale price at your exit cap rate — override to stress test" />
+                  <SectionHead title="Exit Value" subtitle="Projected sale price at Year 5 NOI ÷ your exit cap rates" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     {capRates.map((cr, i) => {
                       const cap = parseFloat(cr) / 100
@@ -908,28 +786,20 @@ export default function Proforma() {
                         <div key={i} className="border border-dark-border p-4 bg-dark-surface">
                           <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Exit at {cr}% Cap</div>
                           <div className="font-semibold text-[#1B2B5E] text-lg">${exitVal.toLocaleString()}</div>
-                          <div className="text-xs text-dark-muted mt-1">Y5 NOI: ${y5NOI.toLocaleString()}</div>
+                          <div className="text-xs text-dark-muted mt-1">Y5 NOI: ${(ourYears[4]?.noi ?? 0).toLocaleString()}</div>
                         </div>
                       )
                     })}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="label-text">Override Exit Sale Price <span className="text-gold text-xs">(recalculates your IRR)</span></label>
-                      <input
-                        className="input-field border-gold/50"
-                        type="number"
-                        step="any"
-                        value={inputs.exitSalePrice ?? ''}
-                        onChange={e => { set('exitSalePrice' as keyof ProformaInputs, e.target.value) }}
-                        placeholder="Leave blank to use cap rate exit"
-                      />
-                    </div>
+                  <div className="max-w-sm">
+                    <label className="label-text">Override Exit Sale Price <span className="text-gold text-xs">(optional — stress test a specific sale price)</span></label>
+                    <input className="input-field border-gold/50" type="number" step="any" value={inputs.exitSalePrice}
+                      onChange={e => set('exitSalePrice', e.target.value)} placeholder="Leave blank to use cap rate exit" />
                   </div>
                 </div>
-                    title="Your IRR"
-                    subtitle="IRR is a result of your offer price — not a target. Enter an offer price above to see your actual return."
-                  />
+
+                <div className="border border-dark-border p-7">
+                  <SectionHead title="Your IRR" subtitle="IRR is a result of your offer price — not a target. Enter an offer price above to see your actual return." />
                   {irrResult ? (
                     <IRRBox result={irrResult} offerPrice={inputs.offerPrice} />
                   ) : (
@@ -939,17 +809,11 @@ export default function Proforma() {
                   )}
                 </div>
 
-                {/* Action Buttons */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Next Steps" />
                   <div className="flex flex-wrap gap-4">
-                    <button onClick={handleContinueToModel} className="btn-gold text-base px-8 py-3">
-                      Continue to Full Model →
-                    </button>
-                    <button
-                      onClick={handleGenerateLOI}
-                      className="px-8 py-3 border border-[#1B2B5E] text-[#1B2B5E] text-sm uppercase tracking-widest hover:bg-[#1B2B5E] hover:text-white transition-colors"
-                    >
+                    <button onClick={handleContinueToModel} className="btn-gold text-base px-8 py-3">Continue to Full Model →</button>
+                    <button onClick={handleGenerateLOI} className="px-8 py-3 border border-[#1B2B5E] text-[#1B2B5E] text-sm uppercase tracking-widest hover:bg-[#1B2B5E] hover:text-white transition-colors">
                       Generate LOI →
                     </button>
                   </div>
