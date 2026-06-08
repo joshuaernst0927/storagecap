@@ -793,8 +793,17 @@ export default function Proforma() {
                   </div>
                   <div className="max-w-sm">
                     <label className="label-text">Override Exit Sale Price <span className="text-gold text-xs">(optional — stress test a specific sale price)</span></label>
-                    <input className="input-field border-gold/50" type="number" step="any" value={inputs.exitSalePrice}
-                      onChange={e => set('exitSalePrice', e.target.value)} placeholder="Leave blank to use cap rate exit" />
+                    <div className="flex gap-2 items-center">
+                      <input className="input-field border-gold/50 flex-1" type="number" step="any" value={inputs.exitSalePrice}
+                        onChange={e => set('exitSalePrice', e.target.value)} placeholder="Leave blank to use cap rate exit" />
+                      <button
+                        onClick={() => handleCalculate()}
+                        disabled={calculating || !inputs.offerPrice}
+                        className="btn-gold disabled:opacity-40 px-4 py-2 text-xs whitespace-nowrap"
+                      >
+                        Recalculate IRR
+                      </button>
+                    </div>
                   </div>
                 </div>
 
