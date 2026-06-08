@@ -829,8 +829,9 @@ export default function Proforma() {
                 {/* Proforma Table */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Underwritten Proforma" subtitle="Our numbers vs seller — Y1 through Y3" />
+               {proformaResult && (
                   <ProformaTable
-                    ourYears={ourYears}
+                    proformaResult={proformaResult}
                     sellerY1={inputs.sellerY1}
                     sellerY2={inputs.sellerY2}
                     sellerY3={inputs.sellerY3}
@@ -838,6 +839,7 @@ export default function Proforma() {
                     haircutY2={inputs.haircutY2}
                     haircutY3={inputs.haircutY3}
                   />
+                )}
                 </div>
 
                 {/* Offer Matrix */}
