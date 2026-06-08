@@ -50,6 +50,11 @@ type ProformaInputs = {
   offerPrice: string
   manualNOI: string
   exitSalePrice: string
+  // Debt assumptions
+  debtLTV: string
+  debtRate: string
+  debtAmortYears: string
+  debtIOMonths: string
 }
 
 type OurYear = {
@@ -100,6 +105,12 @@ type ProformaResult = {
 
 type IRRResult = {
   irr_at_max: number
+  levered_irr?: number
+  unlevered_irr?: number
+  equity_multiple?: number
+  equity_required?: number
+  loan_amount?: number
+  annual_debt_service?: number
   going_in_cap: number
   stabilized_cap: number
   target_irr: number
@@ -132,6 +143,7 @@ const EMPTY: ProformaInputs = {
   t12Utilities: '', t12OfficeEmployee: '', t12Administrative: '',
   t12RepairsMaintenance: '', t12Tax: '', t12Insurance: '', t12OtherExpenses: '',
   exitCapRate: '7.25', exitMonth: '60', offerPrice: '', manualNOI: '', exitSalePrice: '',
+  debtLTV: '65', debtRate: '7.00', debtAmortYears: '30', debtIOMonths: '24',
 }
 
 const DEAL_TYPE_LABELS: Record<DealType, string> = {
@@ -375,14 +387,28 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
 }
 
 function IRRBox({ result, offerPrice, exitSalePrice }: { result: IRRResult; offerPrice: string; exitSalePrice?: string }) {
+  const displayPrice = exitSalePrice && parseInt(exitSalePrice) > 0 ? exitSalePrice : offerPrice
+  const hasDebt = result.levered_irr !== undefined && result.levered_irr !== result.unlevered_irr
   return (
     <div className="border-2 border-gold bg-gold/5 p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <div className="text-xs uppercase tracking-widest text-gold font-medium mb-1">
-            Your Return at {exitSalePrice && parseInt(exitSalePrice) > 0 ? '$' + parseInt(exitSalePrice).toLocaleString() + ' (exit override)' : offerPrice ? '$' + parseInt(offerPrice).toLocaleString() : 'This Offer'}
+      <div className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
+        Returns at {displayPrice ? '$' + parseInt(displayPrice).toLocaleString() : 'This Offer'}
+        {exitSalePrice && parseInt(exitSalePrice) > 0 ? ' (exit override)' : ''}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="border border-gold/30 p-4 bg-white/50">
+          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Levered IRR</div>
+          <div className="font-serif text-4xl font-light text-[#1B2B5E]">
+            {hasDebt ? fmtPct(result.levered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
           </div>
-          <div className="font-serif text-5xl font-light text-[#1B2B5E]">{fmtPct(result.irr_at_max, 1)} IRR</div>
+          <div className="text-xs text-dark-muted mt-1">After debt service</div>
+        </div>
+        <div className="border border-dark-border p-4">
+          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Unlevered IRR</div>
+          <div className="font-serif text-4xl font-light text-[#1B2B5E]">
+            {hasDebt ? fmtPct(result.unlevered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
+          </div>
+          <div className="text-xs text-dark-muted mt-1">All cash, no debt</div>
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gold/30">
@@ -394,16 +420,47 @@ function IRRBox({ result, offerPrice, exitSalePrice }: { result: IRRResult; offe
           <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Stabilized Cap</div>
           <div className="font-semibold text-[#1B2B5E]">{fmtPct(result.stabilized_cap)}</div>
         </div>
-        <div>
-          <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Y1 NOI</div>
-          <div className="font-semibold text-[#1B2B5E]">{fmt$(result.in_place_noi)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Stabilized NOI</div>
-          <div className="font-semibold text-[#1B2B5E]">{fmt$(result.stabilized_noi)}</div>
-        </div>
+        {result.equity_multiple && (
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Equity Multiple</div>
+            <div className="font-semibold text-[#1B2B5E]">{result.equity_multiple.toFixed(2)}x</div>
+          </div>
+        )}
+        {result.equity_required && (
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Equity Required</div>
+            <div className="font-semibold text-[#1B2B5E]">{fmt$(result.equity_required)}</div>
+          </div>
+        )}
+        {!result.equity_multiple && (
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Y1 NOI</div>
+            <div className="font-semibold text-[#1B2B5E]">{fmt$(result.in_place_noi)}</div>
+          </div>
+        )}
+        {!result.equity_required && (
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Stabilized NOI</div>
+            <div className="font-semibold text-[#1B2B5E]">{fmt$(result.stabilized_noi)}</div>
+          </div>
+        )}
       </div>
-      <p className="text-xs text-dark-muted mt-3 italic">{result.method}</p>
+      {result.loan_amount && (
+        <div className="mt-4 pt-4 border-t border-gold/20 grid grid-cols-3 gap-4">
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Loan Amount</div>
+            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.loan_amount)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Annual Debt Service</div>
+            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.annual_debt_service ?? 0)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Equity Required</div>
+            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.equity_required ?? 0)}</div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -502,22 +559,20 @@ export default function Proforma() {
       const effectivePurchasePrice = exitSalePriceVal > 0 ? exitSalePriceVal : offerPriceVal
 
       if (offerPriceVal > 0) {
+        const noiYears = proformaData.years.map((y: OurYear) => y.noi)
         const irrBody = {
-          action: 'calc-irr',
+          action: 'calc-irr-v2',
           purchase_price: effectivePurchasePrice,
-          in_place_noi: anchorNOI,
-          stabilized_noi: y5NOI,
-          start_occupancy: n(inputs.currentOccupancy) / 100,
-          stabilized_occupancy: n(inputs.targetOccupancy, 92) / 100,
+          noi_years: noiYears,
           exit_cap_rate: n(inputs.exitCapRate, 7.25) / 100,
-          exit_month: n(inputs.exitMonth, 60),
-          months_to_stabilization: n(inputs.monthsToStabilization, 18),
-          rent_growth: n(inputs.revenueGrowthPostStab, 3) / 100,
-          opex_growth: n(inputs.expenseGrowth, 3) / 100,
+          selling_costs_pct: 0.02,
           closing_costs_pct: 0.03,
           acquisition_fee_pct: 0.02,
           initial_repairs: 0,
-          selling_costs_pct: 0.02,
+          ltv: n(inputs.debtLTV, 65) / 100,
+          interest_rate: n(inputs.debtRate, 7.0) / 100,
+          amort_years: Math.round(n(inputs.debtAmortYears, 30)),
+          io_months: Math.round(n(inputs.debtIOMonths, 24)),
         }
 
         const irrRes = await fetch('/api/underwrite', {
@@ -528,12 +583,18 @@ export default function Proforma() {
         if (irrRes.ok) {
           const irrData = await irrRes.json()
           setIrrResult({
-            irr_at_max: irrData.irr_at_price ?? 0,
+            irr_at_max: irrData.levered_irr ?? 0,
+            levered_irr: irrData.levered_irr ?? 0,
+            unlevered_irr: irrData.unlevered_irr ?? 0,
+            equity_multiple: irrData.equity_multiple ?? 0,
+            equity_required: irrData.equity_required ?? 0,
+            loan_amount: irrData.loan_amount ?? 0,
+            annual_debt_service: irrData.annual_debt_service ?? 0,
             going_in_cap: irrData.going_in_cap ?? 0,
             stabilized_cap: irrData.stabilized_cap ?? 0,
             target_irr: 0,
-            in_place_noi: irrData.in_place_noi ?? 0,
-            stabilized_noi: irrData.stabilized_noi ?? 0,
+            in_place_noi: anchorNOI,
+            stabilized_noi: y5NOI,
             method: '',
           })
         }
@@ -671,6 +732,17 @@ export default function Proforma() {
                   <input className="input-field border-gold/50" type="number" step="any" value={inputs.offerPrice}
                     onChange={e => set('offerPrice', e.target.value)} placeholder="e.g. 3500000" />
                 </div>
+              </div>
+            </div>
+
+            <div className="border border-dark-border p-7">
+              <SectionHead title="Debt Assumptions" subtitle="Used to calculate levered IRR — adjust for your actual loan terms" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Field label="Loan LTV" value={inputs.debtLTV} onChange={v => set('debtLTV', v)} suffix="%" step="1"
+                  note="% of purchase price" />
+                <Field label="Interest Rate" value={inputs.debtRate} onChange={v => set('debtRate', v)} suffix="%" step="0.05" />
+                <Field label="Amortization" value={inputs.debtAmortYears} onChange={v => set('debtAmortYears', v)} suffix="yrs" />
+                <Field label="IO Period" value={inputs.debtIOMonths} onChange={v => set('debtIOMonths', v)} suffix="mo" />
               </div>
             </div>
 
