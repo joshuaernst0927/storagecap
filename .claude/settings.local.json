@@ -36,7 +36,32 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://[::1]:3000/pipeline)",
       "Bash(timeout 8)",
       "PowerShell(Start-Process \"http://localhost:3005/pipeline\")",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(git restore *)",
+      "Bash(npm install *)",
+      "Bash(vercel --version)",
+      "Bash(npx vercel *)",
+      "Bash(ssh *)",
+      "Read(//mnt/c/Users/joshu/**)",
+      "Read(//c/Users/joshu/.ssh//**)",
+      "Bash(find /mnt -name \"*.pub\" -path \"*/joshu/.ssh/*\")",
+      "Bash(mkdir -p ~/.ssh)",
+      "Bash(ssh-keygen -t ed25519 -C \"claude-do-setup\" -f ~/.ssh/do_storagecap -N \"\")",
+      "Bash(gh auth *)",
+      "Bash(where gh *)",
+      "Bash(Get-Command gh *)",
+      "Bash(node -e ' *)",
+      "Bash(where chrome.exe)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Read(//c/Program Files \\(x86\\)/Google/Chrome/**)",
+      "Bash(node -e \"require\\('puppeteer-extra'\\); require\\('puppeteer-extra-plugin-stealth'\\); console.log\\('OK'\\)\")",
+      "Bash(node -e \"require\\('./scripts/run-scrapers.js'\\)\")",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(git checkout *)",
+      "Bash(git rebase *)",
+      "Bash(curl -s \"https://www.courtlistener.com/api/rest/v4/parties/?docket=71235697&page_size=50\" -H \"Authorization: Token 25e0d81f7c377dbdd866ba6165afe7af4fa9c99e\")",
+      "Bash(python3 -m json.tool)"
     ]
   }
 }
