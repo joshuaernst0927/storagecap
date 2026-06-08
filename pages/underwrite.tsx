@@ -419,10 +419,21 @@ export default function Underwrite() {
           expenses: data.sellerY2Expenses != null ? String(data.sellerY2Expenses) : '',
           noi:      data.sellerY2NOI      != null ? String(data.sellerY2NOI)      : '',
         },
-        sellerY3: {
+       sellerY3: {
           revenue:  data.sellerY3Revenue  != null ? String(data.sellerY3Revenue)  : '',
           expenses: data.sellerY3Expenses != null ? String(data.sellerY3Expenses) : '',
           noi:      data.sellerY3NOI      != null ? String(data.sellerY3NOI)      : '',
+        },
+        sellerY4: {
+          revenue:  data.sellerY4Revenue  != null ? String(data.sellerY4Revenue)  : '',
+          expenses: '',
+          noi:      data.sellerY4NOI      != null ? String(data.sellerY4NOI)      : '',
+        },
+        sellerY5: {
+          revenue:  data.sellerY5Revenue  != null ? String(data.sellerY5Revenue)  : '',
+          expenses: '',
+          noi:      data.sellerY5NOI      != null ? String(data.sellerY5NOI)      : '',
+        },
         },
         t12Revenue:            data.t12Revenue            != null ? String(data.t12Revenue)            : '',
         t12TotalExpenses:      data.t12Expenses           != null ? String(data.t12Expenses)           : '',
