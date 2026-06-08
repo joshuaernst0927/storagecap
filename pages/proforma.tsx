@@ -374,13 +374,13 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
   )
 }
 
-function IRRBox({ result, offerPrice }: { result: IRRResult; offerPrice: string }) {
+function IRRBox({ result, offerPrice, exitSalePrice }: { result: IRRResult; offerPrice: string; exitSalePrice?: string }) {
   return (
     <div className="border-2 border-gold bg-gold/5 p-6">
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="text-xs uppercase tracking-widest text-gold font-medium mb-1">
-            Your Return at {offerPrice ? '$' + parseInt(offerPrice).toLocaleString() : 'This Offer'}
+            Your Return at {exitSalePrice && parseInt(exitSalePrice) > 0 ? '$' + parseInt(exitSalePrice).toLocaleString() + ' (exit override)' : offerPrice ? '$' + parseInt(offerPrice).toLocaleString() : 'This Offer'}
           </div>
           <div className="font-serif text-5xl font-light text-[#1B2B5E]">{fmtPct(result.irr_at_max, 1)} IRR</div>
         </div>
@@ -498,11 +498,13 @@ export default function Proforma() {
       else if (activeAnchor === 'manual' && manualNOIval > 0) anchorNOI = manualNOIval
 
       const offerPriceVal = n(inputs.offerPrice)
+      const exitSalePriceVal = n(inputs.exitSalePrice)
+      const effectivePurchasePrice = exitSalePriceVal > 0 ? exitSalePriceVal : offerPriceVal
 
       if (offerPriceVal > 0) {
         const irrBody = {
           action: 'calc-irr',
-          purchase_price: offerPriceVal,
+          purchase_price: effectivePurchasePrice,
           in_place_noi: anchorNOI,
           stabilized_noi: y5NOI,
           start_occupancy: n(inputs.currentOccupancy) / 100,
@@ -810,7 +812,7 @@ export default function Proforma() {
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Your IRR" subtitle="IRR is a result of your offer price — not a target. Enter an offer price above to see your actual return." />
                   {irrResult ? (
-                    <IRRBox result={irrResult} offerPrice={inputs.offerPrice} />
+                    <IRRBox result={irrResult} offerPrice={inputs.offerPrice} exitSalePrice={inputs.exitSalePrice} />
                   ) : (
                     <div className="p-6 border border-dark-border bg-dark-surface text-center">
                       <p className="text-dark-muted text-sm">Enter your offer price in the Exit & Offer Price section above, then recalculate.</p>
