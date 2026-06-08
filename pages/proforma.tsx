@@ -298,8 +298,10 @@ function BrokerInvestorTable({
     ...sellerYears.map(s => {
       const rev = parseFloat(s.revenue)
       const exp = parseFloat(s.expenses)
-      if (isNaN(rev) || isNaN(exp) || rev === 0) return null
-      return (rev * (1 - revenueHaircut)) - exp
+      const noi = parseFloat(s.noi)
+      if (!isNaN(rev) && !isNaN(exp) && rev > 0) return (rev * (1 - revenueHaircut)) - exp
+      if (!isNaN(noi) && noi > 0) return noi * (1 - revenueHaircut)
+      return null
     })
   ]
 
