@@ -251,136 +251,143 @@ function SellerYearFields({ label, value, onChange }: {
 // ─── Proforma Table ───────────────────────────────────────────────────────────
 
 function ProformaTable({
-  ourYears,
+  proformaResult,
   sellerY1, sellerY2, sellerY3,
   haircutY1, haircutY2, haircutY3,
 }: {
-  ourYears: OurYear[]
+  proformaResult: ProformaResult
   sellerY1: SellerYear; sellerY2: SellerYear; sellerY3: SellerYear
   haircutY1: string; haircutY2: string; haircutY3: string
 }) {
+  const { t12, years } = proformaResult
   const sellers = [sellerY1, sellerY2, sellerY3]
   const haircuts = [n(haircutY1) / 100, n(haircutY2) / 100, n(haircutY3) / 100]
-
   const hasSeller = sellers.some(s => s.revenue || s.noi)
+
+  const cols = ['T-12', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5']
+
+  function Row({ label, values, bold, gold, indent, pct }: {
+    label: string
+    values: (number | null)[]
+    bold?: boolean
+    gold?: boolean
+    indent?: boolean
+    pct?: boolean
+  }) {
+    return (
+      <tr className={bold ? 'bg-navy/5' : ''}>
+        <td className={`py-2.5 pr-4 text-xs uppercase tracking-widest
+          ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'}
+          ${indent ? 'pl-4' : ''}
+          ${gold ? 'text-gold font-semibold' : ''}`}>
+          {label}
+        </td>
+        {values.map((v, i) => (
+          <td key={i} className={`py-2.5 px-2 text-right text-sm
+            ${bold ? 'font-bold text-[#1B2B5E]' : 'text-[#1B2B5E]'}
+            ${gold ? 'text-gold font-semibold' : ''}`}>
+            {v === null ? '—' : pct ? fmtPct(v) : fmt$(v)}
+          </td>
+        ))}
+      </tr>
+    )
+  }
+
+  function Divider({ label }: { label: string }) {
+    return (
+      <tr className="bg-dark-surface">
+        <td colSpan={7} className="py-1.5 px-3 text-xs uppercase tracking-widest text-dark-muted font-medium">
+          {label}
+        </td>
+      </tr>
+    )
+  }
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-dark-border">
-            <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-6 w-40">Metric</th>
-            {[1, 2, 3].map(yr => (
-              <th key={yr} className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">
-                Year {yr}
+            <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-44">Line Item</th>
+            {cols.map(c => (
+              <th key={c} className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">
+                {c}
               </th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-dark-border/40">
 
-          {/* Occupancy */}
-          <tr>
-            <td className="py-3 pr-6 text-dark-muted text-xs uppercase tracking-widest">Occupancy</td>
-            {ourYears.map((y, i) => (
-              <td key={i} className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">{fmtPct(y.occupancy)}</td>
-            ))}
-          </tr>
+          {/* Occupancy & Rent */}
+          <Row label="Occupancy" pct
+            values={[t12.occupancy, ...years.map(y => y.occupancy)]} />
+          <Row label="Avg Rent/Unit/Mo"
+            values={[t12.avg_rent_mo, ...years.map(y => y.avg_rent_mo)]} />
 
-          {/* Avg Rent */}
-          <tr>
-            <td className="py-3 pr-6 text-dark-muted text-xs uppercase tracking-widest">Avg Rent/Unit</td>
-            {ourYears.map((y, i) => (
-              <td key={i} className="py-3 px-3 text-right text-[#1B2B5E]">{fmt$(y.avgRent)}/mo</td>
-            ))}
-          </tr>
+          {/* Revenue */}
+          <Divider label="Revenue" />
+          <Row label="Total Revenue" bold
+            values={[t12.revenue, ...years.map(y => y.revenue)]} />
 
-          {/* Divider */}
-          <tr className="bg-gold/5">
-            <td colSpan={4} className="py-1.5 px-3 text-xs uppercase tracking-widest text-gold font-medium">
-              Our Underwritten Numbers
-            </td>
-          </tr>
+          {/* Expenses */}
+          <Divider label="Expenses" />
+          <Row label="Payroll" indent
+            values={[t12.expense_breakdown.payroll, ...years.map(y => y.expenses.payroll)]} />
+          <Row label="Mgmt Fees" indent
+            values={[t12.expense_breakdown.management_fees, ...years.map(y => y.expenses.management_fees)]} />
+          <Row label="Marketing" indent
+            values={[t12.expense_breakdown.marketing, ...years.map(y => y.expenses.marketing)]} />
+          <Row label="Utilities" indent
+            values={[t12.expense_breakdown.utilities, ...years.map(y => y.expenses.utilities)]} />
+          <Row label="Office/Employee" indent
+            values={[t12.expense_breakdown.office_employee, ...years.map(y => y.expenses.office_employee)]} />
+          <Row label="Administrative" indent
+            values={[t12.expense_breakdown.administrative, ...years.map(y => y.expenses.administrative)]} />
+          <Row label="Repairs & Maint" indent
+            values={[t12.expense_breakdown.repairs_maintenance, ...years.map(y => y.expenses.repairs_maintenance)]} />
+          <Row label="Tax" indent
+            values={[t12.expense_breakdown.tax, ...years.map(y => y.expenses.tax)]} />
+          <Row label="Insurance" indent
+            values={[t12.expense_breakdown.insurance, ...years.map(y => y.expenses.insurance)]} />
+          <Row label="Other" indent
+            values={[t12.expense_breakdown.other, ...years.map(y => y.expenses.other)]} />
+          <Row label="Total Expenses" bold
+            values={[t12.expenses, ...years.map(y => y.expenses.total)]} />
 
-          {/* Our Revenue */}
-          <tr>
-            <td className="py-3 pr-6 text-dark-muted text-xs uppercase tracking-widest pl-3">EGI</td>
-            {ourYears.map((y, i) => (
-              <td key={i} className="py-3 px-3 text-right text-[#1B2B5E]">{fmt$(y.egi)}</td>
-            ))}
-          </tr>
+          {/* NOI */}
+          <Divider label="Net Operating Income" />
+          <Row label="NOI" bold gold
+            values={[t12.noi, ...years.map(y => y.noi)]} />
+          <Row label="NOI Margin" pct
+            values={[
+              t12.revenue > 0 ? t12.noi / t12.revenue : null,
+              ...years.map(y => y.noi_margin)
+            ]} />
 
-          {/* Our Expenses */}
-          <tr>
-            <td className="py-3 pr-6 text-dark-muted text-xs uppercase tracking-widest pl-3">Expenses</td>
-            {ourYears.map((y, i) => (
-              <td key={i} className="py-3 px-3 text-right text-[#1B2B5E]">
-                {fmt$(y.expenses)}
-                <span className="text-dark-muted text-xs ml-1">({fmtPct(y.expenseRatio)})</span>
-              </td>
-            ))}
-          </tr>
-
-          {/* Our NOI */}
-          <tr className="bg-navy/5">
-            <td className="py-3 pr-6 text-xs uppercase tracking-widest font-semibold text-[#1B2B5E] pl-3">Our NOI</td>
-            {ourYears.map((y, i) => (
-              <td key={i} className="py-3 px-3 text-right font-bold text-[#1B2B5E] text-base">{fmt$(y.noi)}</td>
-            ))}
-          </tr>
-
-          {/* Seller comparison — only if entered */}
+          {/* Seller comparison */}
           {hasSeller && (
             <>
-              <tr className="bg-dark-surface">
-                <td colSpan={4} className="py-1.5 px-3 text-xs uppercase tracking-widest text-dark-muted font-medium">
-                  Seller Proforma (with haircut applied)
-                </td>
-              </tr>
-
-              {/* Seller Revenue */}
-              <tr>
-                <td className="py-3 pr-6 text-dark-muted text-xs uppercase tracking-widest pl-3">Seller Revenue</td>
-                {sellers.map((s, i) => (
-                  <td key={i} className="py-3 px-3 text-right text-dark-muted">
-                    {s.revenue ? fmt$(n(s.revenue)) : '—'}
-                  </td>
-                ))}
-              </tr>
-
-              {/* Haircut */}
-              <tr>
-                <td className="py-3 pr-6 text-dark-muted text-xs uppercase tracking-widest pl-3">Haircut Applied</td>
-                {haircuts.map((h, i) => (
-                  <td key={i} className="py-3 px-3 text-right text-red-500 text-xs font-medium">
-                    -{(h * 100).toFixed(0)}%
-                  </td>
-                ))}
-              </tr>
-
-              {/* Seller NOI haircutted */}
-              <tr>
-                <td className="py-3 pr-6 text-dark-muted text-xs uppercase tracking-widest pl-3">Haircutted NOI</td>
-                {sellers.map((s, i) => {
+              <Divider label="Seller Proforma (haircut applied)" />
+              <Row label="Seller Revenue"
+                values={[null, ...sellers.map(s => s.revenue ? n(s.revenue) : null), null, null]} />
+              <Row label="Haircut"
+                values={[null, ...haircuts.map(h => -(h * 100)), null, null]} />
+              <Row label="Haircutted NOI"
+                values={[null, ...sellers.map((s, i) => {
                   const rev = n(s.revenue)
                   const exp = n(s.expenses)
-                  const haircuttedRev = rev * (1 - haircuts[i])
-                  const haircuttedNOI = rev > 0 ? haircuttedRev - exp : (s.noi ? n(s.noi) * (1 - haircuts[i]) : null)
-                  return (
-                    <td key={i} className="py-3 px-3 text-right text-dark-muted">
-                      {haircuttedNOI !== null ? fmt$(haircuttedNOI) : '—'}
-                    </td>
-                  )
-                })}
-              </tr>
+                  if (rev > 0) return (rev * (1 - haircuts[i])) - exp
+                  if (s.noi) return n(s.noi) * (1 - haircuts[i])
+                  return null
+                }), null, null]} />
             </>
           )}
+
         </tbody>
       </table>
     </div>
   )
 }
-
 // ─── Max Offer Result Box ─────────────────────────────────────────────────────
 
 function MaxOfferBox({ result }: { result: MaxOfferResult }) {
