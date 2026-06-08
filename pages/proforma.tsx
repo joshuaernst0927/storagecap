@@ -61,14 +61,50 @@ type ProformaInputs = {
 }
 
 type OurYear = {
-  grossRevenue: number
-  vacancyLoss: number
-  egi: number
-  expenses: number
-  noi: number
+  year: number
   occupancy: number
-  avgRent: number
-  expenseRatio: number
+  avg_rent_mo: number
+  revenue: number
+  expenses: {
+    payroll: number
+    management_fees: number
+    marketing: number
+    utilities: number
+    office_employee: number
+    administrative: number
+    repairs_maintenance: number
+    tax: number
+    insurance: number
+    other: number
+    total: number
+  }
+  noi: number
+  noi_margin: number
+  expense_ratio: number
+}
+
+type ProformaResult = {
+  t12: {
+    revenue: number
+    expenses: number
+    noi: number
+    occupancy: number
+    avg_rent_mo: number
+    expense_breakdown: {
+      payroll: number
+      management_fees: number
+      marketing: number
+      utilities: number
+      office_employee: number
+      administrative: number
+      repairs_maintenance: number
+      tax: number
+      insurance: number
+      other: number
+    }
+  }
+  years: OurYear[]
+}expenseRatio: number
 }
 
 type MaxOfferResult = {
