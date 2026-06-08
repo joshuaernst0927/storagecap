@@ -577,8 +577,8 @@ export default function Proforma() {
   }
 
       // Calculate max offer via API — use selected anchor NOI
-      const y1NOI = proformaData.years[0]?.noi ?? 0
-      const y3NOI = proformaData.years[4]?.noi ?? y1NOI
+      const y1NOI = proformaResult?.years[0]?.noi ?? 0
+      const y3NOI = proformaResult?.years[4]?.noi ?? y1NOI
       const t12NOIval = parseFloat(inputs.t12NOI) || y1NOI
       const activeAnchor = anchorOverride ?? maxOfferAnchor ?? 'y1'
       const anchorNOI = activeAnchor === 't12' ? t12NOIval : activeAnchor === 'stabilized' ? y3NOI : y1NOI
