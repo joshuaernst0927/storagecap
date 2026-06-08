@@ -877,11 +877,13 @@ export default function Proforma() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-dark-border/40">
-                          {[
-                            ['T-12', parseFloat(inputs.t12NOI) || null],
+                        {[
+                            ['T-12', parseFloat(inputs.t12NOI) || proformaResult?.t12.noi || null],
                             ['Year 1', ourYears[0]?.noi ?? null],
                             ['Year 2', ourYears[1]?.noi ?? null],
                             ['Year 3', ourYears[2]?.noi ?? null],
+                            ['Year 4', ourYears[3]?.noi ?? null],
+                            ['Year 5', ourYears[4]?.noi ?? null],
                           ].filter(([, noi]) => noi && (noi as number) > 0).map(([label, noi]) => (
                             <tr key={label as string} className="hover:bg-gold/5 transition-colors">
                               <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{label as string}</td>
