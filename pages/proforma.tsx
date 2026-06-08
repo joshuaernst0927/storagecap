@@ -115,6 +115,10 @@ const EMPTY: ProformaInputs = {
   sellerY2: { ...EMPTY_SELLER },
   sellerY3: { ...EMPTY_SELLER },
   t12NOI: '', t3NOI: '', t12Occupancy: '',
+  t12Revenue: '', t12TotalExpenses: '',
+  t12Payroll: '', t12ManagementFees: '', t12Marketing: '',
+  t12Utilities: '', t12OfficeEmployee: '', t12Administrative: '',
+  t12RepairsMaintenance: '', t12Tax: '', t12Insurance: '', t12OtherExpenses: '',
   exitCapRate: '7.25', exitMonth: '60', targetIRR: '15',
 }
 
