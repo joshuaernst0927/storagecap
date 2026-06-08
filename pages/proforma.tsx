@@ -785,11 +785,21 @@ export default function Proforma() {
                       const y5NOI = ourYears[4]?.noi ?? 0
                       const exitVal = cap > 0 ? Math.round(y5NOI / cap) : 0
                       return (
-                        <div key={i} className="border border-dark-border p-4 bg-dark-surface">
+                        <button
+                          key={i}
+                          onClick={() => {
+                            set('exitSalePrice', String(exitVal))
+                            setTimeout(() => handleCalculate(), 50)
+                          }}
+                          disabled={!inputs.offerPrice || calculating}
+                          className={`border p-4 text-left transition-colors duration-150 w-full
+                            ${inputs.exitSalePrice === String(exitVal) ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}
+                            disabled:opacity-50 disabled:cursor-default`}
+                        >
                           <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Exit at {cr}% Cap</div>
                           <div className="font-semibold text-[#1B2B5E] text-lg">${exitVal.toLocaleString()}</div>
                           <div className="text-xs text-dark-muted mt-1">Y5 NOI: ${(ourYears[4]?.noi ?? 0).toLocaleString()}</div>
-                        </div>
+                        </button>
                       )
                     })}
                   </div>
