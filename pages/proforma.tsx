@@ -896,6 +896,37 @@ export default function Proforma() {
                 {/* IRR Result */}
                 <div className="border border-dark-border p-7">
                   <SectionHead
+                    {/* Exit Value Box */}
+                <div className="border border-dark-border p-7">
+                  <SectionHead title="Exit Value" subtitle="Projected sale price at your exit cap rate — override to stress test" />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {capRates.map((cr, i) => {
+                      const cap = parseFloat(cr) / 100
+                      const y5NOI = ourYears[4]?.noi ?? 0
+                      const exitVal = cap > 0 ? Math.round(y5NOI / cap) : 0
+                      return (
+                        <div key={i} className="border border-dark-border p-4 bg-dark-surface">
+                          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Exit at {cr}% Cap</div>
+                          <div className="font-semibold text-[#1B2B5E] text-lg">${exitVal.toLocaleString()}</div>
+                          <div className="text-xs text-dark-muted mt-1">Y5 NOI: ${y5NOI.toLocaleString()}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label-text">Override Exit Sale Price <span className="text-gold text-xs">(recalculates your IRR)</span></label>
+                      <input
+                        className="input-field border-gold/50"
+                        type="number"
+                        step="any"
+                        value={inputs.exitSalePrice ?? ''}
+                        onChange={e => { set('exitSalePrice' as keyof ProformaInputs, e.target.value) }}
+                        placeholder="Leave blank to use cap rate exit"
+                      />
+                    </div>
+                  </div>
+                </div>
                     title="Your IRR"
                     subtitle="IRR is a result of your offer price — not a target. Enter an offer price above to see your actual return."
                   />
