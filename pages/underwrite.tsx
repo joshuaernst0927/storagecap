@@ -12,20 +12,15 @@ type DealType = 'value-add' | 'stabilized' | 'distressed'
 type UWInputs = {
   propertyName: string; address: string
   dealType: DealType
-  // Acquisition
   purchasePrice: string; closingCostsPct: string; initialRepairs: string
   acquisitionFeePct: string; assetMgmtFeePct: string; dispositionFeePct: string
-  // Operations
   inPlaceNOI: string; stabilizedNOI: string
   startOccupancy: string; stabilizedOccupancy: string; monthsToStabilization: string
   annualRentGrowth: string; opexGrowth: string
-  // Debt
   initialLTV: string; initialRate: string; initialAmortYears: string
   ioPeriodMonths: string; minDSCR: string
   refiMonth: string; refiLTV: string; refiRate: string; refiAmortYears: string
-  // Exit
   exitCapRate: string; exitMonth: string; sellingCostsPct: string
-  // GP/LP
   preferredReturn: string; lpCatchUp: string; gpCatchUp: string
   lpResidual: string; gpResidual: string
 }
@@ -251,7 +246,6 @@ function MaxOfferBox({ result, loading }: { result: MaxOfferResult | null; loadi
           <div className="text-xl font-semibold text-[#1B2B5E]">{fmtPct(result.target_irr)}</div>
         </div>
       </div>
-
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gold/30">
         <div>
           <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Going-In Cap</div>
@@ -270,7 +264,6 @@ function MaxOfferBox({ result, loading }: { result: MaxOfferResult | null; loadi
           <div className="font-semibold text-[#1B2B5E]">{fmt$(result.stabilized_noi)}</div>
         </div>
       </div>
-
       <p className="text-xs text-dark-muted mt-3 italic">{result.method}</p>
     </div>
   )
@@ -284,19 +277,14 @@ export default function Underwrite() {
   const [source, setSource] = useState<Source>('upload')
   const [pipelineDeals, setPipelineDeals] = useState<PipelineProperty[]>([])
   const [selectedDealId, setSelectedDealId] = useState('')
-
   const [files, setFiles] = useState<UploadFile[]>([])
-
   const [step, setStep] = useState<'source' | 'form'>('source')
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState('')
   const [building, setBuilding] = useState(false)
   const [buildError, setBuildError] = useState('')
-
   const [inputs, setInputs] = useState<UWInputs>(EMPTY)
   const [unitMix, setUnitMix] = useState<UnitMixRow[]>(DEFAULT_MIX)
-
-  // Max offer state
   const [maxOfferResult, setMaxOfferResult] = useState<MaxOfferResult | null>(null)
   const [maxOfferLoading, setMaxOfferLoading] = useState(false)
   const [maxOfferTimer, setMaxOfferTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
@@ -312,46 +300,28 @@ export default function Underwrite() {
       .catch(() => {})
   }, [])
 
-  // ── Auto-calculate max offer when NOI fields + deal type are set ──
   const fetchMaxOffer = useCallback(async (inp: UWInputs) => {
     const inPlaceNOI = parseFloat(inp.inPlaceNOI)
-    if (!inPlaceNOI || inPlaceNOI <= 0) {
-      setMaxOfferResult(null)
-      return
-    }
-
+    if (!inPlaceNOI || inPlaceNOI <= 0) { setMaxOfferResult(null); return }
     setMaxOfferLoading(true)
     try {
-      const stabilizedNOI = parseFloat(inp.stabilizedNOI) || null
-      const startOcc = inp.startOccupancy ? parseFloat(inp.startOccupancy) / 100 : 0.75
-      const stabOcc = inp.stabilizedOccupancy ? parseFloat(inp.stabilizedOccupancy) / 100 : 0.90
-      const exitCap = inp.exitCapRate ? parseFloat(inp.exitCapRate) / 100 : 0.0725
-      const exitMonth = inp.exitMonth ? parseInt(inp.exitMonth) : 60
-      const monthsToStab = inp.monthsToStabilization ? parseInt(inp.monthsToStabilization) : 18
-      const rentGrowth = inp.annualRentGrowth ? parseFloat(inp.annualRentGrowth) / 100 : 0.05
-      const opexGrowth = inp.opexGrowth ? parseFloat(inp.opexGrowth) / 100 : 0.025
-      const closingCosts = inp.closingCostsPct ? parseFloat(inp.closingCostsPct) / 100 : 0.03
-      const acqFee = inp.acquisitionFeePct ? parseFloat(inp.acquisitionFeePct) / 100 : 0.02
-      const initialRepairs = inp.initialRepairs ? parseFloat(inp.initialRepairs) : 0
-
       const body = {
         target_irr: 0.15,
         deal_type: inp.dealType,
         in_place_noi: inPlaceNOI,
-        stabilized_noi: stabilizedNOI,
-        start_occupancy: startOcc,
-        stabilized_occupancy: stabOcc,
-        exit_cap_rate: exitCap,
-        exit_month: exitMonth,
-        months_to_stabilization: monthsToStab,
-        rent_growth: rentGrowth,
-        opex_growth: opexGrowth,
-        closing_costs_pct: closingCosts,
-        acquisition_fee_pct: acqFee,
-        initial_repairs: initialRepairs,
+        stabilized_noi: parseFloat(inp.stabilizedNOI) || null,
+        start_occupancy: inp.startOccupancy ? parseFloat(inp.startOccupancy) / 100 : 0.75,
+        stabilized_occupancy: inp.stabilizedOccupancy ? parseFloat(inp.stabilizedOccupancy) / 100 : 0.90,
+        exit_cap_rate: inp.exitCapRate ? parseFloat(inp.exitCapRate) / 100 : 0.0725,
+        exit_month: inp.exitMonth ? parseInt(inp.exitMonth) : 60,
+        months_to_stabilization: inp.monthsToStabilization ? parseInt(inp.monthsToStabilization) : 18,
+        rent_growth: inp.annualRentGrowth ? parseFloat(inp.annualRentGrowth) / 100 : 0.05,
+        opex_growth: inp.opexGrowth ? parseFloat(inp.opexGrowth) / 100 : 0.025,
+        closing_costs_pct: inp.closingCostsPct ? parseFloat(inp.closingCostsPct) / 100 : 0.03,
+        acquisition_fee_pct: inp.acquisitionFeePct ? parseFloat(inp.acquisitionFeePct) / 100 : 0.02,
+        initial_repairs: inp.initialRepairs ? parseFloat(inp.initialRepairs) : 0,
         selling_costs_pct: 0.02,
       }
-
       const res = await fetch('/api/underwrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -367,7 +337,6 @@ export default function Underwrite() {
     }
   }, [])
 
-  // Debounce: recalculate max offer 800ms after user stops typing
   useEffect(() => {
     if (step !== 'form') return
     if (maxOfferTimer) clearTimeout(maxOfferTimer)
@@ -379,15 +348,12 @@ export default function Underwrite() {
       inputs.startOccupancy, inputs.stabilizedOccupancy, inputs.monthsToStabilization,
       inputs.annualRentGrowth, inputs.opexGrowth, step])
 
-  // ── Source handlers ──────────────────────────────────────────────
-
   function handleLoadDeal() {
     const deal = pipelineDeals.find(d => d.id === selectedDealId)
     if (!deal) return
     const occ = deal.occupancy > 1 ? deal.occupancy / 100 : deal.occupancy
     const askPrice = deal.askingPrice ?? deal.estimatedValue ?? 0
     const exitCap = (deal.noi && askPrice) ? deal.noi / askPrice : null
-
     setInputs({
       ...EMPTY,
       propertyName: deal.facilityName,
@@ -426,7 +392,6 @@ export default function Underwrite() {
       }
       const data = await res.json()
 
-      // Build proforma payload from extracted fields and route directly to /proforma
       const proformaData = {
         propertyName:          data.propertyName          ?? '',
         address:               data.address               ?? '',
@@ -458,37 +423,20 @@ export default function Underwrite() {
           revenue:  data.sellerY3Revenue  != null ? String(data.sellerY3Revenue)  : '',
           expenses: data.sellerY3Expenses != null ? String(data.sellerY3Expenses) : '',
           noi:      data.sellerY3NOI      != null ? String(data.sellerY3NOI)      : '',
-    sellerY3: {
-          revenue:  data.sellerY3Revenue  != null ? String(data.sellerY3Revenue)  : '',
-          expenses: data.sellerY3Expenses != null ? String(data.sellerY3Expenses) : '',
-          noi:      data.sellerY3NOI      != null ? String(data.sellerY3NOI)      : '',
         },
-        t12Revenue:             data.t12Revenue            != null ? String(data.t12Revenue)            : '',
-        t12TotalExpenses:       data.t12Expenses           != null ? String(data.t12Expenses)           : '',
-        t12Payroll:             data.t12Payroll            != null ? String(data.t12Payroll)            : '',
-        t12ManagementFees:      data.t12ManagementFees     != null ? String(data.t12ManagementFees)     : '',
-        t12Marketing:           data.t12Marketing          != null ? String(data.t12Marketing)          : '',
-        t12Utilities:           data.t12Utilities          != null ? String(data.t12Utilities)          : '',
-        t12OfficeEmployee:      data.t12OfficeEmployee     != null ? String(data.t12OfficeEmployee)     : '',
-        t12Administrative:      data.t12Administrative     != null ? String(data.t12Administrative)     : '',
-        t12RepairsMaintenance:  data.t12RepairsMaintenance != null ? String(data.t12RepairsMaintenance) : '',
-        t12Tax:                 data.t12Tax                != null ? String(data.t12Tax)                : '',
-        t12Insurance:           data.t12Insurance          != null ? String(data.t12Insurance)          : '',
-        t12OtherExpenses:       data.t12OtherExpenses      != null ? String(data.t12OtherExpenses)      : '',
+        t12Revenue:            data.t12Revenue            != null ? String(data.t12Revenue)            : '',
+        t12TotalExpenses:      data.t12Expenses           != null ? String(data.t12Expenses)           : '',
+        t12Payroll:            data.t12Payroll            != null ? String(data.t12Payroll)            : '',
+        t12ManagementFees:     data.t12ManagementFees     != null ? String(data.t12ManagementFees)     : '',
+        t12Marketing:          data.t12Marketing          != null ? String(data.t12Marketing)          : '',
+        t12Utilities:          data.t12Utilities          != null ? String(data.t12Utilities)          : '',
+        t12OfficeEmployee:     data.t12OfficeEmployee     != null ? String(data.t12OfficeEmployee)     : '',
+        t12Administrative:     data.t12Administrative     != null ? String(data.t12Administrative)     : '',
+        t12RepairsMaintenance: data.t12RepairsMaintenance != null ? String(data.t12RepairsMaintenance) : '',
+        t12Tax:                data.t12Tax                != null ? String(data.t12Tax)                : '',
+        t12Insurance:          data.t12Insurance          != null ? String(data.t12Insurance)          : '',
+        t12OtherExpenses:      data.t12OtherExpenses      != null ? String(data.t12OtherExpenses)      : '',
       }
-        t12Revenue:             data.t12Revenue            != null ? String(data.t12Revenue)            : '',
-        t12TotalExpenses:       data.t12Expenses           != null ? String(data.t12Expenses)           : '',
-        t12Payroll:             data.t12Payroll            != null ? String(data.t12Payroll)            : '',
-        t12ManagementFees:      data.t12ManagementFees     != null ? String(data.t12ManagementFees)     : '',
-        t12Marketing:           data.t12Marketing          != null ? String(data.t12Marketing)          : '',
-        t12Utilities:           data.t12Utilities          != null ? String(data.t12Utilities)          : '',
-        t12OfficeEmployee:      data.t12OfficeEmployee     != null ? String(data.t12OfficeEmployee)     : '',
-        t12Administrative:      data.t12Administrative     != null ? String(data.t12Administrative)     : '',
-        t12RepairsMaintenance:  data.t12RepairsMaintenance != null ? String(data.t12RepairsMaintenance) : '',
-        t12Tax:                 data.t12Tax                != null ? String(data.t12Tax)                : '',
-        t12Insurance:           data.t12Insurance          != null ? String(data.t12Insurance)          : '',
-        t12OtherExpenses:       data.t12OtherExpenses      != null ? String(data.t12OtherExpenses)      : '',
-      }  // ← same closing brace, just moved down
 
       window.location.href = `/proforma?data=${encodeURIComponent(JSON.stringify(proformaData))}`
 
@@ -498,8 +446,6 @@ export default function Underwrite() {
       setExtracting(false)
     }
   }
-
-  // ── Build handler ────────────────────────────────────────────────
 
   async function handleBuild() {
     setBuilding(true)
@@ -530,8 +476,6 @@ export default function Underwrite() {
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────────
-
   return (
     <AuthGate>
     <>
@@ -540,7 +484,6 @@ export default function Underwrite() {
         <meta name="description" content="Populate the acquisition model from a deal document or pipeline property." />
       </Head>
 
-      {/* Hero */}
       <section className="page-hero border-b border-dark-border">
         <div className="section-label">Underwrite</div>
         <h1 className="display-heading text-5xl md:text-7xl max-w-3xl mb-6">
@@ -556,7 +499,6 @@ export default function Underwrite() {
       <section className="py-14">
         <div className="section-container max-w-4xl">
 
-          {/* Step 1: Source */}
           {step === 'source' && (
             <>
               <div className="flex gap-2 mb-8 border-b border-dark-border pb-4">
@@ -565,9 +507,7 @@ export default function Underwrite() {
                     key={s}
                     onClick={() => setSource(s)}
                     className={`px-5 py-2 text-xs uppercase tracking-widest border transition-colors duration-150
-                      ${source === s
-                        ? 'border-gold text-gold bg-gold/5'
-                        : 'border-dark-border text-dark-muted hover:border-gold/40'}`}
+                      ${source === s ? 'border-gold text-gold bg-gold/5' : 'border-dark-border text-dark-muted hover:border-gold/40'}`}
                   >
                     {s === 'upload' ? 'Upload Document' : s === 'pipeline' ? 'From Pipeline' : 'Enter Manually'}
                   </button>
@@ -582,9 +522,7 @@ export default function Underwrite() {
                   )}
                   <div className="mt-5">
                     <button onClick={handleExtract} disabled={files.length === 0 || extracting} className="btn-gold disabled:opacity-60">
-                      {extracting
-                        ? `Extracting ${files.length} file${files.length !== 1 ? 's' : ''} with Claude...`
-                        : 'Extract & Populate'}
+                      {extracting ? `Extracting ${files.length} file${files.length !== 1 ? 's' : ''} with Claude...` : 'Extract & Populate'}
                     </button>
                   </div>
                 </div>
@@ -636,7 +574,6 @@ export default function Underwrite() {
             </>
           )}
 
-          {/* Step 2: Form */}
           {step === 'form' && (
             <>
               <div className="flex items-center justify-between mb-8">
@@ -651,7 +588,6 @@ export default function Underwrite() {
 
               <div className="space-y-10">
 
-                {/* Deal Type */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Deal Type" />
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
@@ -660,22 +596,17 @@ export default function Underwrite() {
                         key={dt}
                         onClick={() => set('dealType', dt)}
                         className={`p-4 border text-left transition-colors duration-150
-                          ${inputs.dealType === dt
-                            ? 'border-gold bg-gold/5'
-                            : 'border-dark-border hover:border-gold/40'}`}
+                          ${inputs.dealType === dt ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
                       >
                         <div className={`text-sm font-semibold mb-1 ${inputs.dealType === dt ? 'text-gold' : 'text-[#1B2B5E]'}`}>
                           {DEAL_TYPE_LABELS[dt]}
                         </div>
-                        <div className="text-xs text-dark-muted leading-snug">
-                          {DEAL_TYPE_DESCRIPTIONS[dt]}
-                        </div>
+                        <div className="text-xs text-dark-muted leading-snug">{DEAL_TYPE_DESCRIPTIONS[dt]}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Property */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Property" />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -684,32 +615,21 @@ export default function Underwrite() {
                   </div>
                 </div>
 
-                {/* NOI & Max Offer */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="NOI & Max Offer" />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <Field
-                      label="In-Place NOI (T12)"
-                      value={inputs.inPlaceNOI}
-                      onChange={v => set('inPlaceNOI', v)}
-                      suffix="$"
-                    />
+                    <Field label="In-Place NOI (T12)" value={inputs.inPlaceNOI} onChange={v => set('inPlaceNOI', v)} suffix="$" />
                     <Field
                       label={inputs.dealType === 'stabilized' ? 'Projected NOI (Year 2)' : 'Stabilized NOI (at full occupancy)'}
-                      value={inputs.stabilizedNOI}
-                      onChange={v => set('stabilizedNOI', v)}
-                      suffix="$"
+                      value={inputs.stabilizedNOI} onChange={v => set('stabilizedNOI', v)} suffix="$"
                     />
                   </div>
                   <MaxOfferBox result={maxOfferResult} loading={maxOfferLoading} />
                   {!maxOfferResult && !maxOfferLoading && (
-                    <p className="text-dark-muted text-xs mt-2">
-                      Enter In-Place NOI above to calculate max offer automatically.
-                    </p>
+                    <p className="text-dark-muted text-xs mt-2">Enter In-Place NOI above to calculate max offer automatically.</p>
                   )}
                 </div>
 
-                {/* Acquisition */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Acquisition & Fees" />
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -722,7 +642,6 @@ export default function Underwrite() {
                   </div>
                 </div>
 
-                {/* Operations */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Operations" />
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -734,7 +653,6 @@ export default function Underwrite() {
                   </div>
                 </div>
 
-                {/* Debt */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Debt & Refinancing" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -749,7 +667,6 @@ export default function Underwrite() {
                   </div>
                 </div>
 
-                {/* Exit */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Exit Assumptions" />
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -759,7 +676,6 @@ export default function Underwrite() {
                   </div>
                 </div>
 
-                {/* GP/LP */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="GP / LP Waterfall" />
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -771,7 +687,6 @@ export default function Underwrite() {
                   </div>
                 </div>
 
-                {/* Unit Mix */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Unit Mix" />
                   <div className="overflow-x-auto">
@@ -791,9 +706,7 @@ export default function Underwrite() {
                               <td key={k} className="py-2 pr-4">
                                 <input
                                   className="input-field py-1.5 text-sm"
-                                  type="number"
-                                  step="any"
-                                  min="0"
+                                  type="number" step="any" min="0"
                                   value={row[k]}
                                   onChange={e => setMix(i, k, e.target.value)}
                                   placeholder={k === 'sqft' ? row.sqft || '—' : '—'}
@@ -810,7 +723,6 @@ export default function Underwrite() {
 
               </div>
 
-              {/* Build button */}
               <div className="mt-10 pt-8 border-t border-dark-border">
                 {buildError && (
                   <div className="mb-5 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{buildError}</div>
@@ -820,8 +732,7 @@ export default function Underwrite() {
                     {building ? 'Building model...' : 'Build Model & Download'}
                   </button>
                   <p className="text-dark-muted text-xs leading-relaxed max-w-xs">
-                    Downloads a pre-populated Excel acquisition model.
-                    Formulas remain live — open in Excel to recalculate.
+                    Downloads a pre-populated Excel acquisition model. Formulas remain live — open in Excel to recalculate.
                   </p>
                 </div>
               </div>
