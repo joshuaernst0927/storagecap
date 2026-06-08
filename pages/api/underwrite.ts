@@ -301,6 +301,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'IRR calculation failed', detail: String(err) })
     }
   }
+  // ── Calc IRR at Price: proxy to DO server ────────────────────────
+  if (action === 'calc-irr') {
+    try {
+      const { action: _a, ...params } = req.body
+      const doRes = await fetch(`${DO_API}/calc-irr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      })
+      if (!doRes.ok) {
+        const err = await doRes.text()
+        return res.status(502).json({ error: 'DO server error', detail: err })
+      }
+      const data = await doRes.json()
+      return res.status(200).json(data)
+    } catch (err) {
+      console.error('calc-irr proxy error:', err)
+      return res.status(500).json({ error: 'IRR calculation failed', detail: String(err) })
+    }
+  }
   // ── Build Proforma: proxy to DO server ───────────────────────────
 if (action === 'build-proforma') {
   try {
