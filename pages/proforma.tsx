@@ -429,6 +429,7 @@ export default function Proforma() {
   const router = useRouter()
   const [inputs, setInputs] = useState<ProformaInputs>(EMPTY)
   const [ourYears, setOurYears] = useState<OurYear[]>([])
+  const [proformaResult, setProformaResult] = useState<ProformaResult | null>(null)
   const [maxOfferResult, setMaxOfferResult] = useState<MaxOfferResult | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [calcError, setCalcError] = useState('')
