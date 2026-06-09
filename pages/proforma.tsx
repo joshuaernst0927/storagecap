@@ -4,6 +4,8 @@ import { useRouter } from 'next/router'
 import AuthGate from '@/components/AuthGate'
 
 type DealType = 'value-add' | 'stabilized' | 'distressed'
+type LeverageType = 'all-cash' | 'levered'
+type LoanType = 'bridge-to-perm' | 'permanent'
 
 type SellerYear = {
   revenue: string
@@ -50,11 +52,36 @@ type ProformaInputs = {
   offerPrice: string
   manualNOI: string
   exitSalePrice: string
-  // Debt assumptions
-  debtLTV: string
-  debtRate: string
-  debtAmortYears: string
-  debtIOMonths: string
+  // Closing costs
+  closingCostsPct: string
+  brokerFeePct: string
+  acquisitionFeePct: string
+  initialRepairs: string
+  leaseUpReserve: string
+  workingCapital: string
+  capexReserve: string
+  // Bridge loan
+  bridgeLTV: string
+  bridgeRate: string
+  bridgeTerm: string
+  bridgeExtensions: string
+  bridgeGuaranteedIOMonths: string
+  bridgePrepaidInterestMonths: string
+  // Refi
+  refiLTV: string
+  refiRate: string
+  refiAmortYears: string
+  refiIOMonths: string
+  refiFeePct: string
+  // Perm loan
+  permLTV: string
+  permRate: string
+  permAmortYears: string
+  permIOMonths: string
+  // Waterfall
+  lpPreferredReturn: string
+  lpSplit: string
+  gpSplit: string
 }
 
 type OurYear = {
@@ -119,6 +146,36 @@ type IRRResult = {
   method: string
 }
 
+type EquityBreakdown = {
+  downPayment: number
+  closingCosts: number
+  brokerFee: number
+  acquisitionFee: number
+  prepaidInterest: number
+  initialRepairs: number
+  leaseUpReserve: number
+  workingCapital: number
+  capexReserve: number
+  total: number
+}
+
+type WaterfallResult = {
+  totalProceeds: number
+  debtPayoff: number
+  netProceeds: number
+  lpCapitalReturn: number
+  lpPreferredReturn: number
+  remainingProceeds: number
+  lpShare: number
+  gpShare: number
+  gpAcquisitionFee: number
+  gpRefiFee: number
+  lpTotal: number
+  gpTotal: number
+  lpMOIC: number
+  gpMOIC: number
+}
+
 const EMPTY_SELLER: SellerYear = { revenue: '', expenses: '', noi: '' }
 
 const EMPTY: ProformaInputs = {
@@ -126,7 +183,7 @@ const EMPTY: ProformaInputs = {
   dealType: 'value-add',
   totalUnits: '',
   currentOccupancy: '', targetOccupancy: '92',
-  monthsToStabilization: '18',
+  monthsToStabilization: '24',
   currentAvgRent: '', marketAvgRent: '',
   monthsToMarketRent: '24',
   expenseRatio: '37',
@@ -143,7 +200,36 @@ const EMPTY: ProformaInputs = {
   t12Utilities: '', t12OfficeEmployee: '', t12Administrative: '',
   t12RepairsMaintenance: '', t12Tax: '', t12Insurance: '', t12OtherExpenses: '',
   exitCapRate: '7.25', exitMonth: '60', offerPrice: '', manualNOI: '', exitSalePrice: '',
-  debtLTV: '65', debtRate: '7.00', debtAmortYears: '30', debtIOMonths: '24',
+  // Closing costs
+  closingCostsPct: '3',
+  brokerFeePct: '3',
+  acquisitionFeePct: '2',
+  initialRepairs: '50000',
+  leaseUpReserve: '100000',
+  workingCapital: '50000',
+  capexReserve: '0',
+  // Bridge loan
+  bridgeLTV: '65',
+  bridgeRate: '8',
+  bridgeTerm: '24',
+  bridgeExtensions: '2',
+  bridgeGuaranteedIOMonths: '12',
+  bridgePrepaidInterestMonths: '12',
+  // Refi
+  refiLTV: '70',
+  refiRate: '6.5',
+  refiAmortYears: '30',
+  refiIOMonths: '0',
+  refiFeePct: '1',
+  // Perm loan
+  permLTV: '65',
+  permRate: '6.5',
+  permAmortYears: '30',
+  permIOMonths: '24',
+  // Waterfall
+  lpPreferredReturn: '8',
+  lpSplit: '85',
+  gpSplit: '15',
 }
 
 const DEAL_TYPE_LABELS: Record<DealType, string> = {
@@ -153,16 +239,78 @@ const DEAL_TYPE_LABELS: Record<DealType, string> = {
 }
 
 function fmt$(v: number) {
-  if (isNaN(v)) return '—'
+  if (isNaN(v) || !isFinite(v)) return '—'
   return '$' + Math.round(v).toLocaleString('en-US')
 }
 function fmtPct(v: number, dec = 1) {
-  if (isNaN(v)) return '—'
+  if (isNaN(v) || !isFinite(v)) return '—'
   return (v * 100).toFixed(dec) + '%'
 }
 function n(s: string, fallback = 0) {
   const v = parseFloat(s)
   return isNaN(v) ? fallback : v
+}
+
+function computeEquityBreakdown(inputs: ProformaInputs, loanAmount: number, leverageType: LeverageType): EquityBreakdown {
+  const price = n(inputs.offerPrice)
+  const downPayment = leverageType === 'levered' ? price - loanAmount : price
+  const closingCosts = price * (n(inputs.closingCostsPct) / 100)
+  const brokerFee = price * (n(inputs.brokerFeePct) / 100)
+  const acquisitionFee = price * (n(inputs.acquisitionFeePct) / 100)
+  const prepaidInterest = leverageType === 'levered'
+    ? loanAmount * (n(inputs.bridgeRate) / 100) * (n(inputs.bridgePrepaidInterestMonths) / 12)
+    : 0
+  const initialRepairs = n(inputs.initialRepairs)
+  const leaseUpReserve = n(inputs.leaseUpReserve)
+  const workingCapital = n(inputs.workingCapital)
+  const capexReserve = n(inputs.capexReserve)
+  const total = downPayment + closingCosts + brokerFee + acquisitionFee + prepaidInterest + initialRepairs + leaseUpReserve + workingCapital + capexReserve
+  return { downPayment, closingCosts, brokerFee, acquisitionFee, prepaidInterest, initialRepairs, leaseUpReserve, workingCapital, capexReserve, total }
+}
+
+function computeWaterfall(inputs: ProformaInputs, equityBreakdown: EquityBreakdown, exitValue: number, loanAmount: number, leverageType: LeverageType, loanType: LoanType): WaterfallResult {
+  const price = n(inputs.offerPrice)
+  const acquisitionFee = price * (n(inputs.acquisitionFeePct) / 100)
+  const refiLoanAmount = leverageType === 'levered' && loanType === 'bridge-to-perm'
+    ? exitValue * (n(inputs.refiLTV) / 100)
+    : loanAmount
+  const debtPayoff = leverageType === 'levered' ? refiLoanAmount : 0
+  const sellingCosts = exitValue * 0.02
+  const netProceeds = exitValue - debtPayoff - sellingCosts
+  const lpCapitalInvested = equityBreakdown.total
+  const lpPref = lpCapitalInvested * (n(inputs.lpPreferredReturn) / 100) * (n(inputs.exitMonth) / 12)
+  const lpCapitalReturn = Math.min(netProceeds, lpCapitalInvested)
+  const afterCapital = Math.max(0, netProceeds - lpCapitalInvested)
+  const lpPreferredPaid = Math.min(afterCapital, lpPref)
+  const afterPref = Math.max(0, afterCapital - lpPreferredPaid)
+  const lpSplitPct = n(inputs.lpSplit) / 100
+  const gpSplitPct = n(inputs.gpSplit) / 100
+  const lpShare = afterPref * lpSplitPct
+  const gpShare = afterPref * gpSplitPct
+  const refiFeePaid = leverageType === 'levered' && loanType === 'bridge-to-perm'
+    ? refiLoanAmount * (n(inputs.refiFeePct) / 100)
+    : 0
+  const lpTotal = lpCapitalReturn + lpPreferredPaid + lpShare
+  const gpTotal = gpShare + acquisitionFee + refiFeePaid
+  const lpMOIC = lpCapitalInvested > 0 ? lpTotal / lpCapitalInvested : 0
+  const gpMOIC = acquisitionFee > 0 ? gpTotal / acquisitionFee : 0
+
+  return {
+    totalProceeds: exitValue,
+    debtPayoff,
+    netProceeds,
+    lpCapitalReturn,
+    lpPreferredReturn: lpPreferredPaid,
+    remainingProceeds: afterPref,
+    lpShare,
+    gpShare,
+    gpAcquisitionFee: acquisitionFee,
+    gpRefiFee: refiFeePaid,
+    lpTotal,
+    gpTotal,
+    lpMOIC,
+    gpMOIC,
+  }
 }
 
 function Field({ label, value, onChange, suffix, note, step, placeholder }: {
@@ -193,6 +341,237 @@ function SectionHead({ title, subtitle }: { title: string; subtitle?: string }) 
     <div className="border-b border-dark-border pb-2 mb-5">
       <div className="section-label-sm">{title}</div>
       {subtitle && <p className="text-dark-muted text-xs mt-0.5">{subtitle}</p>}
+    </div>
+  )
+}
+
+function Toggle({ label, options, value, onChange }: {
+  label: string
+  options: { value: string; label: string; desc?: string }[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div>
+      <label className="label-text mb-2 block">{label}</label>
+      <div className="flex gap-2 flex-wrap">
+        {options.map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`flex-1 p-3 border text-left transition-colors duration-150 min-w-[120px] ${value === opt.value ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
+          >
+            <div className={`text-xs font-semibold mb-0.5 ${value === opt.value ? 'text-gold' : 'text-[#1B2B5E]'}`}>{opt.label}</div>
+            {opt.desc && <div className="text-xs text-dark-muted">{opt.desc}</div>}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function EquityBreakdownBox({ breakdown, leverageType, loanType, inputs }: {
+  breakdown: EquityBreakdown
+  leverageType: LeverageType
+  loanType: LoanType
+  inputs: ProformaInputs
+}) {
+  const rows = [
+    { label: 'Down Payment', value: breakdown.downPayment, note: leverageType === 'all-cash' ? 'All cash — no debt' : `Purchase price minus loan` },
+    { label: `Closing Costs (${inputs.closingCostsPct}%)`, value: breakdown.closingCosts },
+    { label: `Broker Fee (${inputs.brokerFeePct}%)`, value: breakdown.brokerFee },
+    { label: `Acquisition Fee (${inputs.acquisitionFeePct}% — GP)`, value: breakdown.acquisitionFee, note: 'Paid to GP at closing' },
+    ...(leverageType === 'levered' && loanType === 'bridge-to-perm' ? [
+      { label: `Prepaid Interest (${inputs.bridgePrepaidInterestMonths} months)`, value: breakdown.prepaidInterest, note: 'Year 1 interest funded by LP at closing' }
+    ] : []),
+    { label: 'Initial Repairs', value: breakdown.initialRepairs },
+    { label: 'Lease-Up Reserve', value: breakdown.leaseUpReserve },
+    { label: 'Working Capital', value: breakdown.workingCapital },
+    ...(breakdown.capexReserve > 0 ? [{ label: 'CapEx Reserve', value: breakdown.capexReserve }] : []),
+  ]
+
+  return (
+    <div className="border border-dark-border p-6">
+      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-4">Equity Required at Closing — Funded 100% by LP</div>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="flex justify-between items-start py-1.5 border-b border-dark-border/30">
+            <div>
+              <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">{row.label}</div>
+              {row.note && <div className="text-xs text-dark-muted mt-0.5">{row.note}</div>}
+            </div>
+            <div className="text-sm font-semibold text-[#1B2B5E] ml-4">{fmt$(row.value)}</div>
+          </div>
+        ))}
+        <div className="flex justify-between items-center pt-3">
+          <div className="text-xs uppercase tracking-widest font-bold text-gold">Total LP Equity Required</div>
+          <div className="text-lg font-bold text-gold">{fmt$(breakdown.total)}</div>
+        </div>
+        <div className="flex justify-between items-center pt-1">
+          <div className="text-xs uppercase tracking-widest text-dark-muted">GP Equity Invested</div>
+          <div className="text-sm font-semibold text-[#1B2B5E]">$0</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WaterfallBox({ waterfall, inputs }: { waterfall: WaterfallResult; inputs: ProformaInputs }) {
+  return (
+    <div className="border border-dark-border p-6">
+      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-4">GP / LP Waterfall at Exit</div>
+
+      <div className="space-y-2 mb-6">
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div className="text-xs uppercase tracking-widest text-dark-muted">Gross Exit Proceeds</div>
+          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.totalProceeds)}</div>
+        </div>
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div className="text-xs uppercase tracking-widest text-dark-muted">Debt Payoff</div>
+          <div className="text-sm font-semibold text-red-500">({fmt$(waterfall.debtPayoff)})</div>
+        </div>
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div className="text-xs uppercase tracking-widest text-dark-muted">Selling Costs (2%)</div>
+          <div className="text-sm font-semibold text-red-500">({fmt$(waterfall.totalProceeds * 0.02)})</div>
+        </div>
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div className="text-xs uppercase tracking-widest font-semibold text-[#1B2B5E]">Net Proceeds</div>
+          <div className="text-sm font-bold text-[#1B2B5E]">{fmt$(waterfall.netProceeds)}</div>
+        </div>
+      </div>
+
+      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-3">Distribution Waterfall</div>
+      <div className="space-y-2 mb-6">
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">① LP Capital Return</div>
+            <div className="text-xs text-dark-muted">100% of invested equity returned first</div>
+          </div>
+          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpCapitalReturn)}</div>
+        </div>
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">② LP Preferred Return ({inputs.lpPreferredReturn}%)</div>
+            <div className="text-xs text-dark-muted">On invested capital over hold period</div>
+          </div>
+          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpPreferredReturn)}</div>
+        </div>
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">③ Remaining Proceeds</div>
+            <div className="text-xs text-dark-muted">Split {inputs.lpSplit}% LP / {inputs.gpSplit}% GP</div>
+          </div>
+          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.remainingProceeds)}</div>
+        </div>
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div className="text-xs uppercase tracking-widest text-dark-muted pl-4">LP Share ({inputs.lpSplit}%)</div>
+          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpShare)}</div>
+        </div>
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div className="text-xs uppercase tracking-widest text-dark-muted pl-4">GP Carried Interest ({inputs.gpSplit}%)</div>
+          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpShare)}</div>
+        </div>
+      </div>
+
+      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-3">GP Fee Income</div>
+      <div className="space-y-2 mb-6">
+        <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+          <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">Acquisition Fee ({inputs.acquisitionFeePct}%)</div>
+          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpAcquisitionFee)}</div>
+        </div>
+        {waterfall.gpRefiFee > 0 && (
+          <div className="flex justify-between py-1.5 border-b border-dark-border/30">
+            <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">Refi Fee ({inputs.refiFeePct}%)</div>
+            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpRefiFee)}</div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 pt-4 border-t-2 border-gold/40">
+        <div className="border border-dark-border p-4">
+          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">LP Total Return</div>
+          <div className="text-2xl font-bold text-[#1B2B5E]">{fmt$(waterfall.lpTotal)}</div>
+          <div className="text-xs text-dark-muted mt-1">MOIC: {waterfall.lpMOIC.toFixed(2)}x</div>
+        </div>
+        <div className="border border-gold bg-gold/5 p-4">
+          <div className="text-xs uppercase tracking-widest text-gold mb-1">GP Total Earnings</div>
+          <div className="text-2xl font-bold text-[#1B2B5E]">{fmt$(waterfall.gpTotal)}</div>
+          <div className="text-xs text-dark-muted mt-1">On $0 invested capital</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function IRRBox({ result, offerPrice, exitSalePrice, equityBreakdown }: {
+  result: IRRResult; offerPrice: string; exitSalePrice?: string; equityBreakdown?: EquityBreakdown
+}) {
+  const displayPrice = exitSalePrice && parseInt(exitSalePrice) > 0 ? exitSalePrice : offerPrice
+  const hasDebt = result.levered_irr !== undefined && result.levered_irr !== result.unlevered_irr
+  return (
+    <div className="border-2 border-gold bg-gold/5 p-6">
+      <div className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
+        Returns at {displayPrice ? '$' + parseInt(displayPrice).toLocaleString() : 'This Offer'}
+        {exitSalePrice && parseInt(exitSalePrice) > 0 ? ' (exit override)' : ''}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="border border-gold/30 p-4 bg-white/50">
+          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Levered IRR</div>
+          <div className="font-serif text-4xl font-light text-[#1B2B5E]">
+            {hasDebt ? fmtPct(result.levered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
+          </div>
+          <div className="text-xs text-dark-muted mt-1">After debt service</div>
+        </div>
+        <div className="border border-dark-border p-4">
+          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Unlevered IRR</div>
+          <div className="font-serif text-4xl font-light text-[#1B2B5E]">
+            {hasDebt ? fmtPct(result.unlevered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
+          </div>
+          <div className="text-xs text-dark-muted mt-1">All cash, no debt</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gold/30">
+        <div>
+          <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Going-In Cap</div>
+          <div className="font-semibold text-[#1B2B5E]">{fmtPct(result.going_in_cap)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Stabilized Cap</div>
+          <div className="font-semibold text-[#1B2B5E]">{fmtPct(result.stabilized_cap)}</div>
+        </div>
+        {result.equity_multiple && (
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Equity Multiple</div>
+            <div className="font-semibold text-[#1B2B5E]">{result.equity_multiple.toFixed(2)}x</div>
+          </div>
+        )}
+        {equityBreakdown && (
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">LP Equity In</div>
+            <div className="font-semibold text-[#1B2B5E]">{fmt$(equityBreakdown.total)}</div>
+          </div>
+        )}
+      </div>
+      {result.loan_amount && result.loan_amount > 0 && (
+        <div className="mt-4 pt-4 border-t border-gold/20 grid grid-cols-3 gap-4">
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Loan Amount</div>
+            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.loan_amount)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Annual Debt Service</div>
+            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.annual_debt_service ?? 0)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">DSCR (Y1)</div>
+            <div className="text-sm font-semibold text-[#1B2B5E]">
+              {result.annual_debt_service && result.annual_debt_service > 0
+                ? (result.in_place_noi / result.annual_debt_service).toFixed(2) + 'x'
+                : '—'}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -379,86 +758,6 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-dark-muted mt-3">The valuation gap shows how much less the property is worth at your conservative underwrite vs the broker&apos;s OM. Use this to anchor your offer in negotiations.</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function IRRBox({ result, offerPrice, exitSalePrice }: { result: IRRResult; offerPrice: string; exitSalePrice?: string }) {
-  const displayPrice = exitSalePrice && parseInt(exitSalePrice) > 0 ? exitSalePrice : offerPrice
-  const hasDebt = result.levered_irr !== undefined && result.levered_irr !== result.unlevered_irr
-  return (
-    <div className="border-2 border-gold bg-gold/5 p-6">
-      <div className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
-        Returns at {displayPrice ? '$' + parseInt(displayPrice).toLocaleString() : 'This Offer'}
-        {exitSalePrice && parseInt(exitSalePrice) > 0 ? ' (exit override)' : ''}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="border border-gold/30 p-4 bg-white/50">
-          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Levered IRR</div>
-          <div className="font-serif text-4xl font-light text-[#1B2B5E]">
-            {hasDebt ? fmtPct(result.levered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
-          </div>
-          <div className="text-xs text-dark-muted mt-1">After debt service</div>
-        </div>
-        <div className="border border-dark-border p-4">
-          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Unlevered IRR</div>
-          <div className="font-serif text-4xl font-light text-[#1B2B5E]">
-            {hasDebt ? fmtPct(result.unlevered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
-          </div>
-          <div className="text-xs text-dark-muted mt-1">All cash, no debt</div>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gold/30">
-        <div>
-          <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Going-In Cap</div>
-          <div className="font-semibold text-[#1B2B5E]">{fmtPct(result.going_in_cap)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Stabilized Cap</div>
-          <div className="font-semibold text-[#1B2B5E]">{fmtPct(result.stabilized_cap)}</div>
-        </div>
-        {result.equity_multiple && (
-          <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Equity Multiple</div>
-            <div className="font-semibold text-[#1B2B5E]">{result.equity_multiple.toFixed(2)}x</div>
-          </div>
-        )}
-        {result.equity_required && (
-          <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Equity Required</div>
-            <div className="font-semibold text-[#1B2B5E]">{fmt$(result.equity_required)}</div>
-          </div>
-        )}
-        {!result.equity_multiple && (
-          <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Y1 NOI</div>
-            <div className="font-semibold text-[#1B2B5E]">{fmt$(result.in_place_noi)}</div>
-          </div>
-        )}
-        {!result.equity_required && (
-          <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Stabilized NOI</div>
-            <div className="font-semibold text-[#1B2B5E]">{fmt$(result.stabilized_noi)}</div>
-          </div>
-        )}
-      </div>
-      {result.loan_amount && (
-        <div className="mt-4 pt-4 border-t border-gold/20 grid grid-cols-3 gap-4">
-          <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Loan Amount</div>
-            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.loan_amount)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Annual Debt Service</div>
-            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.annual_debt_service ?? 0)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Equity Required</div>
-            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.equity_required ?? 0)}</div>
-          </div>
         </div>
       )}
     </div>
@@ -468,14 +767,18 @@ function IRRBox({ result, offerPrice, exitSalePrice }: { result: IRRResult; offe
 export default function Proforma() {
   const router = useRouter()
   const [inputs, setInputs] = useState<ProformaInputs>(EMPTY)
+  const [leverageType, setLeverageType] = useState<LeverageType>('levered')
+  const [loanType, setLoanType] = useState<LoanType>('bridge-to-perm')
   const [ourYears, setOurYears] = useState<OurYear[]>([])
   const [proformaResult, setProformaResult] = useState<ProformaResult | null>(null)
   const [irrResult, setIrrResult] = useState<IRRResult | null>(null)
+  const [equityBreakdown, setEquityBreakdown] = useState<EquityBreakdown | null>(null)
+  const [waterfallResult, setWaterfallResult] = useState<WaterfallResult | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [calcError, setCalcError] = useState('')
   const [hasCalculated, setHasCalculated] = useState(false)
   const [maxOfferAnchor, setMaxOfferAnchor] = useState<'t12' | 'y1' | 'stabilized' | 'manual'>('y1')
-  const [capRates, setCapRates] = useState(['6.50', '7.00', '7.50', '8.00'])
+  const [capRates, setCapRates] = useState(['6.50', '7.00', '7.25', '7.50'])
   const [revenueHaircut, setRevenueHaircut] = useState('8')
   const setCapRate = (i: number, v: string) => setCapRates(prev => prev.map((c, idx) => idx === i ? v : c))
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
@@ -556,23 +859,57 @@ export default function Proforma() {
 
       const offerPriceVal = n(inputs.offerPrice)
       const exitSalePriceVal = n(inputs.exitSalePrice)
-      const effectivePurchasePrice = exitSalePriceVal > 0 ? exitSalePriceVal : offerPriceVal
+
+      // Compute exit value — default to Y5 NOI / exit cap rate
+      const exitCapVal = n(inputs.exitCapRate, 7.25) / 100
+      const defaultExitValue = exitCapVal > 0 ? y5NOI / exitCapVal : offerPriceVal
+      const exitValue = exitSalePriceVal > 0 ? exitSalePriceVal : defaultExitValue
+
+      // Compute loan amount based on leverage type
+      let loanAmount = 0
+      if (leverageType === 'levered') {
+        if (loanType === 'bridge-to-perm') {
+          loanAmount = offerPriceVal * (n(inputs.bridgeLTV, 65) / 100)
+        } else {
+          loanAmount = offerPriceVal * (n(inputs.permLTV, 65) / 100)
+        }
+      }
+
+      // Compute equity breakdown
+      const breakdown = computeEquityBreakdown(inputs, loanAmount, leverageType)
+      setEquityBreakdown(breakdown)
 
       if (offerPriceVal > 0) {
         const noiYears = proformaData.years.map((y: OurYear) => y.noi)
+
+        // Debt params for IRR engine
+        const ltv = leverageType === 'levered'
+          ? (loanType === 'bridge-to-perm' ? n(inputs.bridgeLTV, 65) / 100 : n(inputs.permLTV, 65) / 100)
+          : 0
+        const rate = leverageType === 'levered'
+          ? (loanType === 'bridge-to-perm' ? n(inputs.bridgeRate, 8) / 100 : n(inputs.permRate, 6.5) / 100)
+          : 0
+        const amortYears = leverageType === 'levered'
+          ? (loanType === 'bridge-to-perm' ? 30 : Math.round(n(inputs.permAmortYears, 30)))
+          : 30
+        const ioMonths = leverageType === 'levered'
+          ? (loanType === 'bridge-to-perm' ? Math.round(n(inputs.bridgeTerm, 24)) : Math.round(n(inputs.permIOMonths, 0)))
+          : 0
+
         const irrBody = {
           action: 'calc-irr-v2',
           purchase_price: offerPriceVal,
           noi_years: noiYears,
-          exit_cap_rate: n(inputs.exitCapRate, 7.25) / 100,
+          exit_cap_rate: exitCapVal,
+          exit_value_override: exitSalePriceVal > 0 ? exitSalePriceVal : null,
           selling_costs_pct: 0.02,
-          closing_costs_pct: 0.03,
-          acquisition_fee_pct: 0.02,
-          initial_repairs: 0,
-          ltv: n(inputs.debtLTV, 65) / 100,
-          interest_rate: n(inputs.debtRate, 7.0) / 100,
-          amort_years: Math.round(n(inputs.debtAmortYears, 30)),
-          io_months: Math.round(n(inputs.debtIOMonths, 24)),
+          closing_costs_pct: n(inputs.closingCostsPct, 3) / 100,
+          acquisition_fee_pct: n(inputs.acquisitionFeePct, 2) / 100,
+          initial_repairs: n(inputs.initialRepairs),
+          ltv,
+          interest_rate: rate,
+          amort_years: amortYears,
+          io_months: ioMonths,
         }
 
         const irrRes = await fetch('/api/underwrite', {
@@ -584,11 +921,11 @@ export default function Proforma() {
           const irrData = await irrRes.json()
           setIrrResult({
             irr_at_max: irrData.levered_irr ?? 0,
-            levered_irr: irrData.levered_irr ?? 0,
+            levered_irr: leverageType === 'levered' ? (irrData.levered_irr ?? 0) : (irrData.unlevered_irr ?? 0),
             unlevered_irr: irrData.unlevered_irr ?? 0,
             equity_multiple: irrData.equity_multiple ?? 0,
-            equity_required: irrData.equity_required ?? 0,
-            loan_amount: irrData.loan_amount ?? 0,
+            equity_required: breakdown.total,
+            loan_amount: loanAmount,
             annual_debt_service: irrData.annual_debt_service ?? 0,
             going_in_cap: irrData.going_in_cap ?? 0,
             stabilized_cap: irrData.stabilized_cap ?? 0,
@@ -597,6 +934,10 @@ export default function Proforma() {
             stabilized_noi: y5NOI,
             method: '',
           })
+
+          // Compute waterfall
+          const wf = computeWaterfall(inputs, breakdown, exitValue, loanAmount, leverageType, loanType)
+          setWaterfallResult(wf)
         }
       }
 
@@ -660,13 +1001,14 @@ export default function Proforma() {
           </h1>
           <p className="text-dark-muted text-lg max-w-xl leading-relaxed">
             Build a true 5-year proforma from T-12 actuals. Compare broker projections to your conservative underwrite.
-            Enter your offer price and see your actual IRR.
+            Enter your offer price and see your actual IRR, equity required, and GP/LP waterfall.
           </p>
         </section>
 
         <section className="py-14">
           <div className="section-container max-w-4xl space-y-10">
 
+            {/* Deal Type */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Deal Type" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -679,6 +1021,7 @@ export default function Proforma() {
               </div>
             </div>
 
+            {/* Property */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Property" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -693,6 +1036,97 @@ export default function Proforma() {
               </div>
             </div>
 
+            {/* Leverage Toggle */}
+            <div className="border border-dark-border p-7">
+              <SectionHead title="Financing Structure" subtitle="Select how this deal will be capitalized" />
+              <div className="space-y-6">
+                <Toggle
+                  label="Leverage"
+                  value={leverageType}
+                  onChange={v => setLeverageType(v as LeverageType)}
+                  options={[
+                    { value: 'all-cash', label: 'All Cash', desc: 'Unlevered — no debt' },
+                    { value: 'levered', label: 'Levered', desc: 'Debt financing' },
+                  ]}
+                />
+                {leverageType === 'levered' && (
+                  <Toggle
+                    label="Loan Type"
+                    value={loanType}
+                    onChange={v => setLoanType(v as LoanType)}
+                    options={[
+                      { value: 'bridge-to-perm', label: 'Bridge to Perm', desc: 'Value-add / lease-up' },
+                      { value: 'permanent', label: 'Permanent Loan', desc: 'Stabilized asset' },
+                    ]}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Bridge Loan Inputs */}
+            {leverageType === 'levered' && loanType === 'bridge-to-perm' && (
+              <div className="border border-dark-border p-7">
+                <SectionHead title="Bridge Loan" subtitle="Short-term acquisition financing — IO with prepaid interest" />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                  <Field label="Bridge LTV" value={inputs.bridgeLTV} onChange={v => set('bridgeLTV', v)} suffix="% of purchase price" step="1" />
+                  <Field label="Bridge Rate" value={inputs.bridgeRate} onChange={v => set('bridgeRate', v)} suffix="% annual" step="0.25" />
+                  <Field label="Bridge Term" value={inputs.bridgeTerm} onChange={v => set('bridgeTerm', v)} suffix="months" step="6" />
+                  <Field label="Extension Options" value={inputs.bridgeExtensions} onChange={v => set('bridgeExtensions', v)} suffix="× 6-month options" step="1" note="e.g. 2 = up to 12 extra months" />
+                  <Field label="Guaranteed IO Months" value={inputs.bridgeGuaranteedIOMonths} onChange={v => set('bridgeGuaranteedIOMonths', v)} suffix="months" step="1" note="Minimum IO commitment" />
+                  <Field label="Prepaid Interest Months" value={inputs.bridgePrepaidInterestMonths} onChange={v => set('bridgePrepaidInterestMonths', v)} suffix="months" step="1" note="Funded by LP at closing as a closing cost" />
+                </div>
+                <SectionHead title="Refinance (Bridge Payoff)" subtitle="Perm loan sourced at or before stabilization — pays off bridge" />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <Field label="Refi LTV" value={inputs.refiLTV} onChange={v => set('refiLTV', v)} suffix="% of stabilized value" step="1" />
+                  <Field label="Refi Rate" value={inputs.refiRate} onChange={v => set('refiRate', v)} suffix="%" step="0.25" />
+                  <Field label="Refi Amortization" value={inputs.refiAmortYears} onChange={v => set('refiAmortYears', v)} suffix="years" step="1" />
+                  <Field label="Refi IO Period" value={inputs.refiIOMonths} onChange={v => set('refiIOMonths', v)} suffix="months (optional)" step="6" />
+                  <Field label="GP Refi Fee" value={inputs.refiFeePct} onChange={v => set('refiFeePct', v)} suffix="% of new loan" step="0.25" note="Paid to GP at refi close" />
+                </div>
+              </div>
+            )}
+
+            {/* Permanent Loan Inputs */}
+            {leverageType === 'levered' && loanType === 'permanent' && (
+              <div className="border border-dark-border p-7">
+                <SectionHead title="Permanent Loan" subtitle="Long-term financing on stabilized asset" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Field label="LTV" value={inputs.permLTV} onChange={v => set('permLTV', v)} suffix="%" step="1" />
+                  <Field label="Interest Rate" value={inputs.permRate} onChange={v => set('permRate', v)} suffix="%" step="0.25" />
+                  <Field label="Amortization" value={inputs.permAmortYears} onChange={v => set('permAmortYears', v)} suffix="years" step="1" />
+                  <Field label="IO Period" value={inputs.permIOMonths} onChange={v => set('permIOMonths', v)} suffix="months (optional)" step="6" />
+                </div>
+              </div>
+            )}
+
+            {/* Closing Costs */}
+            <div className="border border-dark-border p-7">
+              <SectionHead title="Closing Costs & Reserves" subtitle="All funded by LP — shown as line items in equity required" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Field label="Closing Costs" value={inputs.closingCostsPct} onChange={v => set('closingCostsPct', v)} suffix="% of purchase" step="0.25" />
+                <Field label="Broker Fee" value={inputs.brokerFeePct} onChange={v => set('brokerFeePct', v)} suffix="% of purchase" step="0.25" />
+                <Field label="Acquisition Fee (GP)" value={inputs.acquisitionFeePct} onChange={v => set('acquisitionFeePct', v)} suffix="% of purchase" step="0.25" note="Paid to GP at closing" />
+                <Field label="Initial Repairs" value={inputs.initialRepairs} onChange={v => set('initialRepairs', v)} suffix="$" placeholder="50000" />
+                <Field label="Lease-Up Reserve" value={inputs.leaseUpReserve} onChange={v => set('leaseUpReserve', v)} suffix="$" placeholder="100000" />
+                <Field label="Working Capital" value={inputs.workingCapital} onChange={v => set('workingCapital', v)} suffix="$" placeholder="50000" />
+                <Field label="CapEx Reserve" value={inputs.capexReserve} onChange={v => set('capexReserve', v)} suffix="$" placeholder="0" />
+              </div>
+            </div>
+
+            {/* GP/LP Waterfall Settings */}
+            <div className="border border-dark-border p-7">
+              <SectionHead title="GP / LP Structure" subtitle="LP funds 100% of equity — GP invests $0" />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <Field label="LP Preferred Return" value={inputs.lpPreferredReturn} onChange={v => set('lpPreferredReturn', v)} suffix="% annual" step="0.5" note="LP gets this before split" />
+                <Field label="LP Split (after pref)" value={inputs.lpSplit} onChange={v => set('lpSplit', v)} suffix="%" step="5" />
+                <Field label="GP Split (after pref)" value={inputs.gpSplit} onChange={v => set('gpSplit', v)} suffix="%" step="5" />
+              </div>
+              <div className="mt-4 p-4 bg-dark-surface border border-dark-border/50 text-xs text-dark-muted">
+                <strong className="text-[#1B2B5E]">Waterfall order:</strong> ① LP gets 100% of invested capital back → ② LP gets {inputs.lpPreferredReturn}% preferred return → ③ Remaining split {inputs.lpSplit}% LP / {inputs.gpSplit}% GP. GP also earns {inputs.acquisitionFeePct}% acquisition fee at closing{leverageType === 'levered' && loanType === 'bridge-to-perm' ? ` and ${inputs.refiFeePct}% refi fee at refinance` : ''}.
+              </div>
+            </div>
+
+            {/* Historical Data */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Historical Data" subtitle="From T12, T3, and available occupancy records" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -702,18 +1136,47 @@ export default function Proforma() {
               </div>
             </div>
 
+            {/* Unit Economics */}
             <div className="border border-dark-border p-7">
-              <SectionHead title="Unit Economics & Lease-Up" />
+              <SectionHead title="Unit Economics & Value-Add Levers" subtitle="Occupancy uplift + rent-to-market = core value-add thesis" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Field label="Total Units" value={inputs.totalUnits} onChange={v => set('totalUnits', v)} />
-                <Field label="Current Occupancy" value={inputs.currentOccupancy} onChange={v => set('currentOccupancy', v)} suffix="%" />
-                <Field label="Target Occupancy" value={inputs.targetOccupancy} onChange={v => set('targetOccupancy', v)} suffix="%" />
+                <Field label="Current Occupancy" value={inputs.currentOccupancy} onChange={v => set('currentOccupancy', v)} suffix="%" note="Where the property is today" />
+                <Field label="Target Occupancy" value={inputs.targetOccupancy} onChange={v => set('targetOccupancy', v)} suffix="%" note="Stabilized target" />
                 <Field label="Months to Stabilization" value={inputs.monthsToStabilization} onChange={v => set('monthsToStabilization', v)} suffix="mo" />
-                <Field label="Current Avg Rent/Unit" value={inputs.currentAvgRent} onChange={v => set('currentAvgRent', v)} suffix="$/mo" />
-                <Field label="Market Avg Rent/Unit" value={inputs.marketAvgRent} onChange={v => set('marketAvgRent', v)} suffix="$/mo" />
+                <Field label="Current Avg Rent/Unit" value={inputs.currentAvgRent} onChange={v => set('currentAvgRent', v)} suffix="$/mo" note="What tenants pay today" />
+                <Field label="Market Avg Rent/Unit" value={inputs.marketAvgRent} onChange={v => set('marketAvgRent', v)} suffix="$/mo" note="What the market supports" />
               </div>
+              {inputs.currentAvgRent && inputs.marketAvgRent && (
+                <div className="mt-4 p-4 bg-gold/5 border border-gold/30">
+                  <div className="text-xs uppercase tracking-widest text-gold font-medium mb-2">Value-Add Rent Upside</div>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <div className="text-dark-muted text-xs">Rent Gap / Unit</div>
+                      <div className="font-semibold text-[#1B2B5E]">{fmt$(n(inputs.marketAvgRent) - n(inputs.currentAvgRent))}/mo</div>
+                    </div>
+                    <div>
+                      <div className="text-dark-muted text-xs">Upside at Stabilization</div>
+                      <div className="font-semibold text-[#1B2B5E]">
+                        {inputs.totalUnits
+                          ? fmt$((n(inputs.marketAvgRent) - n(inputs.currentAvgRent)) * n(inputs.totalUnits) * 12) + '/yr'
+                          : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-dark-muted text-xs">Rent Uplift</div>
+                      <div className="font-semibold text-[#1B2B5E]">
+                        {n(inputs.currentAvgRent) > 0
+                          ? fmtPct((n(inputs.marketAvgRent) - n(inputs.currentAvgRent)) / n(inputs.currentAvgRent))
+                          : '—'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Growth Assumptions */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Growth Assumptions" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -722,30 +1185,21 @@ export default function Proforma() {
               </div>
             </div>
 
+            {/* Exit & Offer Price */}
             <div className="border border-dark-border p-7">
-              <SectionHead title="Exit & Offer Price" subtitle="Enter your offer price to calculate your actual IRR" />
+              <SectionHead title="Exit & Offer Price" subtitle="Exit defaults to Year 5 NOI ÷ exit cap rate — enter offer price to see your IRR" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => set('exitCapRate', v)} suffix="%" step="0.25" />
                 <Field label="Hold Period" value={inputs.exitMonth} onChange={v => set('exitMonth', v)} suffix="mo" />
                 <div className="md:col-span-2">
                   <label className="label-text">Your Offer Price <span className="text-gold text-xs">(enter to see your IRR)</span></label>
                   <input className="input-field border-gold/50" type="number" step="any" value={inputs.offerPrice}
-                    onChange={e => set('offerPrice', e.target.value)} placeholder="e.g. 3500000" />
+                    onChange={e => set('offerPrice', e.target.value)} placeholder="e.g. 4250000" />
                 </div>
               </div>
             </div>
 
-            <div className="border border-dark-border p-7">
-              <SectionHead title="Debt Assumptions" subtitle="Used to calculate levered IRR — adjust for your actual loan terms" />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Field label="Loan LTV" value={inputs.debtLTV} onChange={v => set('debtLTV', v)} suffix="%" step="1"
-                  note="% of purchase price" />
-                <Field label="Interest Rate" value={inputs.debtRate} onChange={v => set('debtRate', v)} suffix="%" step="0.05" />
-                <Field label="Amortization" value={inputs.debtAmortYears} onChange={v => set('debtAmortYears', v)} suffix="yrs" />
-                <Field label="IO Period" value={inputs.debtIOMonths} onChange={v => set('debtIOMonths', v)} suffix="mo" />
-              </div>
-            </div>
-
+            {/* Calculate Button */}
             <div className="pt-2">
               {calcError && <div className="mb-4 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{calcError}</div>}
               <div className="mb-6">
@@ -761,7 +1215,7 @@ export default function Proforma() {
                 </div>
                 {maxOfferAnchor === 'manual' && (
                   <div className="mt-3 max-w-xs">
-                    <Field label="Manual NOI ($)" value={inputs.manualNOI} onChange={v => set('manualNOI', v)} note="Type any NOI to anchor your analysis to this number" />
+                    <Field label="Manual NOI ($)" value={inputs.manualNOI} onChange={v => set('manualNOI', v)} note="Type any NOI to anchor your analysis" />
                   </div>
                 )}
               </div>
@@ -774,16 +1228,18 @@ export default function Proforma() {
             {hasCalculated && ourYears.length > 0 && (
               <div className="space-y-8">
 
+                {/* Our Proforma */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Our Underwritten Proforma" subtitle="T-12 actuals → 5-year projection. ESMI management at 5% of EGI." />
                   {proformaResult && <ProformaTable proformaResult={proformaResult} />}
                 </div>
 
+                {/* Broker vs Investor */}
                 {hasSeller && proformaResult && (
                   <div className="border border-dark-border p-7">
                     <div className="flex items-start justify-between mb-1">
                       <div className="flex-1">
-                        <SectionHead title="Broker vs Investor Analysis" subtitle="OM projections vs your conservative underwrite — adjust the revenue haircut to stress-test" />
+                        <SectionHead title="Broker vs Investor Analysis" subtitle="OM projections vs your conservative underwrite" />
                       </div>
                       <div className="flex items-center gap-2 ml-6 mt-1">
                         <label className="text-xs uppercase tracking-widest text-dark-muted whitespace-nowrap">Revenue Haircut</label>
@@ -796,6 +1252,7 @@ export default function Proforma() {
                   </div>
                 )}
 
+                {/* Offer Matrix */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Offer Matrix" subtitle="Our NOI ÷ cap rate — adjust cap rates to match your market" />
                   <div className="flex gap-3 mb-4 flex-wrap">
@@ -846,11 +1303,11 @@ export default function Proforma() {
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-xs text-dark-muted mt-3">Offer = Our NOI ÷ cap rate. Use this to anchor your bid.</p>
                 </div>
 
+                {/* Exit Value */}
                 <div className="border border-dark-border p-7">
-                  <SectionHead title="Exit Value" subtitle="Projected sale price at Year 5 NOI ÷ your exit cap rates" />
+                  <SectionHead title="Exit Value" subtitle="Default exit = Year 5 NOI ÷ exit cap rate. Click to override." />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     {capRates.map((cr, i) => {
                       const cap = parseFloat(cr) / 100
@@ -876,32 +1333,46 @@ export default function Proforma() {
                     })}
                   </div>
                   <div className="max-w-sm">
-                    <label className="label-text">Override Exit Sale Price <span className="text-gold text-xs">(optional — stress test a specific sale price)</span></label>
+                    <label className="label-text">Override Exit Sale Price <span className="text-gold text-xs">(optional)</span></label>
                     <div className="flex gap-2 items-center">
                       <input className="input-field border-gold/50 flex-1" type="number" step="any" value={inputs.exitSalePrice}
                         onChange={e => set('exitSalePrice', e.target.value)} placeholder="Leave blank to use cap rate exit" />
-                      <button
-                        onClick={() => handleCalculate()}
-                        disabled={calculating || !inputs.offerPrice}
-                        className="btn-gold disabled:opacity-40 px-4 py-2 text-xs whitespace-nowrap"
-                      >
-                        Recalculate IRR
+                      <button onClick={() => handleCalculate()} disabled={calculating || !inputs.offerPrice}
+                        className="btn-gold disabled:opacity-40 px-4 py-2 text-xs whitespace-nowrap">
+                        Recalculate
                       </button>
                     </div>
                   </div>
                 </div>
 
+                {/* Equity Required */}
+                {equityBreakdown && (
+                  <EquityBreakdownBox
+                    breakdown={equityBreakdown}
+                    leverageType={leverageType}
+                    loanType={loanType}
+                    inputs={inputs}
+                  />
+                )}
+
+                {/* IRR */}
                 <div className="border border-dark-border p-7">
-                  <SectionHead title="Your IRR" subtitle="IRR is a result of your offer price — not a target. Enter an offer price above to see your actual return." />
+                  <SectionHead title="Your IRR" subtitle="Based on your offer price, exit cap rate, and financing structure" />
                   {irrResult ? (
-                    <IRRBox result={irrResult} offerPrice={inputs.offerPrice} exitSalePrice={inputs.exitSalePrice} />
+                    <IRRBox result={irrResult} offerPrice={inputs.offerPrice} exitSalePrice={inputs.exitSalePrice} equityBreakdown={equityBreakdown ?? undefined} />
                   ) : (
                     <div className="p-6 border border-dark-border bg-dark-surface text-center">
-                      <p className="text-dark-muted text-sm">Enter your offer price in the Exit & Offer Price section above, then recalculate.</p>
+                      <p className="text-dark-muted text-sm">Enter your offer price above, then calculate.</p>
                     </div>
                   )}
                 </div>
 
+                {/* GP/LP Waterfall */}
+                {waterfallResult && (
+                  <WaterfallBox waterfall={waterfallResult} inputs={inputs} />
+                )}
+
+                {/* Next Steps */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Next Steps" />
                   <div className="flex flex-wrap gap-4">
