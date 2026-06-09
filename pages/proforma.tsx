@@ -85,6 +85,26 @@ type ProformaInputs = {
   // Interest reserves
   interestReserveY2Source: 'closing' | 'operations'
   interestReserveY3Source: 'closing' | 'operations'
+  // Broker info (extracted from OM)
+  broker1Name: string
+  broker2Name: string
+  brokerPhone1: string
+  brokerPhone2: string
+  brokerEmail1: string
+  brokerEmail2: string
+  brokerageName: string
+  totalSF: string
+  yearBuilt: string
+  city: string
+  state: string
+  msaName: string
+  // Refi sizing
+  refiCapRate: string
+  refiDSCR: string
+  refiLoanRate: string
+  // Interest reserves
+  interestReserveY2Source: 'closing' | 'operations'
+  interestReserveY3Source: 'closing' | 'operations'
   // Waterfall
   lpPreferredReturn: string
   lpSplit: string
@@ -238,6 +258,19 @@ const EMPTY: ProformaInputs = {
   permRate: '6.5',
   permAmortYears: '30',
   permIOMonths: '24',
+  // Broker info
+  broker1Name: '',
+  broker2Name: '',
+  brokerPhone1: '',
+  brokerPhone2: '',
+  brokerEmail1: '',
+  brokerEmail2: '',
+  brokerageName: '',
+  totalSF: '',
+  yearBuilt: '',
+  city: '',
+  state: '',
+  msaName: '',
   // Refi sizing
   refiCapRate: '7',
   refiDSCR: '1.30',
@@ -899,6 +932,19 @@ export default function Proforma() {
         const data = JSON.parse(decodeURIComponent(router.query.data as string))
         setInputs(prev => ({
           ...prev, ...data,
+          // Map extracted broker fields
+          broker1Name: data.broker1Name ?? prev.broker1Name,
+          broker2Name: data.broker2Name ?? prev.broker2Name,
+          brokerPhone1: data.brokerPhone1 ?? prev.brokerPhone1,
+          brokerPhone2: data.brokerPhone2 ?? prev.brokerPhone2,
+          brokerEmail1: data.brokerEmail1 ?? prev.brokerEmail1,
+          brokerEmail2: data.brokerEmail2 ?? prev.brokerEmail2,
+          brokerageName: data.brokerageName ?? prev.brokerageName,
+          totalSF: data.totalSF ? String(data.totalSF) : prev.totalSF,
+          yearBuilt: data.yearBuilt ? String(data.yearBuilt) : prev.yearBuilt,
+          city: data.city ?? prev.city,
+          state: data.state ?? prev.state,
+          msaName: data.msaName ?? prev.msaName,
           sellerY1: { ...prev.sellerY1, ...(data.sellerY1 ?? {}) },
           sellerY2: { ...prev.sellerY2, ...(data.sellerY2 ?? {}) },
           sellerY3: { ...prev.sellerY3, ...(data.sellerY3 ?? {}) },
@@ -1093,16 +1139,80 @@ export default function Proforma() {
   }
 
   function handleGenerateLOI() {
+    const offerPriceVal = n(inputs.offerPrice)
+    const bridgeLoan = inputs.leverageType !== 'all-cash'
+      ? Math.round(offerPriceVal * (n(inputs.bridgeLTV, 65) / 100))
+      : 0
+    const annualInterest = bridgeLoan * (n(inputs.bridgeRate, 8) / 100)
+    const lpEquityTotal = equityBreakdown?.total ?? 0
+    const y3NOI = ourYears[2]?.noi ?? 0
+    const y5NOI = ourYears[4]?.noi ?? 0
+    const y3Cap = offerPriceVal > 0 ? ((y3NOI / offerPriceVal) * 100).toFixed(2) : ''
+    const pfCap = offerPriceVal > 0 ? ((y5NOI / offerPriceVal) * 100).toFixed(2) : ''
+
+    // Build broker salutation
+    const b1 = inputs.broker1Name?.split(' ')[0] ?? ''
+    const b2 = inputs.broker2Name?.split(' ')[0] ?? ''
+    const salutation = b1 && b2 ? `Dear ${b1} and ${b2},` : b1 ? `Dear ${b1},` : ''
+
+    // Build waterfall description
+    const waterfall = `${n(inputs.lpPreferredReturn, 8)}% preferred return to LP, then ${inputs.lpSplit}/${inputs.gpSplit} split (LP/GP)`
+
     const data = {
+      // Property
       propertyName: inputs.propertyName,
       address: inputs.address,
-      purchasePrice: inputs.offerPrice || String(Math.round((ourYears[0]?.noi ?? 0) / 0.075)),
+      city: inputs.city,
+      state: inputs.state,
+      msaName: inputs.msaName,
+      dealType: inputs.dealType,
+      units: inputs.totalUnits,
+      sf: inputs.totalSF,
+      yearBuilt: inputs.yearBuilt,
+      occupancy: inputs.currentOccupancy ? `${inputs.currentOccupancy}%` : '',
+      currentAvgRent: inputs.currentAvgRent,
+      marketAvgRent: inputs.marketAvgRent,
+      monthsToStabilization: inputs.monthsToStabilization,
+      // Broker
+      broker1Name: inputs.broker1Name,
+      broker2Name: inputs.broker2Name,
+      brokerPhone1: inputs.brokerPhone1,
+      brokerPhone2: inputs.brokerPhone2,
+      brokerEmail1: inputs.brokerEmail1,
+      brokerEmail2: inputs.brokerEmail2,
+      brokerageName: inputs.brokerageName,
+      salutation,
+      // Deal economics
+      offerPrice: inputs.offerPrice,
+      allInCost: String(Math.round(offerPriceVal + lpEquityTotal)),
+      bridgeLoan: String(bridgeLoan),
+      bridgeRate: inputs.bridgeRate,
+      annualDS: String(Math.round(annualInterest)),
+      interestReserve: String(Math.round(annualInterest)),
+      capexReserve: inputs.capexReserve,
+      // GP/LP
+      gpFeeTotal: String(Math.round(offerPriceVal * (n(inputs.acquisitionFeePct, 2) / 100))),
+      gpFeePct: inputs.acquisitionFeePct,
+      lpEquity: String(Math.round(lpEquityTotal)),
+      waterfall,
+      // Returns
+      goingInCap: irrResult ? (irrResult.going_in_cap * 100).toFixed(2) : '',
+      yr3Cap: y3Cap,
+      pfCap: pfCap,
+      exitCap: inputs.exitCapRate,
+      lpMOIC: waterfallResult ? waterfallResult.lpMOIC.toFixed(2) : '',
+      lpIRR: irrResult ? (irrResult.unlevered_irr * 100).toFixed(1) : '',
+      gpMOIC: waterfallResult ? waterfallResult.gpMOIC.toFixed(2) : '',
+      // Deal terms
+      emd: String(Math.round(offerPriceVal * 0.01)),
+      ddDays: '15',
+      closingDays: '30',
+      // NOI progression for narrative
+      t12NOI: inputs.t12NOI,
       year1NOI: String(Math.round(ourYears[0]?.noi ?? 0)),
       year2NOI: String(Math.round(ourYears[1]?.noi ?? 0)),
-      year3NOI: String(Math.round(ourYears[2]?.noi ?? 0)),
-      goingInCap: irrResult ? String((irrResult.going_in_cap * 100).toFixed(2)) : '',
-      stabilizedCap: irrResult ? String((irrResult.stabilized_cap * 100).toFixed(2)) : '',
-      dealType: inputs.dealType,
+      year3NOI: String(Math.round(y3NOI)),
+      year5NOI: String(Math.round(y5NOI)),
     }
     router.push(`/generate-loi?data=${encodeURIComponent(JSON.stringify(data))}`)
   }
