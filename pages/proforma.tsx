@@ -78,6 +78,13 @@ type ProformaInputs = {
   permRate: string
   permAmortYears: string
   permIOMonths: string
+  // Refi sizing
+  refiCapRate: string
+  refiDSCR: string
+  refiLoanRate: string
+  // Interest reserves
+  interestReserveY2Source: 'closing' | 'operations'
+  interestReserveY3Source: 'closing' | 'operations'
   // Waterfall
   lpPreferredReturn: string
   lpSplit: string
@@ -174,6 +181,10 @@ type WaterfallResult = {
   gpTotal: number
   lpMOIC: number
   gpMOIC: number
+  refiLoanAmount: number
+  refiCashOut: number
+  lpRemainingEquity: number
+  stabilizedValue: number
 }
 
 const EMPTY_SELLER: SellerYear = { revenue: '', expenses: '', noi: '' }
@@ -226,6 +237,13 @@ const EMPTY: ProformaInputs = {
   permRate: '6.5',
   permAmortYears: '30',
   permIOMonths: '24',
+  // Refi sizing
+  refiCapRate: '7',
+  refiDSCR: '1.30',
+  refiLoanRate: '6',
+  // Interest reserves
+  interestReserveY2Source: 'operations',
+  interestReserveY3Source: 'operations',
   // Waterfall
   lpPreferredReturn: '8',
   lpSplit: '85',
@@ -257,9 +275,13 @@ function computeEquityBreakdown(inputs: ProformaInputs, loanAmount: number, leve
   const closingCosts = price * (n(inputs.closingCostsPct) / 100)
   const brokerFee = price * (n(inputs.brokerFeePct) / 100)
   const acquisitionFee = price * (n(inputs.acquisitionFeePct) / 100)
-  const prepaidInterest = leverageType === 'levered'
-    ? loanAmount * (n(inputs.bridgeRate) / 100) * (n(inputs.bridgePrepaidInterestMonths) / 12)
-    : 0
+  // Year 1 interest reserve — always funded at closing (hard cost)
+  const annualInterest = leverageType === 'levered' ? loanAmount * (n(inputs.bridgeRate) / 100) : 0
+  const prepaidInterestY1 = annualInterest
+  // Year 2 and Year 3 reserves — only add to closing equity if toggled to "closing"
+  const prepaidInterestY2 = leverageType === 'levered' && inputs.interestReserveY2Source === 'closing' ? annualInterest : 0
+  const prepaidInterestY3 = leverageType === 'levered' && inputs.interestReserveY3Source === 'closing' ? annualInterest : 0
+  const prepaidInterest = prepaidInterestY1 + prepaidInterestY2 + prepaidInterestY3
   const initialRepairs = n(inputs.initialRepairs)
   const leaseUpReserve = n(inputs.leaseUpReserve)
   const workingCapital = n(inputs.workingCapital)
@@ -268,31 +290,65 @@ function computeEquityBreakdown(inputs: ProformaInputs, loanAmount: number, leve
   return { downPayment, closingCosts, brokerFee, acquisitionFee, prepaidInterest, initialRepairs, leaseUpReserve, workingCapital, capexReserve, total }
 }
 
-function computeWaterfall(inputs: ProformaInputs, equityBreakdown: EquityBreakdown, exitValue: number, loanAmount: number, leverageType: LeverageType, loanType: LoanType): WaterfallResult {
+function computeWaterfall(
+  inputs: ProformaInputs,
+  equityBreakdown: EquityBreakdown,
+  exitValue: number,
+  loanAmount: number,
+  leverageType: LeverageType,
+  loanType: LoanType,
+  noiYears: number[]
+): WaterfallResult {
   const price = n(inputs.offerPrice)
   const acquisitionFee = price * (n(inputs.acquisitionFeePct) / 100)
-  const refiLoanAmount = leverageType === 'levered' && loanType === 'bridge-to-perm'
-    ? exitValue * (n(inputs.refiLTV) / 100)
-    : loanAmount
+
+  // ── Refi sizing (bridge-to-perm only) ──
+  // Stabilized value = Year 3 NOI / 7% cap rate
+  // Max loan = lower of: (LTV cap) vs (DSCR test: Year3NOI / 1.30 / 6%)
+  let refiLoanAmount = loanAmount // default: bridge loan carries to exit
+  let refiCashOut = 0
+  let refiFeePaid = 0
+
+  if (leverageType === 'levered' && loanType === 'bridge-to-perm') {
+    const y3NOI = noiYears[2] ?? noiYears[noiYears.length - 1] ?? 0
+    const refiCapRate = n(inputs.refiCapRate, 7) / 100
+    const refiDSCR = n(inputs.refiDSCR, 1.30)
+    const refiLoanRate = n(inputs.refiLoanRate, 6) / 100
+    const stabilizedValue = refiCapRate > 0 ? y3NOI / refiCapRate : 0
+    const ltvMaxLoan = stabilizedValue * (n(inputs.refiLTV) / 100)
+    const dscrMaxLoan = refiLoanRate > 0 ? y3NOI / refiDSCR / refiLoanRate : 0
+    refiLoanAmount = Math.min(ltvMaxLoan, dscrMaxLoan)
+    refiCashOut = Math.max(0, refiLoanAmount - loanAmount)
+    refiFeePaid = refiLoanAmount * (n(inputs.refiFeePct) / 100)
+  }
+
+  // ── LP equity after refi cash out ──
+  const lpEquityAtClosing = equityBreakdown.total
+  const lpRemainingEquity = Math.max(0, lpEquityAtClosing - refiCashOut)
+
+  // ── Exit waterfall ──
   const debtPayoff = leverageType === 'levered' ? refiLoanAmount : 0
   const sellingCosts = exitValue * 0.02
   const netProceeds = exitValue - debtPayoff - sellingCosts
-  const lpCapitalInvested = equityBreakdown.total
-  const lpPref = lpCapitalInvested * (n(inputs.lpPreferredReturn) / 100) * (n(inputs.exitMonth) / 12)
-  const lpCapitalReturn = Math.min(netProceeds, lpCapitalInvested)
-  const afterCapital = Math.max(0, netProceeds - lpCapitalInvested)
+
+  // ① LP gets remaining capital back first
+  const lpCapitalReturn = Math.min(netProceeds, lpRemainingEquity)
+  const afterCapital = Math.max(0, netProceeds - lpRemainingEquity)
+
+  // ② LP gets 8% preferred return on ORIGINAL equity over full hold
+  const lpPref = lpEquityAtClosing * (n(inputs.lpPreferredReturn) / 100) * (n(inputs.exitMonth) / 12)
   const lpPreferredPaid = Math.min(afterCapital, lpPref)
   const afterPref = Math.max(0, afterCapital - lpPreferredPaid)
+
+  // ③ Split remaining
   const lpSplitPct = n(inputs.lpSplit) / 100
   const gpSplitPct = n(inputs.gpSplit) / 100
   const lpShare = afterPref * lpSplitPct
   const gpShare = afterPref * gpSplitPct
-  const refiFeePaid = leverageType === 'levered' && loanType === 'bridge-to-perm'
-    ? refiLoanAmount * (n(inputs.refiFeePct) / 100)
-    : 0
-  const lpTotal = lpCapitalReturn + lpPreferredPaid + lpShare
+
+  const lpTotal = lpCapitalReturn + lpPreferredPaid + lpShare + refiCashOut
   const gpTotal = gpShare + acquisitionFee + refiFeePaid
-  const lpMOIC = lpCapitalInvested > 0 ? lpTotal / lpCapitalInvested : 0
+  const lpMOIC = lpEquityAtClosing > 0 ? lpTotal / lpEquityAtClosing : 0
   const gpMOIC = acquisitionFee > 0 ? gpTotal / acquisitionFee : 0
 
   return {
@@ -310,6 +366,12 @@ function computeWaterfall(inputs: ProformaInputs, equityBreakdown: EquityBreakdo
     gpTotal,
     lpMOIC,
     gpMOIC,
+    refiLoanAmount,
+    refiCashOut,
+    lpRemainingEquity,
+    stabilizedValue: leverageType === 'levered' && loanType === 'bridge-to-perm' && noiYears[2]
+      ? (noiYears[2] ?? 0) / (n(inputs.refiCapRate, 7) / 100)
+      : 0,
   }
 }
 
@@ -376,13 +438,17 @@ function EquityBreakdownBox({ breakdown, leverageType, loanType, inputs }: {
   loanType: LoanType
   inputs: ProformaInputs
 }) {
+  const bridgeLoanAmount = leverageType === 'levered' ? n(inputs.offerPrice) * (n(inputs.bridgeLTV) / 100) : 0
+  const annualInterest = bridgeLoanAmount * (n(inputs.bridgeRate) / 100)
   const rows = [
     { label: 'Down Payment', value: breakdown.downPayment, note: leverageType === 'all-cash' ? 'All cash — no debt' : `Purchase price minus loan` },
     { label: `Closing Costs (${inputs.closingCostsPct}%)`, value: breakdown.closingCosts },
     { label: `Broker Fee (${inputs.brokerFeePct}%)`, value: breakdown.brokerFee },
     { label: `Acquisition Fee (${inputs.acquisitionFeePct}% — GP)`, value: breakdown.acquisitionFee, note: 'Paid to GP at closing' },
     ...(leverageType === 'levered' && loanType === 'bridge-to-perm' ? [
-      { label: `Prepaid Interest (${inputs.bridgePrepaidInterestMonths} months)`, value: breakdown.prepaidInterest, note: 'Year 1 interest funded by LP at closing' }
+      { label: 'Year 1 Interest Reserve (hard)', value: annualInterest, note: 'Always funded at closing by LP' },
+      { label: `Year 2 Interest Reserve`, value: inputs.interestReserveY2Source === 'closing' ? annualInterest : 0, note: inputs.interestReserveY2Source === 'closing' ? 'Funded at closing' : 'From operations (contingency)' },
+      { label: `Year 3 Interest Reserve`, value: inputs.interestReserveY3Source === 'closing' ? annualInterest : 0, note: inputs.interestReserveY3Source === 'closing' ? 'Funded at closing' : 'From operations (contingency)' },
     ] : []),
     { label: 'Initial Repairs', value: breakdown.initialRepairs },
     { label: 'Lease-Up Reserve', value: breakdown.leaseUpReserve },
@@ -936,7 +1002,7 @@ export default function Proforma() {
           })
 
           // Compute waterfall
-          const wf = computeWaterfall(inputs, breakdown, exitValue, loanAmount, leverageType, loanType)
+          const wf = computeWaterfall(inputs, breakdown, exitValue, loanAmount, leverageType, loanType, noiYears)
           setWaterfallResult(wf)
         }
       }
@@ -1075,13 +1141,24 @@ export default function Proforma() {
                   <Field label="Guaranteed IO Months" value={inputs.bridgeGuaranteedIOMonths} onChange={v => set('bridgeGuaranteedIOMonths', v)} suffix="months" step="1" note="Minimum IO commitment" />
                   <Field label="Prepaid Interest Months" value={inputs.bridgePrepaidInterestMonths} onChange={v => set('bridgePrepaidInterestMonths', v)} suffix="months" step="1" note="Funded by LP at closing as a closing cost" />
                 </div>
-                <SectionHead title="Refinance (Bridge Payoff)" subtitle="Perm loan sourced at or before stabilization — pays off bridge" />
+                <SectionHead title="Refinance at Month 36" subtitle="Perm loan sized by DSCR test on Year 3 NOI — pays off bridge" />
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <Field label="Refi LTV" value={inputs.refiLTV} onChange={v => set('refiLTV', v)} suffix="% of stabilized value" step="1" />
-                  <Field label="Refi Rate" value={inputs.refiRate} onChange={v => set('refiRate', v)} suffix="%" step="0.25" />
-                  <Field label="Refi Amortization" value={inputs.refiAmortYears} onChange={v => set('refiAmortYears', v)} suffix="years" step="1" />
-                  <Field label="Refi IO Period" value={inputs.refiIOMonths} onChange={v => set('refiIOMonths', v)} suffix="months (optional)" step="6" />
-                  <Field label="GP Refi Fee" value={inputs.refiFeePct} onChange={v => set('refiFeePct', v)} suffix="% of new loan" step="0.25" note="Paid to GP at refi close" />
+                  <Field label="Refi Cap Rate (valuation)" value={inputs.refiCapRate} onChange={v => set('refiCapRate', v)} suffix="%" step="0.25" note="Y3 NOI ÷ this = stabilized value" />
+                  <Field label="Min DSCR" value={inputs.refiDSCR} onChange={v => set('refiDSCR', v)} suffix="x" step="0.05" note="1.30x standard" />
+                  <Field label="Perm Loan Rate (IO)" value={inputs.refiLoanRate} onChange={v => set('refiLoanRate', v)} suffix="%" step="0.25" note="Max loan = Y3 NOI ÷ DSCR ÷ rate" />
+                  <Field label="LTV Cap" value={inputs.refiLTV} onChange={v => set('refiLTV', v)} suffix="% of stabilized value" step="1" note="Takes lower of LTV or DSCR" />
+                  <div>
+                    <label className="label-text">GP Refi Fee</label>
+                    <div className="flex gap-2 mt-1">
+                      {([['1', '1 Point'], ['0.75', '75 bps'], ['0.5', '50 bps'], ['0', 'None']] as const).map(([val, label]) => (
+                        <button key={val} onClick={() => set('refiFeePct', val)}
+                          className={`flex-1 p-2.5 border text-left transition-colors ${inputs.refiFeePct === val ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}>
+                          <div className={`text-sm font-semibold ${inputs.refiFeePct === val ? 'text-gold' : 'text-[#1B2B5E]'}`}>{label}</div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-sm text-dark-muted mt-1">Paid to GP at refi close</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1111,6 +1188,42 @@ export default function Proforma() {
                 <Field label="Working Capital" value={inputs.workingCapital} onChange={v => set('workingCapital', v)} suffix="$" placeholder="50000" />
                 <Field label="CapEx Reserve" value={inputs.capexReserve} onChange={v => set('capexReserve', v)} suffix="$" placeholder="0" />
               </div>
+              {leverageType === 'levered' && loanType === 'bridge-to-perm' && (
+                <div className="mt-5 pt-5 border-t border-dark-border/50">
+                  <div className="text-sm uppercase tracking-widest text-dark-muted font-medium mb-3">Interest Reserve Funding</div>
+                  <p className="text-sm text-dark-muted mb-4">Year 1 is always funded at closing. Years 2 and 3 are typically covered by operations as the property leases up.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm uppercase tracking-widest text-[#1B2B5E] font-medium mb-2">Year 2 Interest Reserve</div>
+                      <div className="flex gap-2">
+                        {(['operations', 'closing'] as const).map(src => (
+                          <button key={src} onClick={() => setInputs(p => ({ ...p, interestReserveY2Source: src }))}
+                            className={`flex-1 p-3 border text-left transition-colors ${inputs.interestReserveY2Source === src ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}>
+                            <div className={`text-sm font-semibold ${inputs.interestReserveY2Source === src ? 'text-gold' : 'text-[#1B2B5E]'}`}>
+                              {src === 'operations' ? 'From Operations' : 'Fund at Closing'}
+                            </div>
+                            <div className="text-sm text-dark-muted">{src === 'operations' ? 'Contingency only' : 'Added to LP equity'}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm uppercase tracking-widest text-[#1B2B5E] font-medium mb-2">Year 3 Interest Reserve</div>
+                      <div className="flex gap-2">
+                        {(['operations', 'closing'] as const).map(src => (
+                          <button key={src} onClick={() => setInputs(p => ({ ...p, interestReserveY3Source: src }))}
+                            className={`flex-1 p-3 border text-left transition-colors ${inputs.interestReserveY3Source === src ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}>
+                            <div className={`text-sm font-semibold ${inputs.interestReserveY3Source === src ? 'text-gold' : 'text-[#1B2B5E]'}`}>
+                              {src === 'operations' ? 'From Operations' : 'Fund at Closing'}
+                            </div>
+                            <div className="text-sm text-dark-muted">{src === 'operations' ? 'Contingency only' : 'Added to LP equity'}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* GP/LP Waterfall Settings */}
