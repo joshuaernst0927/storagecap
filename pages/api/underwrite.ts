@@ -22,14 +22,27 @@ IMPORTANT: Extract the SELLER'S projected numbers exactly as presented. Do not a
 {
   "propertyName": string,
   "address": string,
+  "city": string,
+  "state": string,
+  "msaName": string,
   "dealType": "value-add" | "stabilized" | "distressed" | null,
 
   "totalUnits": number,
+  "totalSF": number (net rentable square feet — self storage units only, not parking),
+  "yearBuilt": number,
   "currentOccupancy": number (percent, e.g. 85 for 85%),
   "occupancy12MonthsAgo": number (percent, if available),
   "occupancy24MonthsAgo": number (percent, if available),
   "currentAvgRentPerUnit": number (monthly $/unit),
   "marketAvgRentPerUnit": number (monthly $/unit — from market comparables in doc),
+
+  "broker1Name": string (first listing broker full name),
+  "broker2Name": string (second listing broker full name, if any),
+  "brokerPhone1": string,
+  "brokerPhone2": string,
+  "brokerEmail1": string,
+  "brokerEmail2": string,
+  "brokerageName": string (brokerage firm name, e.g. CBRE, Marcus and Millichap),
 
   "t12NOI": number (dollars — trailing 12 month NOI),
   "t3NOI": number (dollars — last 3 months NOI annualized, i.e. multiply by 4),
