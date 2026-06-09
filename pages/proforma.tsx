@@ -135,6 +135,7 @@ type ProformaResult = {
     }
   }
   years: OurYear[]
+  broker_years?: OurYear[]
 }
 
 type IRRResult = {
@@ -318,7 +319,9 @@ function computeWaterfall(
     const ltvMaxLoan = stabilizedValue * (n(inputs.refiLTV) / 100)
     const dscrMaxLoan = refiLoanRate > 0 ? y3NOI / refiDSCR / refiLoanRate : 0
     refiLoanAmount = Math.min(ltvMaxLoan, dscrMaxLoan)
-    refiCashOut = Math.max(0, refiLoanAmount - loanAmount)
+    const grossCashOut = Math.max(0, refiLoanAmount - loanAmount)
+    // Cap refi cash out at LP equity — cannot return more than invested
+    refiCashOut = Math.min(grossCashOut, equityBreakdown.total)
     refiFeePaid = refiLoanAmount * (n(inputs.refiFeePct) / 100)
   }
 
@@ -482,10 +485,51 @@ function EquityBreakdownBox({ breakdown, leverageType, loanType, inputs }: {
   )
 }
 
-function WaterfallBox({ waterfall, inputs }: { waterfall: WaterfallResult; inputs: ProformaInputs }) {
+function WaterfallBox({ waterfall, inputs, leverageType, loanType }: {
+  waterfall: WaterfallResult; inputs: ProformaInputs; leverageType: LeverageType; loanType: LoanType
+}) {
+  const bridgeLoan = n(inputs.offerPrice) * (n(inputs.bridgeLTV) / 100)
   return (
     <div className="border border-dark-border p-6">
       <div className="section-label-sm mb-4">GP / LP Waterfall at Exit</div>
+
+      {/* Refi Event Box */}
+      {leverageType === 'levered' && loanType === 'bridge-to-perm' && waterfall.stabilizedValue > 0 && (
+        <div className="mb-6 p-4 border border-gold/40 bg-gold/5">
+          <div className="section-label-sm mb-3">Refi Event — Month 36</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+            <div>
+              <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Stabilized Value</div>
+              <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.stabilizedValue)}</div>
+              <div className="text-sm text-dark-muted">Y3 NOI ÷ {inputs.refiCapRate}% cap</div>
+            </div>
+            <div>
+              <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">New Perm Loan</div>
+              <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.refiLoanAmount)}</div>
+              <div className="text-sm text-dark-muted">Lower of LTV or DSCR test</div>
+            </div>
+            <div>
+              <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Bridge Payoff</div>
+              <div className="text-base font-semibold text-red-500">({fmt$(bridgeLoan)})</div>
+            </div>
+            <div>
+              <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Cash Out to LP</div>
+              <div className="text-base font-bold text-gold">{fmt$(waterfall.refiCashOut)}</div>
+              <div className="text-sm text-dark-muted">Reduces LP outstanding equity</div>
+            </div>
+          </div>
+          <div className="flex justify-between pt-3 border-t border-gold/20">
+            <div className="text-sm text-dark-muted uppercase tracking-widest">LP Remaining Equity After Refi</div>
+            <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpRemainingEquity)}</div>
+          </div>
+          {waterfall.gpRefiFee > 0 && (
+            <div className="flex justify-between pt-2 border-t border-gold/20 mt-2">
+              <div className="text-sm text-dark-muted uppercase tracking-widest">GP Refi Fee ({inputs.refiFeePct}%)</div>
+              <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpRefiFee)}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2 mb-6">
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
@@ -889,10 +933,11 @@ export default function Proforma() {
         total_units:          n(inputs.totalUnits, 100),
         current_occupancy:    n(inputs.currentOccupancy) / 100,
         rent_uplift_y1:       0.12,
-        rent_growth:          n(inputs.revenueGrowthPostStab, 3) / 100,
-        opex_growth:          n(inputs.expenseGrowth, 3) / 100,
-        tax_insurance_growth: 0.05,
+        rent_growth:          0.04,
+        opex_growth:          0.02,
+        tax_insurance_growth: 0.02,
         mgmt_fee_pct:         0.05,
+        revenue_haircut:      n(revenueHaircut) / 100,
         occ_schedule: [
           Math.min(n(inputs.targetOccupancy, 80) / 100, 0.92),
           Math.min((n(inputs.targetOccupancy, 80) + 6) / 100, 0.92),
@@ -902,10 +947,24 @@ export default function Proforma() {
         ],
       }
 
+      // Build seller_years array from extracted seller data
+      const sellerYearsData = [
+        inputs.sellerY1, inputs.sellerY2, inputs.sellerY3, inputs.sellerY4, inputs.sellerY5
+      ].map(sy => ({
+        revenue: n(sy.revenue),
+        expenses: n(sy.expenses),
+        noi: n(sy.noi),
+      })).filter(sy => sy.revenue > 0 || sy.noi > 0)
+
+      const t12DataWithSeller = {
+        ...t12Data,
+        seller_years: sellerYearsData,
+      }
+
       const proformaRes = await fetch('/api/underwrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'build-proforma', t12_data: t12Data, assumptions }),
+        body: JSON.stringify({ action: 'build-proforma', t12_data: t12DataWithSeller, assumptions }),
       })
       if (!proformaRes.ok) throw new Error('Proforma build failed')
       const proformaData: ProformaResult = await proformaRes.json()
@@ -1342,8 +1401,17 @@ export default function Proforma() {
               <div className="space-y-8">
 
                 {/* Our Proforma */}
+                {/* Chart 1 — CBRE OM */}
+                {proformaResult?.broker_years && proformaResult.broker_years.length > 0 && (
+                  <div className="border border-dark-border p-7">
+                    <SectionHead title="Chart 1 — Broker OM (CBRE)" subtitle="Seller's projected numbers exactly as presented — no adjustments" />
+                    <ProformaTable proformaResult={{ ...proformaResult, years: proformaResult.broker_years }} />
+                  </div>
+                )}
+
+                {/* Chart 2 — Our Underwrite */}
                 <div className="border border-dark-border p-7">
-                  <SectionHead title="Our Underwritten Proforma" subtitle="T-12 actuals → 5-year projection. ESMI management at 5% of EGI." />
+                  <SectionHead title="Chart 2 — Our Underwrite" subtitle={`CBRE revenue haircutted ${revenueHaircut}% — grown at 4% / yr. Expenses grown at 2% / yr.`} />
                   {proformaResult && <ProformaTable proformaResult={proformaResult} />}
                 </div>
 
@@ -1482,7 +1550,7 @@ export default function Proforma() {
 
                 {/* GP/LP Waterfall */}
                 {waterfallResult && (
-                  <WaterfallBox waterfall={waterfallResult} inputs={inputs} />
+                  <WaterfallBox waterfall={waterfallResult} inputs={inputs} leverageType={leverageType} loanType={loanType} />
                 )}
 
                 {/* Next Steps */}
