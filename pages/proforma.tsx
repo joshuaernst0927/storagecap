@@ -98,13 +98,6 @@ type ProformaInputs = {
   city: string
   state: string
   msaName: string
-  // Refi sizing
-  refiCapRate: string
-  refiDSCR: string
-  refiLoanRate: string
-  // Interest reserves
-  interestReserveY2Source: 'closing' | 'operations'
-  interestReserveY3Source: 'closing' | 'operations'
   // Waterfall
   lpPreferredReturn: string
   lpSplit: string
