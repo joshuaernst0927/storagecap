@@ -1,5 +1,6 @@
 import Head from 'next/head'
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import AuthGate from '@/components/AuthGate'
 
 type LOIForm = {
@@ -22,10 +23,10 @@ const EMPTY: LOIForm = {
   property_name: '', property_address: '', property_description: '',
   asset_type: 'Self-Storage', units: '', sf: '', year_built: '', occupancy: '',
   broker1_name: '', broker2_name: '', brokerage: '', broker1_phone: '',
-  broker2_phone: '', buyer_broker: '', salutation: '',
+  broker2_phone: '', buyer_broker: 'YEM Acquisitions', salutation: '',
   offer_price: '', all_in_cost: '', bridge_loan: '', bridge_rate: '',
   sofr: '', annual_ds: '', interest_reserve: '', capex_reserve: '',
-  gp_fee_total: '', gp_fee_income: '', gp_coinvest: '', lp_equity: '',
+  gp_fee_total: '', gp_fee_income: '', gp_coinvest: '0', lp_equity: '',
   going_in_cap: '', yr3_cap: '', pf_cap: '',
   lp_moic: '', lp_irr: '', gp_moic: '', gp_irr: '',
   waterfall: '', emd: '', dd_days: '15', closing_days: '30',
@@ -33,9 +34,8 @@ const EMPTY: LOIForm = {
   breakeven_occ: '', exit_cap: '',
 }
 
-function Field({ label, name, form, onChange, type = 'text', placeholder = '', prefix, suffix, span }: {
-  label: string; name: keyof LOIForm; form: LOIForm
-  onChange: (name: keyof LOIForm, value: string) => void
+function Field({ label, value, onChange, type = 'text', placeholder = '', prefix, suffix, span }: {
+  label: string; value: string; onChange: (v: string) => void
   type?: 'text' | 'number' | 'date' | 'tel'
   placeholder?: string; prefix?: string; suffix?: string
   span?: 'full' | 'half'
@@ -46,25 +46,27 @@ function Field({ label, name, form, onChange, type = 'text', placeholder = '', p
       {prefix || suffix ? (
         <div className="flex items-stretch">
           {prefix && <span className="flex items-center px-3 bg-dark-surface border border-r-0 border-dark-border text-dark-muted" style={{ fontSize: '1rem' }}>{prefix}</span>}
-          <input type={type} className="input-field flex-1 min-w-0" style={{ borderRadius: 0 }} value={form[name]} onChange={e => onChange(name, e.target.value)} placeholder={placeholder} autoComplete="off" />
+          <input type={type} className="input-field flex-1 min-w-0" style={{ borderRadius: 0 }} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} autoComplete="off" />
           {suffix && <span className="flex items-center px-3 bg-dark-surface border border-l-0 border-dark-border text-dark-muted" style={{ fontSize: '1rem' }}>{suffix}</span>}
         </div>
       ) : (
-        <input type={type} className="input-field" value={form[name]} onChange={e => onChange(name, e.target.value)} placeholder={placeholder} autoComplete="off" />
+        <input type={type} className="input-field" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} autoComplete="off" />
       )}
     </div>
   )
 }
 
-function TextareaField({ label, name, form, onChange, rows = 4, placeholder = '' }: {
-  label: string; name: keyof LOIForm; form: LOIForm
-  onChange: (name: keyof LOIForm, value: string) => void
-  rows?: number; placeholder?: string
+function TextareaField({ label, value, onChange, rows = 4, placeholder = '', loading = false }: {
+  label: string; value: string; onChange: (v: string) => void
+  rows?: number; placeholder?: string; loading?: boolean
 }) {
   return (
     <div>
-      <label className="label-text">{label}</label>
-      <textarea className="input-field resize-none" rows={rows} value={form[name]} onChange={e => onChange(name, e.target.value)} placeholder={placeholder} autoComplete="off" />
+      <label className="label-text flex items-center gap-2">
+        {label}
+        {loading && <span className="text-gold text-xs animate-pulse">Generating...</span>}
+      </label>
+      <textarea className="input-field resize-none" rows={rows} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} autoComplete="off" />
     </div>
   )
 }
@@ -83,12 +85,127 @@ function Card({ children }: { children: React.ReactNode }) {
 }
 
 function LOIContent() {
+  const router = useRouter()
   const [form, setForm] = useState<LOIForm>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
+  const [generatingNarrative, setGeneratingNarrative] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
   const set = (name: keyof LOIForm, value: string) => setForm(f => ({ ...f, [name]: value }))
+
+  // Auto-populate from proforma data passed via URL
+  useEffect(() => {
+    if (!router.query.data) return
+    try {
+      const data = JSON.parse(decodeURIComponent(router.query.data as string))
+      setForm(prev => ({
+        ...prev,
+        property_name: data.propertyName || prev.property_name,
+        property_address: data.address || prev.property_address,
+        asset_type: 'Self-Storage',
+        units: data.units || prev.units,
+        sf: data.sf || prev.sf,
+        year_built: data.yearBuilt || prev.year_built,
+        occupancy: data.occupancy || prev.occupancy,
+        broker1_name: data.broker1Name || prev.broker1_name,
+        broker2_name: data.broker2Name || prev.broker2_name,
+        brokerage: data.brokerageName || prev.brokerage,
+        broker1_phone: data.brokerPhone1 || prev.broker1_phone,
+        broker2_phone: data.brokerPhone2 || prev.broker2_phone,
+        salutation: data.salutation || prev.salutation,
+        offer_price: data.offerPrice || prev.offer_price,
+        all_in_cost: data.allInCost || prev.all_in_cost,
+        bridge_loan: data.bridgeLoan || prev.bridge_loan,
+        bridge_rate: data.bridgeRate || prev.bridge_rate,
+        annual_ds: data.annualDS || prev.annual_ds,
+        interest_reserve: data.interestReserve || prev.interest_reserve,
+        capex_reserve: data.capexReserve || prev.capex_reserve,
+        gp_fee_total: data.gpFeeTotal || prev.gp_fee_total,
+        gp_fee_income: data.gpFeePct || prev.gp_fee_income,
+        lp_equity: data.lpEquity || prev.lp_equity,
+        waterfall: data.waterfall || prev.waterfall,
+        going_in_cap: data.goingInCap || prev.going_in_cap,
+        yr3_cap: data.yr3Cap || prev.yr3_cap,
+        pf_cap: data.pfCap || prev.pf_cap,
+        exit_cap: data.exitCap || prev.exit_cap,
+        lp_moic: data.lpMOIC || prev.lp_moic,
+        lp_irr: data.lpIRR || prev.lp_irr,
+        gp_moic: data.gpMOIC || prev.gp_moic,
+        emd: data.emd || prev.emd,
+      }))
+
+      // Auto-generate narrative and rent strategy if we have enough data
+      if (data.propertyName && data.t12NOI && data.year3NOI) {
+        generateNarratives(data)
+      }
+    } catch { /* ignore */ }
+  }, [router.query.data])
+
+  async function generateNarratives(data: Record<string, string>) {
+    setGeneratingNarrative(true)
+    try {
+      // Fetch live SOFR rate
+      let sofrRate = ''
+      try {
+        const sofrRes = await fetch('https://api.stlouisfed.org/fred/series/observations?series_id=SOFR&api_key=&file_type=json&limit=1&sort_order=desc')
+        if (sofrRes.ok) {
+          const sofrData = await sofrRes.json()
+          sofrRate = sofrData?.observations?.[0]?.value ?? ''
+        }
+      } catch { /* ignore */ }
+
+      if (sofrRate) setForm(f => ({ ...f, sofr: sofrRate }))
+
+      const prompt = `You are writing a professional real estate Letter of Intent for a self-storage acquisition. Generate two sections based on these deal metrics:
+
+Property: ${data.propertyName} at ${data.address}
+Market: ${data.city || ''}, ${data.state || ''} ${data.msaName ? `(${data.msaName} MSA)` : ''}
+Deal Type: ${data.dealType || 'value-add'}
+Units: ${data.units}
+SF: ${data.sf}
+Current Occupancy: ${data.occupancy}
+Target Occupancy: 92%
+Current Avg Rent: $${data.currentAvgRent}/unit/mo
+Market Avg Rent: $${data.marketAvgRent}/unit/mo
+Months to Stabilization: ${data.monthsToStabilization}
+T-12 NOI: $${Number(data.t12NOI).toLocaleString()}
+Year 1 NOI: $${Number(data.year1NOI).toLocaleString()}
+Year 3 NOI: $${Number(data.year3NOI).toLocaleString()}
+Year 5 NOI: $${Number(data.year5NOI).toLocaleString()}
+Offer Price: $${Number(data.offerPrice).toLocaleString()}
+Going-In Cap: ${data.goingInCap}%
+
+Return ONLY a JSON object with exactly two fields, no markdown:
+{
+  "underwriting_narrative": "3-4 sentence paragraph describing the investment thesis, market dynamics, value-add levers (occupancy uplift + rent to market), and NOI growth trajectory",
+  "rent_strategy": "2-3 sentence paragraph describing the post-close rent optimization plan including timeline, rate adjustment approach, and occupancy targets"
+}`
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      })
+
+      if (res.ok) {
+        const aiData = await res.json()
+        const text = aiData.content?.[0]?.text ?? ''
+        const clean = text.replace(/```json|```/g, '').trim()
+        const parsed = JSON.parse(clean)
+        setForm(f => ({
+          ...f,
+          underwriting_narrative: parsed.underwriting_narrative || f.underwriting_narrative,
+          rent_strategy: parsed.rent_strategy || f.rent_strategy,
+        }))
+      }
+    } catch { /* ignore */ }
+    finally { setGeneratingNarrative(false) }
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault(); setSubmitting(true); setError(''); setSuccess(false)
@@ -111,7 +228,6 @@ function LOIContent() {
 
   return (
     <>
-      {/* Hero */}
       <section className="relative overflow-hidden border-b border-dark-border" style={{ backgroundColor: '#1B2B5E' }}>
         <div className="relative z-10 page-hero">
           <div className="section-label" style={{ color: '#D4A843' }}>Deal Execution</div>
@@ -119,7 +235,7 @@ function LOIContent() {
             Generate Letter<br /><em style={{ color: '#D4A843' }}>of Intent.</em>
           </h1>
           <p className="leading-relaxed" style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.7)', maxWidth: '520px' }}>
-            Fill in the deal parameters below to generate a professional, ready-to-send LOI PDF.
+            All fields auto-populated from your proforma. Review, adjust, and generate.
           </p>
         </div>
       </section>
@@ -132,59 +248,59 @@ function LOIContent() {
             <Card>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
                 <SectionHeader label="Property Details" />
-                <Field label="LOI Date" name="date" form={form} onChange={set} type="date" />
-                <Field label="Property Name" name="property_name" form={form} onChange={set} placeholder="ABC Self Storage" />
-                <Field label="Asset Type" name="asset_type" form={form} onChange={set} placeholder="Self-Storage" />
-                <Field label="Year Built" name="year_built" form={form} onChange={set} type="number" placeholder="1998" />
-                <Field label="Property Address" name="property_address" form={form} onChange={set} placeholder="123 Main St, Tampa, FL 33601" span="full" />
+                <Field label="LOI Date" value={form.date} onChange={v => set('date', v)} type="date" />
+                <Field label="Property Name" value={form.property_name} onChange={v => set('property_name', v)} placeholder="ABC Self Storage" />
+                <Field label="Asset Type" value={form.asset_type} onChange={v => set('asset_type', v)} placeholder="Self-Storage" />
+                <Field label="Year Built" value={form.year_built} onChange={v => set('year_built', v)} type="number" placeholder="1998" />
+                <Field label="Property Address" value={form.property_address} onChange={v => set('property_address', v)} placeholder="123 Main St, Tampa, FL 33601" span="full" />
                 <div className="col-span-full">
-                  <TextareaField label="Property Description" name="property_description" form={form} onChange={set} rows={3} placeholder="Brief description of the property..." />
+                  <TextareaField label="Property Description" value={form.property_description} onChange={v => set('property_description', v)} rows={3} placeholder="Brief description of the property..." />
                 </div>
-                <Field label="Total Units" name="units" form={form} onChange={set} type="number" placeholder="350" />
-                <Field label="Total SF" name="sf" form={form} onChange={set} type="number" placeholder="42000" />
-                <Field label="Current Occupancy" name="occupancy" form={form} onChange={set} placeholder="82%" />
+                <Field label="Total Units" value={form.units} onChange={v => set('units', v)} type="number" placeholder="350" />
+                <Field label="Total SF" value={form.sf} onChange={v => set('sf', v)} type="number" placeholder="42000" />
+                <Field label="Current Occupancy" value={form.occupancy} onChange={v => set('occupancy', v)} placeholder="82%" />
               </div>
             </Card>
 
             {/* Broker Information */}
             <Card>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
-                <SectionHeader label="Broker Information" />
-                <Field label="Broker 1 Name" name="broker1_name" form={form} onChange={set} placeholder="John Smith" />
-                <Field label="Broker 2 Name" name="broker2_name" form={form} onChange={set} placeholder="Jane Doe" />
-                <Field label="Brokerage" name="brokerage" form={form} onChange={set} placeholder="Marcus & Millichap" />
-                <Field label="Salutation" name="salutation" form={form} onChange={set} placeholder="Dear John and Jane," />
-                <Field label="Broker 1 Phone" name="broker1_phone" form={form} onChange={set} type="tel" placeholder="555-123-4567" />
-                <Field label="Broker 2 Phone" name="broker2_phone" form={form} onChange={set} type="tel" placeholder="555-234-5678" />
-                <Field label="Buyer Broker" name="buyer_broker" form={form} onChange={set} placeholder="YEM Acquisitions" span="half" />
+                <SectionHeader label="Broker Information" sub="Auto-populated from uploaded OM" />
+                <Field label="Broker 1 Name" value={form.broker1_name} onChange={v => set('broker1_name', v)} placeholder="Nick Walker" />
+                <Field label="Broker 2 Name" value={form.broker2_name} onChange={v => set('broker2_name', v)} placeholder="Adam Alexander" />
+                <Field label="Brokerage" value={form.brokerage} onChange={v => set('brokerage', v)} placeholder="CBRE" />
+                <Field label="Salutation" value={form.salutation} onChange={v => set('salutation', v)} placeholder="Dear Nick and Adam," />
+                <Field label="Broker 1 Phone" value={form.broker1_phone} onChange={v => set('broker1_phone', v)} type="tel" placeholder="213-613-3223" />
+                <Field label="Broker 2 Phone" value={form.broker2_phone} onChange={v => set('broker2_phone', v)} type="tel" placeholder="213-613-3224" />
+                <Field label="Buyer Broker" value={form.buyer_broker} onChange={v => set('buyer_broker', v)} placeholder="YEM Acquisitions" span="half" />
               </div>
             </Card>
 
             {/* Deal Economics */}
             <Card>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
-                <SectionHeader label="Deal Economics" sub="All dollar figures in USD" />
-                <Field label="Offer Price" name="offer_price" form={form} onChange={set} prefix="$" placeholder="4,200,000" />
-                <Field label="All-In Cost" name="all_in_cost" form={form} onChange={set} prefix="$" placeholder="4,500,000" />
-                <Field label="Bridge Loan" name="bridge_loan" form={form} onChange={set} prefix="$" placeholder="2,730,000" />
-                <Field label="Bridge Rate" name="bridge_rate" form={form} onChange={set} suffix="%" placeholder="8.50" />
-                <Field label="SOFR" name="sofr" form={form} onChange={set} suffix="%" placeholder="5.33" />
-                <Field label="Annual Debt Service" name="annual_ds" form={form} onChange={set} prefix="$" placeholder="232,000" />
-                <Field label="Interest Reserve" name="interest_reserve" form={form} onChange={set} prefix="$" placeholder="175,000" />
-                <Field label="CapEx Reserve" name="capex_reserve" form={form} onChange={set} prefix="$" placeholder="50,000" />
+                <SectionHeader label="Deal Economics" sub="Auto-populated from proforma" />
+                <Field label="Offer Price" value={form.offer_price} onChange={v => set('offer_price', v)} prefix="$" placeholder="4,500,000" />
+                <Field label="All-In Cost" value={form.all_in_cost} onChange={v => set('all_in_cost', v)} prefix="$" placeholder="4,800,000" />
+                <Field label="Bridge Loan" value={form.bridge_loan} onChange={v => set('bridge_loan', v)} prefix="$" placeholder="2,925,000" />
+                <Field label="Bridge Rate" value={form.bridge_rate} onChange={v => set('bridge_rate', v)} suffix="%" placeholder="8.00" />
+                <Field label="SOFR" value={form.sofr} onChange={v => set('sofr', v)} suffix="%" placeholder="5.33" />
+                <Field label="Annual Debt Service" value={form.annual_ds} onChange={v => set('annual_ds', v)} prefix="$" placeholder="234,000" />
+                <Field label="Interest Reserve" value={form.interest_reserve} onChange={v => set('interest_reserve', v)} prefix="$" placeholder="234,000" />
+                <Field label="CapEx Reserve" value={form.capex_reserve} onChange={v => set('capex_reserve', v)} prefix="$" placeholder="50,000" />
               </div>
             </Card>
 
             {/* GP / LP Structure */}
             <Card>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
-                <SectionHeader label="GP / LP Structure" />
-                <Field label="GP Fee (Total)" name="gp_fee_total" form={form} onChange={set} prefix="$" placeholder="84,000" />
-                <Field label="GP Fee (% of Income)" name="gp_fee_income" form={form} onChange={set} suffix="%" placeholder="3.0" />
-                <Field label="GP Co-Invest" name="gp_coinvest" form={form} onChange={set} suffix="%" placeholder="10" />
-                <Field label="LP Equity" name="lp_equity" form={form} onChange={set} prefix="$" placeholder="1,545,000" />
+                <SectionHeader label="GP / LP Structure" sub="Auto-populated from proforma waterfall" />
+                <Field label="GP Fee (Total $)" value={form.gp_fee_total} onChange={v => set('gp_fee_total', v)} prefix="$" placeholder="90,000" />
+                <Field label="GP Fee (% of purchase)" value={form.gp_fee_income} onChange={v => set('gp_fee_income', v)} suffix="%" placeholder="2.0" />
+                <Field label="GP Co-Invest" value={form.gp_coinvest} onChange={v => set('gp_coinvest', v)} suffix="%" placeholder="0" />
+                <Field label="LP Equity" value={form.lp_equity} onChange={v => set('lp_equity', v)} prefix="$" placeholder="1,800,000" />
                 <div className="col-span-full">
-                  <TextareaField label="Waterfall Structure" name="waterfall" form={form} onChange={set} rows={3} placeholder="e.g. 8% pref → 80/20 to LP → 70/30 above 15% IRR" />
+                  <TextareaField label="Waterfall Structure" value={form.waterfall} onChange={v => set('waterfall', v)} rows={2} placeholder="8% preferred return to LP, then 85/15 split (LP/GP)" />
                 </div>
               </div>
             </Card>
@@ -192,15 +308,15 @@ function LOIContent() {
             {/* Projected Returns */}
             <Card>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
-                <SectionHeader label="Projected Returns" />
-                <Field label="Going-In Cap Rate" name="going_in_cap" form={form} onChange={set} suffix="%" placeholder="6.2" />
-                <Field label="Year 3 Cap Rate" name="yr3_cap" form={form} onChange={set} suffix="%" placeholder="7.1" />
-                <Field label="Pro Forma Cap Rate" name="pf_cap" form={form} onChange={set} suffix="%" placeholder="8.4" />
-                <Field label="Exit Cap Rate" name="exit_cap" form={form} onChange={set} suffix="%" placeholder="6.5" />
-                <Field label="LP MoIC" name="lp_moic" form={form} onChange={set} suffix="x" placeholder="1.85" />
-                <Field label="LP IRR" name="lp_irr" form={form} onChange={set} suffix="%" placeholder="14.2" />
-                <Field label="GP MoIC" name="gp_moic" form={form} onChange={set} suffix="x" placeholder="2.30" />
-                <Field label="GP IRR" name="gp_irr" form={form} onChange={set} suffix="%" placeholder="19.8" />
+                <SectionHeader label="Projected Returns" sub="Auto-populated from proforma IRR engine" />
+                <Field label="Going-In Cap Rate" value={form.going_in_cap} onChange={v => set('going_in_cap', v)} suffix="%" placeholder="4.9" />
+                <Field label="Year 3 Cap Rate" value={form.yr3_cap} onChange={v => set('yr3_cap', v)} suffix="%" placeholder="8.0" />
+                <Field label="Pro Forma Cap Rate" value={form.pf_cap} onChange={v => set('pf_cap', v)} suffix="%" placeholder="9.2" />
+                <Field label="Exit Cap Rate" value={form.exit_cap} onChange={v => set('exit_cap', v)} suffix="%" placeholder="7.25" />
+                <Field label="LP MoIC" value={form.lp_moic} onChange={v => set('lp_moic', v)} suffix="x" placeholder="1.85" />
+                <Field label="LP IRR" value={form.lp_irr} onChange={v => set('lp_irr', v)} suffix="%" placeholder="14.2" />
+                <Field label="GP MoIC" value={form.gp_moic} onChange={v => set('gp_moic', v)} suffix="x" placeholder="2.30" />
+                <Field label="GP IRR" value={form.gp_irr} onChange={v => set('gp_irr', v)} suffix="%" placeholder="19.8" />
               </div>
             </Card>
 
@@ -208,10 +324,10 @@ function LOIContent() {
             <Card>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
                 <SectionHeader label="Deal Terms" />
-                <Field label="Earnest Money Deposit" name="emd" form={form} onChange={set} prefix="$" placeholder="50,000" />
-                <Field label="Due Diligence (Days)" name="dd_days" form={form} onChange={set} type="number" placeholder="15" />
-                <Field label="Closing (Days)" name="closing_days" form={form} onChange={set} type="number" placeholder="30" />
-                <Field label="Offer Expiry" name="offer_expiry" form={form} onChange={set} type="date" />
+                <Field label="Earnest Money Deposit" value={form.emd} onChange={v => set('emd', v)} prefix="$" placeholder="45,000" />
+                <Field label="Due Diligence (Days)" value={form.dd_days} onChange={v => set('dd_days', v)} type="number" placeholder="15" />
+                <Field label="Closing (Days)" value={form.closing_days} onChange={v => set('closing_days', v)} type="number" placeholder="30" />
+                <Field label="Offer Expiry" value={form.offer_expiry} onChange={v => set('offer_expiry', v)} type="date" />
               </div>
             </Card>
 
@@ -219,11 +335,27 @@ function LOIContent() {
             <Card>
               <div className="pb-2 border-b border-dark-border mb-6">
                 <div className="section-label">Underwriting Narrative</div>
-                <p style={{ fontSize: '0.9rem', color: '#6B6860', marginTop: '4px' }}>These fields populate the LOI narrative sections.</p>
+                <p style={{ fontSize: '0.9rem', color: '#6B6860', marginTop: '4px' }}>
+                  Auto-generated from deal data. Edit as needed before generating PDF.
+                </p>
               </div>
               <div className="space-y-5">
-                <TextareaField label="Underwriting Narrative" name="underwriting_narrative" form={form} onChange={set} rows={6} placeholder="Describe the investment thesis, market dynamics, and rationale for this offer..." />
-                <TextareaField label="Rent Strategy" name="rent_strategy" form={form} onChange={set} rows={4} placeholder="Describe the planned rent adjustment strategy post-close..." />
+                <TextareaField
+                  label="Underwriting Narrative"
+                  value={form.underwriting_narrative}
+                  onChange={v => set('underwriting_narrative', v)}
+                  rows={6}
+                  loading={generatingNarrative}
+                  placeholder="Auto-generating from deal data..."
+                />
+                <TextareaField
+                  label="Rent Strategy"
+                  value={form.rent_strategy}
+                  onChange={v => set('rent_strategy', v)}
+                  rows={4}
+                  loading={generatingNarrative}
+                  placeholder="Auto-generating from deal data..."
+                />
                 <div style={{ maxWidth: '280px' }}>
                   <label className="label-text">Breakeven Occupancy</label>
                   <div className="flex items-stretch">
@@ -238,7 +370,7 @@ function LOIContent() {
             <div className="border border-dark-border bg-dark-surface px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <div className="font-sans uppercase tracking-widest font-semibold" style={{ fontSize: '0.85rem', color: '#1B2B5E' }}>Ready to Generate</div>
-                <p style={{ fontSize: '0.9rem', color: '#6B6860', marginTop: '4px' }}>PDF will download automatically when complete. Generation takes 10–20 seconds.</p>
+                <p style={{ fontSize: '0.9rem', color: '#6B6860', marginTop: '4px' }}>PDF will download automatically. Generation takes 10–20 seconds.</p>
               </div>
               <div className="flex flex-col items-end gap-2">
                 {error && <p className="text-red-600 bg-red-50 border border-red-200 px-3 py-2 max-w-sm text-right" style={{ fontSize: '0.9rem' }}>{error}</p>}
