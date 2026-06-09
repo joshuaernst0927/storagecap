@@ -1133,7 +1133,7 @@ export default function Proforma() {
 
   function handleGenerateLOI() {
     const offerPriceVal = n(inputs.offerPrice)
-    const bridgeLoan = inputs.leverageType !== 'all-cash'
+    const bridgeLoan = leverageType !== 'all-cash'
       ? Math.round(offerPriceVal * (n(inputs.bridgeLTV, 65) / 100))
       : 0
     const annualInterest = bridgeLoan * (n(inputs.bridgeRate, 8) / 100)
