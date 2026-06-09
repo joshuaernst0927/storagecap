@@ -562,7 +562,7 @@ export default function Proforma() {
         const noiYears = proformaData.years.map((y: OurYear) => y.noi)
         const irrBody = {
           action: 'calc-irr-v2',
-          purchase_price: effectivePurchasePrice,
+          purchase_price: offerPriceVal,
           noi_years: noiYears,
           exit_cap_rate: n(inputs.exitCapRate, 7.25) / 100,
           selling_costs_pct: 0.02,
