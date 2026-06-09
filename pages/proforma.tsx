@@ -1194,7 +1194,7 @@ export default function Proforma() {
       pfCap: pfCap,
       exitCap: inputs.exitCapRate,
       lpMOIC: waterfallResult ? waterfallResult.lpMOIC.toFixed(2) : '',
-      lpIRR: irrResult ? (irrResult.unlevered_irr * 100).toFixed(1) : '',
+      lpIRR: irrResult ? ((irrResult.unlevered_irr ?? 0) * 100).toFixed(1) : '',
       gpMOIC: waterfallResult ? waterfallResult.gpMOIC.toFixed(2) : '',
       // Deal terms
       emd: String(Math.round(offerPriceVal * 0.01)),
