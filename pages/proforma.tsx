@@ -331,7 +331,7 @@ function Field({ label, value, onChange, suffix, note, step, placeholder }: {
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
       />
-      {note && <p className="text-xs text-dark-muted mt-1">{note}</p>}
+      {note && <p className="text-sm text-dark-muted mt-1">{note}</p>}
     </div>
   )
 }
@@ -340,7 +340,7 @@ function SectionHead({ title, subtitle }: { title: string; subtitle?: string }) 
   return (
     <div className="border-b border-dark-border pb-2 mb-5">
       <div className="section-label-sm">{title}</div>
-      {subtitle && <p className="text-dark-muted text-xs mt-0.5">{subtitle}</p>}
+      {subtitle && <p className="text-dark-muted text-sm mt-0.5">{subtitle}</p>}
     </div>
   )
 }
@@ -361,8 +361,8 @@ function Toggle({ label, options, value, onChange }: {
             onClick={() => onChange(opt.value)}
             className={`flex-1 p-3 border text-left transition-colors duration-150 min-w-[120px] ${value === opt.value ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}
           >
-            <div className={`text-xs font-semibold mb-0.5 ${value === opt.value ? 'text-gold' : 'text-[#1B2B5E]'}`}>{opt.label}</div>
-            {opt.desc && <div className="text-xs text-dark-muted">{opt.desc}</div>}
+            <div className={`text-sm font-semibold mb-0.5 ${value === opt.value ? 'text-gold' : 'text-[#1B2B5E]'}`}>{opt.label}</div>
+            {opt.desc && <div className="text-sm text-dark-muted">{opt.desc}</div>}
           </button>
         ))}
       </div>
@@ -392,24 +392,24 @@ function EquityBreakdownBox({ breakdown, leverageType, loanType, inputs }: {
 
   return (
     <div className="border border-dark-border p-6">
-      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-4">Equity Required at Closing — Funded 100% by LP</div>
+      <div className="section-label-sm mb-4">Equity Required at Closing — Funded 100% by LP</div>
       <div className="space-y-2">
         {rows.map((row, i) => (
           <div key={i} className="flex justify-between items-start py-1.5 border-b border-dark-border/30">
             <div>
-              <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">{row.label}</div>
-              {row.note && <div className="text-xs text-dark-muted mt-0.5">{row.note}</div>}
+              <div className="text-sm uppercase tracking-widest text-[#1B2B5E]">{row.label}</div>
+              {row.note && <div className="text-sm text-dark-muted mt-0.5">{row.note}</div>}
             </div>
-            <div className="text-sm font-semibold text-[#1B2B5E] ml-4">{fmt$(row.value)}</div>
+            <div className="text-base font-semibold text-[#1B2B5E] ml-4">{fmt$(row.value)}</div>
           </div>
         ))}
         <div className="flex justify-between items-center pt-3">
-          <div className="text-xs uppercase tracking-widest font-bold text-gold">Total LP Equity Required</div>
+          <div className="text-sm uppercase tracking-widest font-bold text-gold">Total LP Equity Required</div>
           <div className="text-lg font-bold text-gold">{fmt$(breakdown.total)}</div>
         </div>
         <div className="flex justify-between items-center pt-1">
-          <div className="text-xs uppercase tracking-widest text-dark-muted">GP Equity Invested</div>
-          <div className="text-sm font-semibold text-[#1B2B5E]">$0</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted">GP Equity Invested</div>
+          <div className="text-base font-semibold text-[#1B2B5E]">$0</div>
         </div>
       </div>
     </div>
@@ -419,84 +419,84 @@ function EquityBreakdownBox({ breakdown, leverageType, loanType, inputs }: {
 function WaterfallBox({ waterfall, inputs }: { waterfall: WaterfallResult; inputs: ProformaInputs }) {
   return (
     <div className="border border-dark-border p-6">
-      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-4">GP / LP Waterfall at Exit</div>
+      <div className="section-label-sm mb-4">GP / LP Waterfall at Exit</div>
 
       <div className="space-y-2 mb-6">
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-          <div className="text-xs uppercase tracking-widest text-dark-muted">Gross Exit Proceeds</div>
-          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.totalProceeds)}</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted">Gross Exit Proceeds</div>
+          <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.totalProceeds)}</div>
         </div>
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-          <div className="text-xs uppercase tracking-widest text-dark-muted">Debt Payoff</div>
-          <div className="text-sm font-semibold text-red-500">({fmt$(waterfall.debtPayoff)})</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted">Debt Payoff</div>
+          <div className="text-base font-semibold text-red-500">({fmt$(waterfall.debtPayoff)})</div>
         </div>
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-          <div className="text-xs uppercase tracking-widest text-dark-muted">Selling Costs (2%)</div>
-          <div className="text-sm font-semibold text-red-500">({fmt$(waterfall.totalProceeds * 0.02)})</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted">Selling Costs (2%)</div>
+          <div className="text-base font-semibold text-red-500">({fmt$(waterfall.totalProceeds * 0.02)})</div>
         </div>
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-          <div className="text-xs uppercase tracking-widest font-semibold text-[#1B2B5E]">Net Proceeds</div>
-          <div className="text-sm font-bold text-[#1B2B5E]">{fmt$(waterfall.netProceeds)}</div>
+          <div className="text-sm uppercase tracking-widest font-semibold text-[#1B2B5E]">Net Proceeds</div>
+          <div className="text-base font-bold text-[#1B2B5E]">{fmt$(waterfall.netProceeds)}</div>
         </div>
       </div>
 
-      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-3">Distribution Waterfall</div>
+      <div className="section-label-sm mb-3">Distribution Waterfall</div>
       <div className="space-y-2 mb-6">
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
           <div>
-            <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">① LP Capital Return</div>
-            <div className="text-xs text-dark-muted">100% of invested equity returned first</div>
+            <div className="text-sm uppercase tracking-widest text-[#1B2B5E]">① LP Capital Return</div>
+            <div className="text-sm text-dark-muted">100% of invested equity returned first</div>
           </div>
-          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpCapitalReturn)}</div>
+          <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpCapitalReturn)}</div>
         </div>
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
           <div>
-            <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">② LP Preferred Return ({inputs.lpPreferredReturn}%)</div>
-            <div className="text-xs text-dark-muted">On invested capital over hold period</div>
+            <div className="text-sm uppercase tracking-widest text-[#1B2B5E]">② LP Preferred Return ({inputs.lpPreferredReturn}%)</div>
+            <div className="text-sm text-dark-muted">On invested capital over hold period</div>
           </div>
-          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpPreferredReturn)}</div>
+          <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpPreferredReturn)}</div>
         </div>
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
           <div>
-            <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">③ Remaining Proceeds</div>
-            <div className="text-xs text-dark-muted">Split {inputs.lpSplit}% LP / {inputs.gpSplit}% GP</div>
+            <div className="text-sm uppercase tracking-widest text-[#1B2B5E]">③ Remaining Proceeds</div>
+            <div className="text-sm text-dark-muted">Split {inputs.lpSplit}% LP / {inputs.gpSplit}% GP</div>
           </div>
-          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.remainingProceeds)}</div>
+          <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.remainingProceeds)}</div>
         </div>
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-          <div className="text-xs uppercase tracking-widest text-dark-muted pl-4">LP Share ({inputs.lpSplit}%)</div>
-          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpShare)}</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted pl-4">LP Share ({inputs.lpSplit}%)</div>
+          <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.lpShare)}</div>
         </div>
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-          <div className="text-xs uppercase tracking-widest text-dark-muted pl-4">GP Carried Interest ({inputs.gpSplit}%)</div>
-          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpShare)}</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted pl-4">GP Carried Interest ({inputs.gpSplit}%)</div>
+          <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpShare)}</div>
         </div>
       </div>
 
-      <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-3">GP Fee Income</div>
+      <div className="section-label-sm mb-3">GP Fee Income</div>
       <div className="space-y-2 mb-6">
         <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-          <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">Acquisition Fee ({inputs.acquisitionFeePct}%)</div>
-          <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpAcquisitionFee)}</div>
+          <div className="text-sm uppercase tracking-widest text-[#1B2B5E]">Acquisition Fee ({inputs.acquisitionFeePct}%)</div>
+          <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpAcquisitionFee)}</div>
         </div>
         {waterfall.gpRefiFee > 0 && (
           <div className="flex justify-between py-1.5 border-b border-dark-border/30">
-            <div className="text-xs uppercase tracking-widest text-[#1B2B5E]">Refi Fee ({inputs.refiFeePct}%)</div>
-            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpRefiFee)}</div>
+            <div className="text-sm uppercase tracking-widest text-[#1B2B5E]">Refi Fee ({inputs.refiFeePct}%)</div>
+            <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.gpRefiFee)}</div>
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 pt-4 border-t-2 border-gold/40">
         <div className="border border-dark-border p-4">
-          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">LP Total Return</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted mb-1">LP Total Return</div>
           <div className="text-2xl font-bold text-[#1B2B5E]">{fmt$(waterfall.lpTotal)}</div>
-          <div className="text-xs text-dark-muted mt-1">MOIC: {waterfall.lpMOIC.toFixed(2)}x</div>
+          <div className="text-sm text-dark-muted mt-1">MOIC: {waterfall.lpMOIC.toFixed(2)}x</div>
         </div>
         <div className="border border-gold bg-gold/5 p-4">
-          <div className="text-xs uppercase tracking-widest text-gold mb-1">GP Total Earnings</div>
+          <div className="text-sm uppercase tracking-widest text-gold mb-1">GP Total Earnings</div>
           <div className="text-2xl font-bold text-[#1B2B5E]">{fmt$(waterfall.gpTotal)}</div>
-          <div className="text-xs text-dark-muted mt-1">On $0 invested capital</div>
+          <div className="text-sm text-dark-muted mt-1">On $0 invested capital</div>
         </div>
       </div>
     </div>
@@ -510,44 +510,44 @@ function IRRBox({ result, offerPrice, exitSalePrice, equityBreakdown }: {
   const hasDebt = result.levered_irr !== undefined && result.levered_irr !== result.unlevered_irr
   return (
     <div className="border-2 border-gold bg-gold/5 p-6">
-      <div className="text-xs uppercase tracking-widest text-gold font-medium mb-4">
+      <div className="section-label-sm text-gold mb-4">
         Returns at {displayPrice ? '$' + parseInt(displayPrice).toLocaleString() : 'This Offer'}
         {exitSalePrice && parseInt(exitSalePrice) > 0 ? ' (exit override)' : ''}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="border border-gold/30 p-4 bg-white/50">
-          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Levered IRR</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted mb-1">Levered IRR</div>
           <div className="font-serif text-4xl font-light text-[#1B2B5E]">
             {hasDebt ? fmtPct(result.levered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
           </div>
-          <div className="text-xs text-dark-muted mt-1">After debt service</div>
+          <div className="text-sm text-dark-muted mt-1">After debt service</div>
         </div>
         <div className="border border-dark-border p-4">
-          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Unlevered IRR</div>
+          <div className="text-sm uppercase tracking-widest text-dark-muted mb-1">Unlevered IRR</div>
           <div className="font-serif text-4xl font-light text-[#1B2B5E]">
             {hasDebt ? fmtPct(result.unlevered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
           </div>
-          <div className="text-xs text-dark-muted mt-1">All cash, no debt</div>
+          <div className="text-sm text-dark-muted mt-1">All cash, no debt</div>
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gold/30">
         <div>
-          <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Going-In Cap</div>
+          <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Going-In Cap</div>
           <div className="font-semibold text-[#1B2B5E]">{fmtPct(result.going_in_cap)}</div>
         </div>
         <div>
-          <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Stabilized Cap</div>
+          <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Stabilized Cap</div>
           <div className="font-semibold text-[#1B2B5E]">{fmtPct(result.stabilized_cap)}</div>
         </div>
         {result.equity_multiple && (
           <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Equity Multiple</div>
+            <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Equity Multiple</div>
             <div className="font-semibold text-[#1B2B5E]">{result.equity_multiple.toFixed(2)}x</div>
           </div>
         )}
         {equityBreakdown && (
           <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">LP Equity In</div>
+            <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">LP Equity In</div>
             <div className="font-semibold text-[#1B2B5E]">{fmt$(equityBreakdown.total)}</div>
           </div>
         )}
@@ -555,16 +555,16 @@ function IRRBox({ result, offerPrice, exitSalePrice, equityBreakdown }: {
       {result.loan_amount && result.loan_amount > 0 && (
         <div className="mt-4 pt-4 border-t border-gold/20 grid grid-cols-3 gap-4">
           <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Loan Amount</div>
-            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.loan_amount)}</div>
+            <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Loan Amount</div>
+            <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(result.loan_amount)}</div>
           </div>
           <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">Annual Debt Service</div>
-            <div className="text-sm font-semibold text-[#1B2B5E]">{fmt$(result.annual_debt_service ?? 0)}</div>
+            <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Annual Debt Service</div>
+            <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(result.annual_debt_service ?? 0)}</div>
           </div>
           <div>
-            <div className="text-xs text-dark-muted uppercase tracking-widest mb-0.5">DSCR (Y1)</div>
-            <div className="text-sm font-semibold text-[#1B2B5E]">
+            <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">DSCR (Y1)</div>
+            <div className="text-base font-semibold text-[#1B2B5E]">
               {result.annual_debt_service && result.annual_debt_service > 0
                 ? (result.in_place_noi / result.annual_debt_service).toFixed(2) + 'x'
                 : '—'}
@@ -585,11 +585,11 @@ function ProformaTable({ proformaResult }: { proformaResult: ProformaResult }) {
   }) {
     return (
       <tr className={bold ? 'bg-navy/5' : ''}>
-        <td className={`py-2.5 pr-4 text-xs uppercase tracking-widest ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'} ${indent ? 'pl-4' : ''} ${gold ? 'text-gold font-semibold' : ''}`}>
+        <td className={`py-2.5 pr-4 text-sm uppercase tracking-widest ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'} ${indent ? 'pl-4' : ''} ${gold ? 'text-gold font-semibold' : ''}`}>
           {label}
         </td>
         {values.map((v, i) => (
-          <td key={i} className={`py-2.5 px-2 text-right text-sm ${bold ? 'font-bold text-[#1B2B5E]' : 'text-[#1B2B5E]'} ${gold ? 'text-gold font-semibold' : ''}`}>
+          <td key={i} className={`py-2.5 px-2 text-right text-base ${bold ? 'font-bold text-[#1B2B5E]' : 'text-[#1B2B5E]'} ${gold ? 'text-gold font-semibold' : ''}`}>
             {v === null ? '—' : pct ? fmtPct(v) : fmt$(v)}
           </td>
         ))}
@@ -600,19 +600,19 @@ function ProformaTable({ proformaResult }: { proformaResult: ProformaResult }) {
   function Divider({ label }: { label: string }) {
     return (
       <tr className="bg-dark-surface">
-        <td colSpan={7} className="py-1.5 px-3 text-xs uppercase tracking-widest text-dark-muted font-medium">{label}</td>
+        <td colSpan={7} className="py-1.5 px-3 text-sm uppercase tracking-widest text-dark-muted font-medium">{label}</td>
       </tr>
     )
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-base">
         <thead>
           <tr className="border-b border-dark-border">
-            <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-44">Line Item</th>
+            <th className="text-left text-sm uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-44">Line Item</th>
             {cols.map(c => (
-              <th key={c} className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">{c}</th>
+              <th key={c} className="text-right text-base uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">{c}</th>
             ))}
           </tr>
         </thead>
@@ -684,9 +684,9 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
   }) {
     return (
       <tr className={bold ? 'bg-navy/5' : ''}>
-        <td className={`py-2.5 pr-4 text-xs uppercase tracking-widest ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'}`}>{label}</td>
+        <td className={`py-2.5 pr-4 text-sm uppercase tracking-widest ${bold ? 'font-semibold text-[#1B2B5E]' : 'text-dark-muted'}`}>{label}</td>
         {values.map((v, i) => (
-          <td key={i} className={`py-2.5 px-2 text-right text-sm ${bold ? 'font-bold text-[#1B2B5E]' : ''} ${red && v !== null && (v as number) < 0 ? 'text-red-500 font-semibold' : 'text-[#1B2B5E]'}`}>
+          <td key={i} className={`py-2.5 px-2 text-right text-base ${bold ? 'font-bold text-[#1B2B5E]' : ''} ${red && v !== null && (v as number) < 0 ? 'text-red-500 font-semibold' : 'text-[#1B2B5E]'}`}>
             {v === null ? '—' : pct ? fmtPct(v) : fmt$(v)}
           </td>
         ))}
@@ -697,7 +697,7 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
   function Divider({ label }: { label: string }) {
     return (
       <tr className="bg-dark-surface">
-        <td colSpan={7} className="py-1.5 px-3 text-xs uppercase tracking-widest text-dark-muted font-medium">{label}</td>
+        <td colSpan={7} className="py-1.5 px-3 text-sm uppercase tracking-widest text-dark-muted font-medium">{label}</td>
       </tr>
     )
   }
@@ -705,12 +705,12 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-base">
           <thead>
             <tr className="border-b border-dark-border">
-              <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-44">Metric</th>
+              <th className="text-left text-sm uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-44">Metric</th>
               {cols.map(c => (
-                <th key={c} className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">{c}</th>
+                <th key={c} className="text-right text-base uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">{c}</th>
               ))}
             </tr>
           </thead>
@@ -727,15 +727,15 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
       </div>
       {brokerY5 !== null && investorY5 !== null && (
         <div className="mt-6 pt-6 border-t border-dark-border">
-          <div className="text-xs uppercase tracking-widest text-dark-muted font-medium mb-4">Year 5 Exit Comparison</div>
+          <div className="section-label-sm mb-4">Year 5 Exit Comparison</div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead>
                 <tr className="border-b border-dark-border">
-                  <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">Cap Rate</th>
-                  <th className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Broker Exit Value</th>
-                  <th className="text-right text-xs uppercase tracking-widest text-gold font-semibold pb-3 px-3">Investor Exit Value</th>
-                  <th className="text-right text-xs uppercase tracking-widest text-red-400 font-semibold pb-3 px-3">Valuation Gap</th>
+                  <th className="text-left text-sm uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">Cap Rate</th>
+                  <th className="text-right text-base uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Broker Exit Value</th>
+                  <th className="text-right text-base uppercase tracking-widest text-gold font-semibold pb-3 px-3">Investor Exit Value</th>
+                  <th className="text-right text-base uppercase tracking-widest text-red-400 font-semibold pb-3 px-3">Valuation Gap</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-border/40">
@@ -748,7 +748,7 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
                   const exitGapPct = exitGap / brokerExit
                   return (
                     <tr key={i} className="hover:bg-gold/5 transition-colors">
-                      <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{cr}% Cap</td>
+                      <td className="py-3 pr-4 text-sm uppercase tracking-widest text-dark-muted font-medium">{cr}% Cap</td>
                       <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">{fmt$(brokerExit)}</td>
                       <td className="py-3 px-3 text-right font-semibold text-gold">{fmt$(investorExit)}</td>
                       <td className="py-3 px-3 text-right font-semibold text-red-500">{fmt$(exitGap)} ({fmtPct(exitGapPct)})</td>
@@ -1121,7 +1121,7 @@ export default function Proforma() {
                 <Field label="LP Split (after pref)" value={inputs.lpSplit} onChange={v => set('lpSplit', v)} suffix="%" step="5" />
                 <Field label="GP Split (after pref)" value={inputs.gpSplit} onChange={v => set('gpSplit', v)} suffix="%" step="5" />
               </div>
-              <div className="mt-4 p-4 bg-dark-surface border border-dark-border/50 text-xs text-dark-muted">
+              <div className="mt-4 p-4 bg-dark-surface border border-dark-border/50 text-sm text-dark-muted">
                 <strong className="text-[#1B2B5E]">Waterfall order:</strong> ① LP gets 100% of invested capital back → ② LP gets {inputs.lpPreferredReturn}% preferred return → ③ Remaining split {inputs.lpSplit}% LP / {inputs.gpSplit}% GP. GP also earns {inputs.acquisitionFeePct}% acquisition fee at closing{leverageType === 'levered' && loanType === 'bridge-to-perm' ? ` and ${inputs.refiFeePct}% refi fee at refinance` : ''}.
               </div>
             </div>
@@ -1149,14 +1149,14 @@ export default function Proforma() {
               </div>
               {inputs.currentAvgRent && inputs.marketAvgRent && (
                 <div className="mt-4 p-4 bg-gold/5 border border-gold/30">
-                  <div className="text-xs uppercase tracking-widest text-gold font-medium mb-2">Value-Add Rent Upside</div>
+                  <div className="section-label-sm text-gold mb-2">Value-Add Rent Upside</div>
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <div className="text-dark-muted text-xs">Rent Gap / Unit</div>
+                      <div className="text-dark-muted text-sm">Rent Gap / Unit</div>
                       <div className="font-semibold text-[#1B2B5E]">{fmt$(n(inputs.marketAvgRent) - n(inputs.currentAvgRent))}/mo</div>
                     </div>
                     <div>
-                      <div className="text-dark-muted text-xs">Upside at Stabilization</div>
+                      <div className="text-dark-muted text-sm">Upside at Stabilization</div>
                       <div className="font-semibold text-[#1B2B5E]">
                         {inputs.totalUnits
                           ? fmt$((n(inputs.marketAvgRent) - n(inputs.currentAvgRent)) * n(inputs.totalUnits) * 12) + '/yr'
@@ -1164,7 +1164,7 @@ export default function Proforma() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-dark-muted text-xs">Rent Uplift</div>
+                      <div className="text-dark-muted text-sm">Rent Uplift</div>
                       <div className="font-semibold text-[#1B2B5E]">
                         {n(inputs.currentAvgRent) > 0
                           ? fmtPct((n(inputs.marketAvgRent) - n(inputs.currentAvgRent)) / n(inputs.currentAvgRent))
@@ -1192,7 +1192,7 @@ export default function Proforma() {
                 <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => set('exitCapRate', v)} suffix="%" step="0.25" />
                 <Field label="Hold Period" value={inputs.exitMonth} onChange={v => set('exitMonth', v)} suffix="mo" />
                 <div className="md:col-span-2">
-                  <label className="label-text">Your Offer Price <span className="text-gold text-xs">(enter to see your IRR)</span></label>
+                  <label className="label-text">Your Offer Price <span className="text-gold text-sm">(enter to see your IRR)</span></label>
                   <input className="input-field border-gold/50" type="number" step="any" value={inputs.offerPrice}
                     onChange={e => set('offerPrice', e.target.value)} placeholder="e.g. 4250000" />
                 </div>
@@ -1208,8 +1208,8 @@ export default function Proforma() {
                   {([['t12', 'T-12 NOI', 'Conservative'], ['y1', 'Year 1 NOI', 'Base case'], ['stabilized', 'Stabilized NOI', 'Aggressive'], ['manual', 'Manual NOI', 'Custom']] as const).map(([val, label, desc]) => (
                     <button key={val} onClick={() => { setMaxOfferAnchor(val); if (hasCalculated) handleCalculate(val); }}
                       className={`flex-1 p-3 border text-left transition-colors duration-150 min-w-[110px] ${maxOfferAnchor === val ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}`}>
-                      <div className={`text-xs font-semibold mb-0.5 ${maxOfferAnchor === val ? 'text-gold' : 'text-[#1B2B5E]'}`}>{label}</div>
-                      <div className="text-xs text-dark-muted">{desc}</div>
+                      <div className={`text-sm font-semibold mb-0.5 ${maxOfferAnchor === val ? 'text-gold' : 'text-[#1B2B5E]'}`}>{label}</div>
+                      <div className="text-sm text-dark-muted">{desc}</div>
                     </button>
                   ))}
                 </div>
@@ -1242,10 +1242,10 @@ export default function Proforma() {
                         <SectionHead title="Broker vs Investor Analysis" subtitle="OM projections vs your conservative underwrite" />
                       </div>
                       <div className="flex items-center gap-2 ml-6 mt-1">
-                        <label className="text-xs uppercase tracking-widest text-dark-muted whitespace-nowrap">Revenue Haircut</label>
+                        <label className="text-sm uppercase tracking-widest text-dark-muted whitespace-nowrap">Revenue Haircut</label>
                         <input className="input-field text-sm w-16" type="number" step="1" min="0" max="30"
                           value={revenueHaircut} onChange={e => setRevenueHaircut(e.target.value)} />
-                        <span className="text-dark-muted text-xs">%</span>
+                        <span className="text-dark-muted text-sm">%</span>
                       </div>
                     </div>
                     <BrokerInvestorTable proformaResult={proformaResult} sellerYears={sellerYears} revenueHaircut={n(revenueHaircut) / 100} capRates={capRates} />
@@ -1261,19 +1261,19 @@ export default function Proforma() {
                         <label className="label-text">Cap Rate {i + 1}</label>
                         <div className="flex items-center">
                           <input className="input-field text-sm" type="number" step="0.25" value={cr} onChange={e => setCapRate(i, e.target.value)} />
-                          <span className="text-dark-muted text-xs ml-1">%</span>
+                          <span className="text-dark-muted text-sm ml-1">%</span>
                         </div>
                       </div>
                     ))}
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-base">
                       <thead>
                         <tr className="border-b border-dark-border">
-                          <th className="text-left text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">NOI Year</th>
-                          <th className="text-right text-xs uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Our NOI</th>
+                          <th className="text-left text-sm uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-28">NOI Year</th>
+                          <th className="text-right text-base uppercase tracking-widest text-dark-muted font-normal pb-3 px-3">Our NOI</th>
                           {capRates.map((cr, i) => (
-                            <th key={i} className="text-right text-xs uppercase tracking-widest text-gold font-semibold pb-3 px-3">{cr}% Cap</th>
+                            <th key={i} className="text-right text-base uppercase tracking-widest text-gold font-semibold pb-3 px-3">{cr}% Cap</th>
                           ))}
                         </tr>
                       </thead>
@@ -1287,7 +1287,7 @@ export default function Proforma() {
                           ['Year 5', ourYears[4]?.noi ?? null],
                         ].filter(([, noi]) => noi && (noi as number) > 0).map(([label, noi]) => (
                           <tr key={label as string} className="hover:bg-gold/5 transition-colors">
-                            <td className="py-3 pr-4 text-xs uppercase tracking-widest text-dark-muted font-medium">{label as string}</td>
+                            <td className="py-3 pr-4 text-sm uppercase tracking-widest text-dark-muted font-medium">{label as string}</td>
                             <td className="py-3 px-3 text-right font-semibold text-[#1B2B5E]">${Math.round(noi as number).toLocaleString()}</td>
                             {capRates.map((cr, i) => {
                               const cap = parseFloat(cr) / 100
@@ -1325,20 +1325,20 @@ export default function Proforma() {
                             ${inputs.exitSalePrice === String(exitVal) ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/40'}
                             disabled:opacity-50 disabled:cursor-default`}
                         >
-                          <div className="text-xs uppercase tracking-widest text-dark-muted mb-1">Exit at {cr}% Cap</div>
+                          <div className="text-sm uppercase tracking-widest text-dark-muted mb-1">Exit at {cr}% Cap</div>
                           <div className="font-semibold text-[#1B2B5E] text-lg">${exitVal.toLocaleString()}</div>
-                          <div className="text-xs text-dark-muted mt-1">Y5 NOI: ${(ourYears[4]?.noi ?? 0).toLocaleString()}</div>
+                          <div className="text-sm text-dark-muted mt-1">Y5 NOI: ${(ourYears[4]?.noi ?? 0).toLocaleString()}</div>
                         </button>
                       )
                     })}
                   </div>
                   <div className="max-w-sm">
-                    <label className="label-text">Override Exit Sale Price <span className="text-gold text-xs">(optional)</span></label>
+                    <label className="label-text">Override Exit Sale Price <span className="text-gold text-sm">(optional)</span></label>
                     <div className="flex gap-2 items-center">
                       <input className="input-field border-gold/50 flex-1" type="number" step="any" value={inputs.exitSalePrice}
                         onChange={e => set('exitSalePrice', e.target.value)} placeholder="Leave blank to use cap rate exit" />
                       <button onClick={() => handleCalculate()} disabled={calculating || !inputs.offerPrice}
-                        className="btn-gold disabled:opacity-40 px-4 py-2 text-xs whitespace-nowrap">
+                        className="btn-gold disabled:opacity-40 px-4 py-2 text-sm whitespace-nowrap">
                         Recalculate
                       </button>
                     </div>
@@ -1381,7 +1381,7 @@ export default function Proforma() {
                       Generate LOI →
                     </button>
                   </div>
-                  <p className="text-dark-muted text-xs mt-3">
+                  <p className="text-dark-muted text-sm mt-3">
                     &ldquo;Continue to Full Model&rdquo; loads these numbers into the underwriting model and downloads the Excel.
                     &ldquo;Generate LOI&rdquo; pre-fills the LOI with your offer price and key terms.
                   </p>
