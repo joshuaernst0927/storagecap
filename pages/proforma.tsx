@@ -302,10 +302,8 @@ function computeEquityBreakdown(inputs: ProformaInputs, loanAmount: number, leve
   const closingCosts = price * (n(inputs.closingCostsPct) / 100)
   const brokerFee = price * (n(inputs.brokerFeePct) / 100)
   const acquisitionFee = price * (n(inputs.acquisitionFeePct) / 100)
-  // Year 1 interest reserve — always funded at closing (hard cost)
   const annualInterest = leverageType === 'levered' ? loanAmount * (n(inputs.bridgeRate) / 100) : 0
   const prepaidInterestY1 = annualInterest
-  // Year 2 and Year 3 reserves — only add to closing equity if toggled to "closing"
   const prepaidInterestY2 = leverageType === 'levered' && inputs.interestReserveY2Source === 'closing' ? annualInterest : 0
   const prepaidInterestY3 = leverageType === 'levered' && inputs.interestReserveY3Source === 'closing' ? annualInterest : 0
   const prepaidInterest = prepaidInterestY1 + prepaidInterestY2 + prepaidInterestY3
@@ -329,10 +327,7 @@ function computeWaterfall(
   const price = n(inputs.offerPrice)
   const acquisitionFee = price * (n(inputs.acquisitionFeePct) / 100)
 
-  // ── Refi sizing (bridge-to-perm only) ──
-  // Stabilized value = Year 3 NOI / 7% cap rate
-  // Max loan = lower of: (LTV cap) vs (DSCR test: Year3NOI / 1.30 / 6%)
-  let refiLoanAmount = loanAmount // default: bridge loan carries to exit
+  let refiLoanAmount = loanAmount
   let refiCashOut = 0
   let refiFeePaid = 0
 
@@ -346,30 +341,24 @@ function computeWaterfall(
     const dscrMaxLoan = refiLoanRate > 0 ? y3NOI / refiDSCR / refiLoanRate : 0
     refiLoanAmount = Math.min(ltvMaxLoan, dscrMaxLoan)
     const grossCashOut = Math.max(0, refiLoanAmount - loanAmount)
-    // Cap refi cash out at LP equity — cannot return more than invested
     refiCashOut = Math.min(grossCashOut, equityBreakdown.total)
     refiFeePaid = refiLoanAmount * (n(inputs.refiFeePct) / 100)
   }
 
-  // ── LP equity after refi cash out ──
   const lpEquityAtClosing = equityBreakdown.total
   const lpRemainingEquity = Math.max(0, lpEquityAtClosing - refiCashOut)
 
-  // ── Exit waterfall ──
   const debtPayoff = leverageType === 'levered' ? refiLoanAmount : 0
   const sellingCosts = exitValue * 0.02
   const netProceeds = exitValue - debtPayoff - sellingCosts
 
-  // ① LP gets remaining capital back first
   const lpCapitalReturn = Math.min(netProceeds, lpRemainingEquity)
   const afterCapital = Math.max(0, netProceeds - lpRemainingEquity)
 
-  // ② LP gets 8% preferred return on ORIGINAL equity over full hold
   const lpPref = lpEquityAtClosing * (n(inputs.lpPreferredReturn) / 100) * (n(inputs.exitMonth) / 12)
   const lpPreferredPaid = Math.min(afterCapital, lpPref)
   const afterPref = Math.max(0, afterCapital - lpPreferredPaid)
 
-  // ③ Split remaining
   const lpSplitPct = n(inputs.lpSplit) / 100
   const gpSplitPct = n(inputs.gpSplit) / 100
   const lpShare = afterPref * lpSplitPct
@@ -519,7 +508,6 @@ function WaterfallBox({ waterfall, inputs, leverageType, loanType }: {
     <div className="border border-dark-border p-6">
       <div className="section-label-sm mb-4">GP / LP Waterfall at Exit</div>
 
-      {/* Refi Event Box */}
       {leverageType === 'levered' && loanType === 'bridge-to-perm' && waterfall.stabilizedValue > 0 && (
         <div className="mb-6 p-4 border border-gold/40 bg-gold/5">
           <div className="section-label-sm mb-3">Refi Event — Month 36</div>
@@ -924,8 +912,7 @@ export default function Proforma() {
       try {
         const data = JSON.parse(decodeURIComponent(router.query.data as string))
         setInputs(prev => ({
-          ...prev, ...data,
-          // Map extracted broker fields
+          ...prev,
           broker1Name: data.broker1Name ?? prev.broker1Name,
           broker2Name: data.broker2Name ?? prev.broker2Name,
           brokerPhone1: data.brokerPhone1 ?? prev.brokerPhone1,
@@ -937,8 +924,9 @@ export default function Proforma() {
           yearBuilt: data.yearBuilt ? String(data.yearBuilt) : prev.yearBuilt,
           city: data.city ?? prev.city,
           state: data.state ?? prev.state,
-          msaName: data.msaName currentAvgRent: data.currentAvgRentPerUnit ? String(data.currentAvgRentPerUnit) : prev.currentAvgRent,
-marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : prev.marketAvgRent, ?? prev.msaName,
+          msaName: data.msaName ?? prev.msaName,
+          currentAvgRent: data.currentAvgRentPerUnit ? String(data.currentAvgRentPerUnit) : prev.currentAvgRent,
+          marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : prev.marketAvgRent,
           sellerY1: { ...prev.sellerY1, ...(data.sellerY1 ?? {}) },
           sellerY2: { ...prev.sellerY2, ...(data.sellerY2 ?? {}) },
           sellerY3: { ...prev.sellerY3, ...(data.sellerY3 ?? {}) },
@@ -987,7 +975,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
         ],
       }
 
-      // Build seller_years array from extracted seller data
       const sellerYearsData = [
         inputs.sellerY1, inputs.sellerY2, inputs.sellerY3, inputs.sellerY4, inputs.sellerY5
       ].map(sy => ({
@@ -1025,12 +1012,10 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
       const offerPriceVal = n(inputs.offerPrice)
       const exitSalePriceVal = n(inputs.exitSalePrice)
 
-      // Compute exit value — default to Y5 NOI / exit cap rate
       const exitCapVal = n(inputs.exitCapRate, 7.25) / 100
       const defaultExitValue = exitCapVal > 0 ? y5NOI / exitCapVal : offerPriceVal
       const exitValue = exitSalePriceVal > 0 ? exitSalePriceVal : defaultExitValue
 
-      // Compute loan amount based on leverage type
       let loanAmount = 0
       if (leverageType === 'levered') {
         if (loanType === 'bridge-to-perm') {
@@ -1040,14 +1025,12 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
         }
       }
 
-      // Compute equity breakdown
       const breakdown = computeEquityBreakdown(inputs, loanAmount, leverageType)
       setEquityBreakdown(breakdown)
 
       if (offerPriceVal > 0) {
         const noiYears = proformaData.years.map((y: OurYear) => y.noi)
 
-        // Debt params for IRR engine
         const ltv = leverageType === 'levered'
           ? (loanType === 'bridge-to-perm' ? n(inputs.bridgeLTV, 65) / 100 : n(inputs.permLTV, 65) / 100)
           : 0
@@ -1100,7 +1083,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
             method: '',
           })
 
-          // Compute waterfall
           const wf = computeWaterfall(inputs, breakdown, exitValue, loanAmount, leverageType, loanType, noiYears)
           setWaterfallResult(wf)
         }
@@ -1144,16 +1126,13 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
     const y3Cap = offerPriceVal > 0 ? ((y3NOI / offerPriceVal) * 100).toFixed(2) : ''
     const pfCap = offerPriceVal > 0 ? ((y5NOI / offerPriceVal) * 100).toFixed(2) : ''
 
-    // Build broker salutation
     const b1 = inputs.broker1Name?.split(' ')[0] ?? ''
     const b2 = inputs.broker2Name?.split(' ')[0] ?? ''
     const salutation = b1 && b2 ? `Dear ${b1} and ${b2},` : b1 ? `Dear ${b1},` : ''
 
-    // Build waterfall description
     const waterfall = `${n(inputs.lpPreferredReturn, 8)}% preferred return to LP, then ${inputs.lpSplit}/${inputs.gpSplit} split (LP/GP)`
 
     const data = {
-      // Property
       propertyName: inputs.propertyName,
       address: inputs.address,
       city: inputs.city,
@@ -1167,7 +1146,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
       currentAvgRent: inputs.currentAvgRent,
       marketAvgRent: inputs.marketAvgRent,
       monthsToStabilization: inputs.monthsToStabilization,
-      // Broker
       broker1Name: inputs.broker1Name,
       broker2Name: inputs.broker2Name,
       brokerPhone1: inputs.brokerPhone1,
@@ -1176,7 +1154,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
       brokerEmail2: inputs.brokerEmail2,
       brokerageName: inputs.brokerageName,
       salutation,
-      // Deal economics
       offerPrice: inputs.offerPrice,
       allInCost: String(Math.round(offerPriceVal + lpEquityTotal)),
       bridgeLoan: String(bridgeLoan),
@@ -1184,12 +1161,10 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
       annualDS: String(Math.round(annualInterest)),
       interestReserve: String(Math.round(annualInterest)),
       capexReserve: inputs.capexReserve,
-      // GP/LP
       gpFeeTotal: String(Math.round(offerPriceVal * (n(inputs.acquisitionFeePct, 2) / 100))),
       gpFeePct: inputs.acquisitionFeePct,
       lpEquity: String(Math.round(lpEquityTotal)),
       waterfall,
-      // Returns
       goingInCap: irrResult ? (irrResult.going_in_cap * 100).toFixed(2) : '',
       yr3Cap: y3Cap,
       pfCap: pfCap,
@@ -1197,11 +1172,9 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
       lpMOIC: waterfallResult ? waterfallResult.lpMOIC.toFixed(2) : '',
       lpIRR: irrResult ? ((irrResult.unlevered_irr ?? 0) * 100).toFixed(1) : '',
       gpMOIC: waterfallResult ? waterfallResult.gpMOIC.toFixed(2) : '',
-      // Deal terms
       emd: String(Math.round(offerPriceVal * 0.01)),
       ddDays: '15',
       closingDays: '30',
-      // NOI progression for narrative
       t12NOI: inputs.t12NOI,
       year1NOI: String(Math.round(ourYears[0]?.noi ?? 0)),
       year2NOI: String(Math.round(ourYears[1]?.noi ?? 0)),
@@ -1504,8 +1477,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
             {hasCalculated && ourYears.length > 0 && (
               <div className="space-y-8">
 
-                {/* Our Proforma */}
-                {/* Chart 1 — CBRE OM */}
                 {proformaResult?.broker_years && proformaResult.broker_years.length > 0 && (
                   <div className="border border-dark-border p-7">
                     <SectionHead title="Chart 1 — Broker OM (CBRE)" subtitle="Seller's projected numbers exactly as presented — no adjustments" />
@@ -1513,13 +1484,11 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
                   </div>
                 )}
 
-                {/* Chart 2 — Our Underwrite */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Chart 2 — Our Underwrite" subtitle={`CBRE revenue haircutted ${revenueHaircut}% — grown at 4% / yr. Expenses grown at 2% / yr.`} />
                   {proformaResult && <ProformaTable proformaResult={proformaResult} />}
                 </div>
 
-                {/* Broker vs Investor */}
                 {hasSeller && proformaResult && (
                   <div className="border border-dark-border p-7">
                     <div className="flex items-start justify-between mb-1">
@@ -1537,7 +1506,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
                   </div>
                 )}
 
-                {/* Offer Matrix */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Offer Matrix" subtitle="Our NOI ÷ cap rate — adjust cap rates to match your market" />
                   <div className="flex gap-3 mb-4 flex-wrap">
@@ -1590,7 +1558,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
                   </div>
                 </div>
 
-                {/* Exit Value */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Exit Value" subtitle="Default exit = Year 5 NOI ÷ exit cap rate. Click to override." />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -1630,7 +1597,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
                   </div>
                 </div>
 
-                {/* Equity Required */}
                 {equityBreakdown && (
                   <EquityBreakdownBox
                     breakdown={equityBreakdown}
@@ -1640,7 +1606,6 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
                   />
                 )}
 
-                {/* IRR */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Your IRR" subtitle="Based on your offer price, exit cap rate, and financing structure" />
                   {irrResult ? (
@@ -1652,12 +1617,10 @@ marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : p
                   )}
                 </div>
 
-                {/* GP/LP Waterfall */}
                 {waterfallResult && (
                   <WaterfallBox waterfall={waterfallResult} inputs={inputs} leverageType={leverageType} loanType={loanType} />
                 )}
 
-                {/* Next Steps */}
                 <div className="border border-dark-border p-7">
                   <SectionHead title="Next Steps" />
                   <div className="flex flex-wrap gap-4">
