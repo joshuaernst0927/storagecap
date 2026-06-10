@@ -1,31 +1,30 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import Anthropic from '@anthropic-ai/sdk'
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export const config = { api: { bodyParser: { sizeLimit: '1mb' } } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
+  const { prompt } = req.body
+  if (!prompt) return res.status(400).json({ error: 'No prompt provided' })
+
   try {
-    const upstream = await fetch('http://157.230.186.240:8000/generate-loi', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body),
-      signal: AbortSignal.timeout(60000),
+    const msg = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }],
     })
 
-    if (!upstream.ok) {
-      const text = await upstream.text().catch(() => '')
-      return res.status(upstream.status).json({ error: `Upstream error ${upstream.status}`, detail: text })
-    }
+    const raw = ((msg.content[0] as { type: string; text: string }).text ?? '').trim()
+    const clean = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    const parsed = JSON.parse(clean)
 
-    const buffer = Buffer.from(await upstream.arrayBuffer())
-    const filename = `LOI-${String(req.body?.property_name || 'property').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
-    res.setHeader('Content-Length', buffer.length)
-    res.send(buffer)
+    return res.status(200).json(parsed)
   } catch (err) {
-    console.error('generate-loi proxy error:', err)
-    res.status(500).json({ error: 'Failed to reach LOI generation server', detail: String(err) })
+    console.error('[generate-loi-narrative] error:', err)
+    return res.status(500).json({ error: 'Narrative generation failed', detail: String(err) })
   }
 }
