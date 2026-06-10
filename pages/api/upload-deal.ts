@@ -133,7 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     contentBlocks.push({ type: 'text', text: EXTRACTION_PROMPT })
 
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-4-6',a
       max_tokens: 2048,
       messages: [{ role: 'user', content: contentBlocks }],
     })
