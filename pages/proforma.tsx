@@ -1349,30 +1349,6 @@ export default function Proforma() {
         <section className="py-14">
           <div className="section-container max-w-4xl space-y-10">
 
-            {/* OM Upload */}
-            <div className="border border-dark-border p-7">
-              <SectionHead title="Upload Offering Memorandum" subtitle="Drop your OM, T12, or rent roll — Claude extracts all fields" />
-              <div className="flex flex-col gap-4">
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf,.xlsx,.docx,.png,.jpg,.jpeg"
-                  className="block w-full text-sm text-dark-muted file:mr-4 file:py-2 file:px-4 file:border file:border-gold/50 file:text-sm file:font-semibold file:text-gold file:bg-gold/5 hover:file:bg-gold/10 cursor-pointer"
-                  onChange={e => setUploadFiles(e.target.files)}
-                />
-                {extractError && <p className="text-red-600 text-sm">{extractError}</p>}
-                {uploadFiles && uploadFiles.length > 0 && (
-                  <button
-                    onClick={handleExtractOM}
-                    disabled={extracting}
-                    className="btn-gold disabled:opacity-50 px-8 py-3 w-full md:w-auto"
-                  >
-                    {extracting ? 'Extracting with Claude...' : 'Extract & Populate'}
-                  </button>
-                )}
-              </div>
-            </div>
-
             {/* Deal Type */}
             <div className="border border-dark-border p-7">
               <SectionHead title="Deal Type" />
