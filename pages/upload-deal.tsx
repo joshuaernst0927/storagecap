@@ -29,39 +29,19 @@ type FormState = {
 }
 
 const EMPTY_FORM: FormState = {
-  facilityName: '',
-  address: '',
-  city: '',
-  state: '',
-  zipCode: '',
-  askingPrice: '',
-  unitCount: '',
-  capRate: '',
-  noi: '',
-  occupancy: '',
-  yearBuilt: '',
-  sqft: '',
-  ownerName: '',
-  stage: 'identified',
-  priority: 'medium',
-  source: 'broker',
-  notes: '',
+  facilityName: '', address: '', city: '', state: '', zipCode: '',
+  askingPrice: '', unitCount: '', capRate: '', noi: '', occupancy: '',
+  yearBuilt: '', sqft: '', ownerName: '',
+  stage: 'identified', priority: 'medium', source: 'broker', notes: '',
 }
 
 function emptyDistress(): DistressSignals {
   return {
-    taxDelinquency: false,
-    fireCodeViolations: false,
-    codeViolations: [],
-    lisPendens: false,
-    decliningOccupancy: false,
-    deferredMaintenance: false,
-    outOfStateOwner: false,
+    taxDelinquency: false, fireCodeViolations: false, codeViolations: [],
+    lisPendens: false, decliningOccupancy: false, deferredMaintenance: false, outOfStateOwner: false,
   }
 }
 
-// Extracts the text layer of a PDF entirely in the browser.
-// A 7–10 MB PDF typically yields 50–300 KB of text — well under Vercel's 4.5 MB limit.
 async function extractPdfTextClient(file: File): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfjs: any = await import('pdfjs-dist')
@@ -79,7 +59,6 @@ async function extractPdfTextClient(file: File): Promise<string> {
   return pages.join('\n\n')
 }
 
-// Safe base64 encode for potentially unicode text (btoa rejects non-Latin1 chars)
 function textToBase64(text: string): string {
   const bytes = new TextEncoder().encode(text)
   let binary = ''
@@ -90,12 +69,37 @@ function textToBase64(text: string): string {
   return btoa(binary)
 }
 
+type ExtractionResult = {
+  facilityName?: string | null; address?: string | null; city?: string | null
+  state?: string | null; zipCode?: string | null; msaName?: string | null
+  askingPrice?: number | null; unitCount?: number | null; totalUnits?: number | null
+  capRate?: number | null; noi?: number | null; t12NOI?: number | null
+  t3NOI?: number | null; t12Revenue?: number | null; t12TotalExpenses?: number | null
+  t12Payroll?: number | null; t12ManagementFees?: number | null; t12Marketing?: number | null
+  t12Utilities?: number | null; t12OfficeEmployee?: number | null; t12Administrative?: number | null
+  t12RepairsMaintenance?: number | null; t12Tax?: number | null; t12Insurance?: number | null
+  t12OtherExpenses?: number | null; occupancy?: number | null; currentOccupancy?: number | null
+  targetOccupancy?: number | null; currentAvgRentPerUnit?: number | null
+  marketAvgRentPerUnit?: number | null; monthsToStabilization?: number | null
+  yearBuilt?: number | null; sqft?: number | null; totalSF?: number | null
+  broker1Name?: string | null; broker2Name?: string | null; brokerPhone1?: string | null
+  brokerPhone2?: string | null; brokerEmail1?: string | null; brokerEmail2?: string | null
+  brokerageName?: string | null
+  sellerY1?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
+  sellerY2?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
+  sellerY3?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
+  sellerY4?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
+  sellerY5?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
+  highlights?: string[] | null
+}
+
 export default function UploadDeal() {
   const router = useRouter()
   const [files, setFiles] = useState<UploadFile[]>([])
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState('')
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [fullExtraction, setFullExtraction] = useState<ExtractionResult | null>(null)
   const [highlights, setHighlights] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -105,12 +109,9 @@ export default function UploadDeal() {
 
   const set = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  // Vercel enforces a hard 4.5 MB platform limit on incoming request bodies.
-  // PDFs > 3 MB are text-extracted in-browser (extractPdfTextClient) so the payload
-  // stays small. Non-PDF files must be < 3 MB (sent as raw binary base64).
-  const MAX_BINARY_FILE = 3_000_000     // bytes — images, spreadsheets, Word docs
-  const MAX_PDF_FILE = 10_000_000       // bytes — PDFs (text extracted client-side)
-  const MAX_BATCH_BASE64 = 3_400_000    // base64 chars — per-request budget
+  const MAX_BINARY_FILE = 3_000_000
+  const MAX_PDF_FILE = 10_000_000
+  const MAX_BATCH_BASE64 = 3_400_000
 
   async function extractPayload(filePayloads: { fileName: string; mimeType: string; data: string }[]) {
     const res = await fetch('/api/upload-deal', {
@@ -126,18 +127,19 @@ export default function UploadDeal() {
     return res.json()
   }
 
-  type ExtractionResult = {
-    facilityName?: string | null; address?: string | null; city?: string | null
-    state?: string | null; zipCode?: string | null; askingPrice?: number | null
-    unitCount?: number | null; capRate?: number | null; noi?: number | null
-    occupancy?: number | null; yearBuilt?: number | null; sqft?: number | null
-    highlights?: string[] | null
-  }
-
-  // Merge multiple partial extractions — first non-null value wins per scalar field.
   function mergeExtractionResults(results: ExtractionResult[]): ExtractionResult {
     if (results.length === 1) return results[0]
-    const scalars: (keyof ExtractionResult)[] = ['facilityName','address','city','state','zipCode','askingPrice','unitCount','capRate','noi','occupancy','yearBuilt','sqft']
+    const scalars: (keyof ExtractionResult)[] = [
+      'facilityName','address','city','state','zipCode','msaName','askingPrice',
+      'unitCount','totalUnits','capRate','noi','t12NOI','t3NOI','t12Revenue',
+      't12TotalExpenses','t12Payroll','t12ManagementFees','t12Marketing','t12Utilities',
+      't12OfficeEmployee','t12Administrative','t12RepairsMaintenance','t12Tax','t12Insurance',
+      't12OtherExpenses','occupancy','currentOccupancy','targetOccupancy',
+      'currentAvgRentPerUnit','marketAvgRentPerUnit','monthsToStabilization',
+      'yearBuilt','sqft','totalSF','broker1Name','broker2Name','brokerPhone1',
+      'brokerPhone2','brokerEmail1','brokerEmail2','brokerageName',
+      'sellerY1','sellerY2','sellerY3','sellerY4','sellerY5',
+    ]
     const merged: ExtractionResult = {}
     for (const f of scalars) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,31 +155,21 @@ export default function UploadDeal() {
     setExtracting(true)
     setExtractError('')
     try {
-      // Per-file size pre-flight: PDFs up to 10 MB OK (text extracted in-browser);
-      // other file types (images, xlsx, docx) must be under 3 MB.
       const oversized = files.filter(({ file, mime }) => {
         const limit = mime === 'application/pdf' ? MAX_PDF_FILE : MAX_BINARY_FILE
         return file.size > limit
       })
       if (oversized.length > 0) {
         const names = oversized.map(({ file }) => `${file.name} (${(file.size / 1_000_000).toFixed(1)} MB)`).join(', ')
-        throw new Error(
-          `${names} ${oversized.length === 1 ? 'is' : 'are'} too large. ` +
-          `PDFs support up to 10 MB; images and spreadsheets support up to 3 MB.`
-        )
+        throw new Error(`${names} ${oversized.length === 1 ? 'is' : 'are'} too large. PDFs support up to 10 MB; images and spreadsheets support up to 3 MB.`)
       }
 
       const filePayloads = await Promise.all(
         files.map(async ({ file, mime }) => {
-          // Large PDFs: extract text in-browser so the JSON body stays under Vercel's 4.5 MB limit.
-          // Sending the raw binary of a 7+ MB PDF would be ~10 MB base64 — rejected before the handler runs.
           if (mime === 'application/pdf' && file.size > MAX_BINARY_FILE) {
             const text = await extractPdfTextClient(file)
             if (text.trim().length < 200) {
-              throw new Error(
-                `${file.name} appears to be a scanned or image-only PDF with no text layer. ` +
-                `Please compress it to under 3 MB or use a text-searchable PDF.`
-              )
+              throw new Error(`${file.name} appears to be a scanned or image-only PDF with no text layer. Please compress it to under 3 MB or use a text-searchable PDF.`)
             }
             return { fileName: file.name, mimeType: 'text/plain', data: textToBase64(text.slice(0, 80_000)) }
           }
@@ -191,28 +183,23 @@ export default function UploadDeal() {
         })
       )
 
-      // Batch files into requests so each stays under MAX_BATCH_BASE64.
       const batches: (typeof filePayloads)[] = []
       let batch: typeof filePayloads = []
       let batchSize = 0
       for (const fp of filePayloads) {
         if (batch.length > 0 && batchSize + fp.data.length > MAX_BATCH_BASE64) {
-          batches.push(batch)
-          batch = [fp]
-          batchSize = fp.data.length
+          batches.push(batch); batch = [fp]; batchSize = fp.data.length
         } else {
-          batch.push(fp)
-          batchSize += fp.data.length
+          batch.push(fp); batchSize += fp.data.length
         }
       }
       if (batch.length > 0) batches.push(batch)
 
       const results: ExtractionResult[] = []
-      for (const b of batches) {
-        results.push(await extractPayload(b) as ExtractionResult)
-      }
+      for (const b of batches) results.push(await extractPayload(b) as ExtractionResult)
       const data = mergeExtractionResults(results)
 
+      setFullExtraction(data)
       setForm({
         facilityName: data.facilityName ?? '',
         address: data.address ?? '',
@@ -220,38 +207,29 @@ export default function UploadDeal() {
         state: data.state ?? '',
         zipCode: data.zipCode ?? '',
         askingPrice: data.askingPrice != null ? String(data.askingPrice) : '',
-        unitCount: data.unitCount != null ? String(data.unitCount) : '',
+        unitCount: (data.unitCount ?? data.totalUnits) != null ? String(data.unitCount ?? data.totalUnits) : '',
         capRate: data.capRate != null ? String((data.capRate * 100).toFixed(2)) : '',
-        noi: data.noi != null ? String(data.noi) : '',
-        occupancy: data.occupancy != null ? String(data.occupancy) : '',
+        noi: (data.t12NOI ?? data.noi) != null ? String(data.t12NOI ?? data.noi) : '',
+        occupancy: (data.currentOccupancy ?? data.occupancy) != null ? String(data.currentOccupancy ?? data.occupancy) : '',
         yearBuilt: data.yearBuilt != null ? String(data.yearBuilt) : '',
-        sqft: data.sqft != null ? String(data.sqft) : '',
+        sqft: (data.sqft ?? data.totalSF) != null ? String(data.sqft ?? data.totalSF) : '',
         ownerName: '',
-        stage: 'identified',
-        priority: 'medium',
-        source: 'broker',
-        notes: '',
+        stage: 'identified', priority: 'medium', source: 'broker', notes: '',
       })
       setHighlights(Array.isArray(data.highlights) ? data.highlights : [])
       setExtracted(true)
 
-      // Fire auto-scoring in background — non-blocking
       setAutoScoring(true)
       fetch('/api/auto-score-deal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          facilityName: data.facilityName,
-          address: data.address,
-          city: data.city,
-          state: data.state,
-          askingPrice: data.askingPrice,
-          noi: data.noi,
+          facilityName: data.facilityName, address: data.address, city: data.city,
+          state: data.state, askingPrice: data.askingPrice, noi: data.t12NOI ?? data.noi,
           capRate: data.capRate != null ? (data.capRate * 100).toFixed(2) : undefined,
-          occupancy: data.occupancy,
-          unitCount: data.unitCount,
-          yearBuilt: data.yearBuilt,
-          sqft: data.sqft,
+          occupancy: data.currentOccupancy ?? data.occupancy,
+          unitCount: data.unitCount ?? data.totalUnits,
+          yearBuilt: data.yearBuilt, sqft: data.sqft ?? data.totalSF,
           highlights: Array.isArray(data.highlights) ? data.highlights : [],
         }),
       })
@@ -266,6 +244,52 @@ export default function UploadDeal() {
     }
   }
 
+  function handleUnderwrite() {
+    if (!fullExtraction) return
+    const data = fullExtraction
+    const proformaData = {
+      propertyName: data.facilityName ?? form.facilityName,
+      address: data.address ?? form.address,
+      city: data.city ?? form.city,
+      state: data.state ?? form.state,
+      msaName: data.msaName ?? '',
+      totalUnits: String(data.unitCount ?? data.totalUnits ?? form.unitCount ?? ''),
+      totalSF: String(data.sqft ?? data.totalSF ?? form.sqft ?? ''),
+      yearBuilt: String(data.yearBuilt ?? form.yearBuilt ?? ''),
+      currentOccupancy: String(data.currentOccupancy ?? data.occupancy ?? form.occupancy ?? ''),
+      currentAvgRent: data.currentAvgRentPerUnit != null ? String(data.currentAvgRentPerUnit) : '',
+      marketAvgRent: data.marketAvgRentPerUnit != null ? String(data.marketAvgRentPerUnit) : '',
+      monthsToStabilization: data.monthsToStabilization != null ? String(data.monthsToStabilization) : '24',
+      t12NOI: String(data.t12NOI ?? data.noi ?? form.noi ?? ''),
+      t3NOI: data.t3NOI != null ? String(data.t3NOI) : '',
+      t12Revenue: data.t12Revenue != null ? String(data.t12Revenue) : '',
+      t12TotalExpenses: data.t12TotalExpenses != null ? String(data.t12TotalExpenses) : '',
+      t12Payroll: data.t12Payroll != null ? String(data.t12Payroll) : '',
+      t12ManagementFees: data.t12ManagementFees != null ? String(data.t12ManagementFees) : '',
+      t12Marketing: data.t12Marketing != null ? String(data.t12Marketing) : '',
+      t12Utilities: data.t12Utilities != null ? String(data.t12Utilities) : '',
+      t12OfficeEmployee: data.t12OfficeEmployee != null ? String(data.t12OfficeEmployee) : '',
+      t12Administrative: data.t12Administrative != null ? String(data.t12Administrative) : '',
+      t12RepairsMaintenance: data.t12RepairsMaintenance != null ? String(data.t12RepairsMaintenance) : '',
+      t12Tax: data.t12Tax != null ? String(data.t12Tax) : '',
+      t12Insurance: data.t12Insurance != null ? String(data.t12Insurance) : '',
+      t12OtherExpenses: data.t12OtherExpenses != null ? String(data.t12OtherExpenses) : '',
+      broker1Name: data.broker1Name ?? '',
+      broker2Name: data.broker2Name ?? '',
+      brokerPhone1: data.brokerPhone1 ?? '',
+      brokerPhone2: data.brokerPhone2 ?? '',
+      brokerEmail1: data.brokerEmail1 ?? '',
+      brokerEmail2: data.brokerEmail2 ?? '',
+      brokerageName: data.brokerageName ?? '',
+      sellerY1: data.sellerY1 ? { revenue: String(data.sellerY1.revenue ?? ''), expenses: String(data.sellerY1.expenses ?? ''), noi: String(data.sellerY1.noi ?? '') } : undefined,
+      sellerY2: data.sellerY2 ? { revenue: String(data.sellerY2.revenue ?? ''), expenses: String(data.sellerY2.expenses ?? ''), noi: String(data.sellerY2.noi ?? '') } : undefined,
+      sellerY3: data.sellerY3 ? { revenue: String(data.sellerY3.revenue ?? ''), expenses: String(data.sellerY3.expenses ?? ''), noi: String(data.sellerY3.noi ?? '') } : undefined,
+      sellerY4: data.sellerY4 ? { revenue: String(data.sellerY4.revenue ?? ''), expenses: String(data.sellerY4.expenses ?? ''), noi: String(data.sellerY4.noi ?? '') } : undefined,
+      sellerY5: data.sellerY5 ? { revenue: String(data.sellerY5.revenue ?? ''), expenses: String(data.sellerY5.expenses ?? ''), noi: String(data.sellerY5.noi ?? '') } : undefined,
+    }
+    router.push(`/proforma?data=${encodeURIComponent(JSON.stringify(proformaData))}`)
+  }
+
   async function handleSave() {
     setSaving(true)
     setSaveError('')
@@ -274,28 +298,20 @@ export default function UploadDeal() {
       const property: PipelineProperty = {
         id: `upload-${Date.now()}`,
         facilityName: form.facilityName || 'Unnamed Facility',
-        address: form.address,
-        city: form.city,
-        state: form.state,
-        zipCode: form.zipCode,
+        address: form.address, city: form.city, state: form.state, zipCode: form.zipCode,
         unitCount: form.unitCount ? parseInt(form.unitCount) : 0,
         unitMix: '',
         yearBuilt: form.yearBuilt ? parseInt(form.yearBuilt) : 0,
-        landAcres: 0,
-        climatePercent: 0,
+        landAcres: 0, climatePercent: 0,
         estimatedValue: form.askingPrice ? parseFloat(form.askingPrice) : 0,
         askingPrice: form.askingPrice ? parseFloat(form.askingPrice) : undefined,
         noi: form.noi ? parseFloat(form.noi) : undefined,
         occupancy: form.occupancy ? parseFloat(form.occupancy) : 0,
         ownerName: form.ownerName || '',
-        ownerEntity: '',
-        ownerEntityState: form.state,
-        ownerMailingAddress: '',
+        ownerEntity: '', ownerEntityState: form.state, ownerMailingAddress: '',
         distressSignals: emptyDistress(),
         motivationScore: 0,
-        stage: form.stage,
-        currentStatus: 'outreach-sent',
-        priority: form.priority,
+        stage: form.stage, currentStatus: 'outreach-sent', priority: form.priority,
         source: form.source,
         addedDate: new Date().toISOString().split('T')[0],
         notes: [
@@ -303,13 +319,10 @@ export default function UploadDeal() {
           highlights.length ? `Highlights:\n${highlights.map(h => `• ${h}`).join('\n')}` : '',
         ].filter(Boolean).join('\n\n') || undefined,
       }
-
       if (capRateNum) {
         const capNote = `Cap Rate: ${(capRateNum * 100).toFixed(2)}%`
         property.notes = property.notes ? `${property.notes}\n${capNote}` : capNote
       }
-
-      // Attach AI deal score if available
       if (autoScore) {
         const scoreResult = computeDealScore(autoScore.inputs)
         property.dealScore = scoreResult.total
@@ -318,17 +331,12 @@ export default function UploadDeal() {
         property.dealScoreInputs = autoScore.inputs as Record<string, string | number>
         property.dealScoredAt = new Date().toISOString()
       }
-
-      // Always save to localStorage first — this is the primary source for /pipeline.
       saveProperty(property)
-
-      // Best-effort server sync (may fail on first cold Vercel deployment due to /tmp isolation).
       fetch('/api/pipeline-ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([property]),
       }).catch(() => {})
-
       router.push('/pipeline')
     } catch (err) {
       setSaveError(String(err))
@@ -338,13 +346,9 @@ export default function UploadDeal() {
   }
 
   function handleStartOver() {
-    setExtracted(false)
-    setFiles([])
-    setForm(EMPTY_FORM)
-    setHighlights([])
-    setExtractError('')
-    setAutoScore(null)
-    setAutoScoring(false)
+    setExtracted(false); setFiles([]); setForm(EMPTY_FORM)
+    setHighlights([]); setExtractError(''); setAutoScore(null)
+    setAutoScoring(false); setFullExtraction(null)
   }
 
   return (
@@ -355,7 +359,6 @@ export default function UploadDeal() {
         <meta name="description" content="Upload deal documents and extract property details with Claude AI." />
       </Head>
 
-      {/* Hero */}
       <section className="page-hero border-b border-dark-border">
         <div className="section-label">Import Deal</div>
         <h1 className="display-heading text-5xl md:text-7xl max-w-3xl mb-6">
@@ -371,46 +374,30 @@ export default function UploadDeal() {
       <section className="py-16">
         <div className="section-container max-w-3xl">
 
-          {/* File drop zone */}
           {!extracted && (
             <>
               <FileDropZone files={files} onChange={setFiles} disabled={extracting} />
-
               {extractError && (
-                <div className="mt-4 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">
-                  {extractError}
-                </div>
+                <div className="mt-4 p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{extractError}</div>
               )}
-
               {files.length > 0 && (
                 <div className="mt-6 text-center">
-                  <button
-                    onClick={handleExtract}
-                    disabled={extracting}
-                    className="btn-gold disabled:opacity-60"
-                  >
-                    {extracting
-                      ? `Extracting ${files.length} file${files.length !== 1 ? 's' : ''} with Claude...`
-                      : `Extract with Claude`}
+                  <button onClick={handleExtract} disabled={extracting} className="btn-gold disabled:opacity-60">
+                    {extracting ? `Extracting ${files.length} file${files.length !== 1 ? 's' : ''} with Claude...` : `Extract with Claude`}
                   </button>
                 </div>
               )}
             </>
           )}
 
-          {/* Editable Form */}
           {extracted && (
             <div className="border border-dark-border bg-dark-surface">
               <div className="border-b border-dark-border px-7 py-5">
                 <div className="section-label-sm mb-0.5">Extracted Data</div>
-                <p className="text-dark-muted text-sm">
-                  Merged from {files.length} file{files.length !== 1 ? 's' : ''}. Review and edit before saving.
-                </p>
+                <p className="text-dark-muted text-sm">Merged from {files.length} file{files.length !== 1 ? 's' : ''}. Review and edit before saving.</p>
               </div>
 
               <div className="p-7 space-y-6">
-
-                {/* Identity */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="label-text">Facility Name</label>
@@ -436,7 +423,6 @@ export default function UploadDeal() {
                   </div>
                 </div>
 
-                {/* Financials */}
                 <div>
                   <div className="section-label-sm mb-3">Financials</div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -455,7 +441,6 @@ export default function UploadDeal() {
                   </div>
                 </div>
 
-                {/* Property Details */}
                 <div>
                   <div className="section-label-sm mb-3">Property Details</div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -478,7 +463,6 @@ export default function UploadDeal() {
                   </div>
                 </div>
 
-                {/* Deal Highlights */}
                 {highlights.length > 0 && (
                   <div>
                     <div className="section-label-sm mb-3">Deal Highlights</div>
@@ -486,36 +470,15 @@ export default function UploadDeal() {
                       {highlights.map((h, i) => (
                         <div key={i} className="flex gap-2 items-start">
                           <span className="text-gold mt-2.5 flex-shrink-0">·</span>
-                          <input
-                            className="input-field flex-1"
-                            value={h}
-                            onChange={e => {
-                              const updated = [...highlights]
-                              updated[i] = e.target.value
-                              setHighlights(updated)
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setHighlights(highlights.filter((_, j) => j !== i))}
-                            className="text-dark-muted hover:text-red-600 transition-colors mt-2.5 flex-shrink-0 text-sm"
-                          >
-                            ✕
-                          </button>
+                          <input className="input-field flex-1" value={h} onChange={e => { const u = [...highlights]; u[i] = e.target.value; setHighlights(u) }} />
+                          <button type="button" onClick={() => setHighlights(highlights.filter((_, j) => j !== i))} className="text-dark-muted hover:text-red-600 transition-colors mt-2.5 flex-shrink-0 text-sm">✕</button>
                         </div>
                       ))}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setHighlights([...highlights, ''])}
-                      className="mt-2 text-gold text-xs uppercase tracking-widest hover:text-gold/70"
-                    >
-                      + Add highlight
-                    </button>
+                    <button type="button" onClick={() => setHighlights([...highlights, ''])} className="mt-2 text-gold text-xs uppercase tracking-widest hover:text-gold/70">+ Add highlight</button>
                   </div>
                 )}
 
-                {/* Pipeline Meta */}
                 <div>
                   <div className="section-label-sm mb-3">Pipeline</div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -561,11 +524,7 @@ export default function UploadDeal() {
                   </div>
                 </div>
 
-                {saveError && (
-                  <div className="p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">
-                    {saveError}
-                  </div>
-                )}
+                {saveError && <div className="p-4 border border-red-400/40 bg-red-50 text-red-700 text-sm">{saveError}</div>}
 
                 {(autoScoring || autoScore) && (
                   <div className="flex items-center gap-3 py-3 border-t border-dark-border">
@@ -577,31 +536,21 @@ export default function UploadDeal() {
                       </div>
                     ) : autoScore && (
                       <div className="flex items-center gap-3 flex-wrap">
-                        <DealScoreBadge
-                          score={computeDealScore(autoScore.inputs).total}
-                          dealType={autoScore.inputs.dealType as 'value-add' | 'stabilized' | 'distressed'}
-                          size="sm"
-                        />
-                        {autoScore.reasoning && (
-                          <p className="text-xs text-dark-muted leading-relaxed">{autoScore.reasoning}</p>
-                        )}
+                        <DealScoreBadge score={computeDealScore(autoScore.inputs).total} dealType={autoScore.inputs.dealType as 'value-add' | 'stabilized' | 'distressed'} size="sm" />
+                        {autoScore.reasoning && <p className="text-xs text-dark-muted leading-relaxed">{autoScore.reasoning}</p>}
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="flex items-center gap-4 pt-2">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="btn-gold disabled:opacity-60"
-                  >
+                <div className="flex items-center gap-4 pt-2 flex-wrap">
+                  <button onClick={handleSave} disabled={saving} className="btn-gold disabled:opacity-60">
                     {saving ? 'Saving...' : 'Save to Pipeline'}
                   </button>
-                  <button
-                    onClick={handleStartOver}
-                    className="text-dark-muted text-sm hover:text-[#1a1a18] transition-colors"
-                  >
+                  <button onClick={handleUnderwrite} className="px-8 py-3 border border-gold text-gold text-sm uppercase tracking-widest hover:bg-gold/10 transition-colors">
+                    Underwrite This Deal →
+                  </button>
+                  <button onClick={handleStartOver} className="text-dark-muted text-sm hover:text-[#1a1a18] transition-colors">
                     Start over
                   </button>
                 </div>
