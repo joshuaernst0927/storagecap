@@ -14,13 +14,47 @@ Return ONLY a valid JSON object — no markdown fences, no commentary, no extra 
   "city": string or null,
   "state": string (2-letter code) or null,
   "zipCode": string or null,
+  "msaName": string or null,
   "askingPrice": number (in dollars) or null,
   "unitCount": number or null,
+  "totalUnits": number or null,
   "capRate": number (as decimal e.g. 0.065 for 6.5%) or null,
   "noi": number (annual, in dollars) or null,
+  "t12NOI": number (trailing 12-month NOI in dollars) or null,
+  "t3NOI": number (trailing 3-month NOI annualized in dollars) or null,
+  "t12Revenue": number (trailing 12-month total revenue in dollars) or null,
+  "t12TotalExpenses": number (trailing 12-month total expenses in dollars) or null,
+  "t12Payroll": number or null,
+  "t12ManagementFees": number or null,
+  "t12Marketing": number or null,
+  "t12Utilities": number or null,
+  "t12OfficeEmployee": number or null,
+  "t12Administrative": number or null,
+  "t12RepairsMaintenance": number or null,
+  "t12Tax": number or null,
+  "t12Insurance": number or null,
+  "t12OtherExpenses": number or null,
   "occupancy": number (percentage 0-100) or null,
+  "currentOccupancy": number (percentage 0-100) or null,
+  "targetOccupancy": number (percentage 0-100) or null,
+  "currentAvgRentPerUnit": number (average monthly rent per unit in dollars) or null,
+  "marketAvgRentPerUnit": number (market rate average monthly rent per unit in dollars) or null,
+  "monthsToStabilization": number or null,
   "yearBuilt": number or null,
   "sqft": number or null,
+  "totalSF": number or null,
+  "broker1Name": string or null,
+  "broker2Name": string or null,
+  "brokerPhone1": string or null,
+  "brokerPhone2": string or null,
+  "brokerEmail1": string or null,
+  "brokerEmail2": string or null,
+  "brokerageName": string or null,
+  "sellerY1": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
+  "sellerY2": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
+  "sellerY3": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
+  "sellerY4": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
+  "sellerY5": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
   "highlights": array of up to 5 key deal highlight strings
 }`
 
@@ -46,7 +80,6 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
   }
 
   if (mimeType === 'text/plain') {
-    // Text was extracted from a large PDF client-side to stay under Vercel's 4.5 MB request limit
     const text = Buffer.from(data, 'base64').toString('utf-8')
     return [{ type: 'text', text: `--- File: ${label} (text extracted from PDF) ---\n\n${text}` }]
   }
@@ -101,15 +134,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [{ role: 'user', content: contentBlocks }],
     })
     const raw = ((msg.content[0] as { type: string; text: string }).text ?? '').trim()
     const extracted = JSON.parse(raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, ''))
     return res.status(200).json(extracted)
   } catch (err: unknown) {
-    // Extract a useful message from Anthropic SDK errors, which expose `.status`
-    // and a nested `.error.error.message` field on API failures.
     let detail = String(err)
     if (err instanceof Error) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
