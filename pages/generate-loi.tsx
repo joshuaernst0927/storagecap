@@ -23,13 +23,13 @@ const EMPTY: LOIForm = {
   property_name: '', property_address: '', property_description: '',
   asset_type: 'Self-Storage', units: '', sf: '', year_built: '', occupancy: '',
   broker1_name: '', broker2_name: '', brokerage: '', broker1_phone: '',
-  broker2_phone: '', buyer_broker: 'YEM Acquisitions', salutation: '',
+  broker2_phone: '', buyer_broker: 'Buyer is unrepresented', salutation: '',
   offer_price: '', all_in_cost: '', bridge_loan: '', bridge_rate: '',
   sofr: '', annual_ds: '', interest_reserve: '', capex_reserve: '',
   gp_fee_total: '', gp_fee_income: '', gp_coinvest: '0', lp_equity: '',
   going_in_cap: '', yr3_cap: '', pf_cap: '',
   lp_moic: '', lp_irr: '', gp_moic: '', gp_irr: '',
-  waterfall: '', emd: '', dd_days: '15', closing_days: '30',
+  waterfall: '', emd: '', dd_days: '30-45', closing_days: '30-45',
   offer_expiry: '', underwriting_narrative: '', rent_strategy: '',
   breakeven_occ: '', exit_cap: '',
 }
@@ -94,18 +94,31 @@ function LOIContent() {
 
   const set = (name: keyof LOIForm, value: string) => setForm(f => ({ ...f, [name]: value }))
 
-  // Auto-populate from proforma data passed via URL
   useEffect(() => {
     if (!router.query.data) return
     try {
       const data = JSON.parse(decodeURIComponent(router.query.data as string))
+
+      // Build full address string
+      const fullAddress = [data.address, data.city, data.state].filter(Boolean).join(', ')
+
+      // Build property description
+      const description = [
+        data.totalUnits || data.units ? `${data.totalUnits || data.units}-unit self-storage facility` : '',
+        data.totalSF || data.sf ? `totaling ${Number(data.totalSF || data.sf).toLocaleString()} SF` : '',
+        data.yearBuilt ? `built in ${data.yearBuilt}` : '',
+        data.city && data.state ? `located in ${data.city}, ${data.state}` : '',
+        data.msaName ? `within the ${data.msaName} MSA` : '',
+      ].filter(Boolean).join(', ')
+
       setForm(prev => ({
         ...prev,
         property_name: data.propertyName || prev.property_name,
-        property_address: data.address || prev.property_address,
+        property_address: fullAddress || data.address || prev.property_address,
+        property_description: description || prev.property_description,
         asset_type: 'Self-Storage',
-        units: data.units || prev.units,
-        sf: data.sf || prev.sf,
+        units: data.units || data.totalUnits || prev.units,
+        sf: data.sf || data.totalSF || prev.sf,
         year_built: data.yearBuilt || prev.year_built,
         occupancy: data.occupancy || prev.occupancy,
         broker1_name: data.broker1Name || prev.broker1_name,
@@ -135,7 +148,6 @@ function LOIContent() {
         emd: data.emd || prev.emd,
       }))
 
-      // Auto-generate narrative and rent strategy if we have enough data
       if (data.propertyName && data.t12NOI && data.year3NOI) {
         generateNarratives(data)
       }
@@ -145,25 +157,13 @@ function LOIContent() {
   async function generateNarratives(data: Record<string, string>) {
     setGeneratingNarrative(true)
     try {
-      // Fetch live SOFR rate
-      let sofrRate = ''
-      try {
-        const sofrRes = await fetch('https://api.stlouisfed.org/fred/series/observations?series_id=SOFR&api_key=&file_type=json&limit=1&sort_order=desc')
-        if (sofrRes.ok) {
-          const sofrData = await sofrRes.json()
-          sofrRate = sofrData?.observations?.[0]?.value ?? ''
-        }
-      } catch { /* ignore */ }
-
-      if (sofrRate) setForm(f => ({ ...f, sofr: sofrRate }))
-
       const prompt = `You are writing a professional real estate Letter of Intent for a self-storage acquisition. Generate two sections based on these deal metrics:
 
 Property: ${data.propertyName} at ${data.address}
 Market: ${data.city || ''}, ${data.state || ''} ${data.msaName ? `(${data.msaName} MSA)` : ''}
 Deal Type: ${data.dealType || 'value-add'}
-Units: ${data.units}
-SF: ${data.sf}
+Units: ${data.units || data.totalUnits}
+SF: ${data.sf || data.totalSF}
 Current Occupancy: ${data.occupancy}
 Target Occupancy: 92%
 Current Avg Rent: $${data.currentAvgRent}/unit/mo
@@ -182,25 +182,18 @@ Return ONLY a JSON object with exactly two fields, no markdown:
   "rent_strategy": "2-3 sentence paragraph describing the post-close rent optimization plan including timeline, rate adjustment approach, and occupancy targets"
 }`
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/generate-loi-narrative', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
+        body: JSON.stringify({ prompt }),
       })
 
       if (res.ok) {
         const aiData = await res.json()
-        const text = aiData.content?.[0]?.text ?? ''
-        const clean = text.replace(/```json|```/g, '').trim()
-        const parsed = JSON.parse(clean)
         setForm(f => ({
           ...f,
-          underwriting_narrative: parsed.underwriting_narrative || f.underwriting_narrative,
-          rent_strategy: parsed.rent_strategy || f.rent_strategy,
+          underwriting_narrative: aiData.underwriting_narrative || f.underwriting_narrative,
+          rent_strategy: aiData.rent_strategy || f.rent_strategy,
         }))
       }
     } catch { /* ignore */ }
@@ -272,7 +265,7 @@ Return ONLY a JSON object with exactly two fields, no markdown:
                 <Field label="Salutation" value={form.salutation} onChange={v => set('salutation', v)} placeholder="Dear Nick and Adam," />
                 <Field label="Broker 1 Phone" value={form.broker1_phone} onChange={v => set('broker1_phone', v)} type="tel" placeholder="213-613-3223" />
                 <Field label="Broker 2 Phone" value={form.broker2_phone} onChange={v => set('broker2_phone', v)} type="tel" placeholder="213-613-3224" />
-                <Field label="Buyer Broker" value={form.buyer_broker} onChange={v => set('buyer_broker', v)} placeholder="YEM Acquisitions" span="half" />
+                <Field label="Buyer Representation" value={form.buyer_broker} onChange={v => set('buyer_broker', v)} placeholder="Buyer is unrepresented" span="half" />
               </div>
             </Card>
 
@@ -325,8 +318,8 @@ Return ONLY a JSON object with exactly two fields, no markdown:
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
                 <SectionHeader label="Deal Terms" />
                 <Field label="Earnest Money Deposit" value={form.emd} onChange={v => set('emd', v)} prefix="$" placeholder="45,000" />
-                <Field label="Due Diligence (Days)" value={form.dd_days} onChange={v => set('dd_days', v)} type="number" placeholder="15" />
-                <Field label="Closing (Days)" value={form.closing_days} onChange={v => set('closing_days', v)} type="number" placeholder="30" />
+                <Field label="Due Diligence (Days)" value={form.dd_days} onChange={v => set('dd_days', v)} placeholder="30-45" />
+                <Field label="Closing (Days)" value={form.closing_days} onChange={v => set('closing_days', v)} placeholder="30-45" />
                 <Field label="Offer Expiry" value={form.offer_expiry} onChange={v => set('offer_expiry', v)} type="date" />
               </div>
             </Card>
