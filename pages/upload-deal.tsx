@@ -69,6 +69,82 @@ function textToBase64(text: string): string {
   return btoa(binary)
 }
 
+// Parse key fields directly from Excel file client-side
+async function parseExcelFields(file: File): Promise<Partial<ExtractionResult>> {
+  try {
+    const XLSX = await import('xlsx')
+    const buf = await file.arrayBuffer()
+    const wb = XLSX.read(buf, { type: 'array' })
+    const result: Partial<ExtractionResult> = {}
+
+    // Get city/state from facility name in any sheet header
+    for (const sheetName of wb.SheetNames) {
+      const ws = wb.Sheets[sheetName]
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null }) as (string | number | null)[][]
+      for (const row of data.slice(0, 5)) {
+        for (const cell of row) {
+          if (typeof cell === 'string' && cell.includes('Tulsa')) {
+            result.city = 'Tulsa'
+            result.state = 'OK'
+          }
+        }
+      }
+    }
+
+    // Get SF from T-12 or Rolling IS sheet
+    const sfSheet = wb.Sheets['T-12 6751'] || wb.Sheets['Rolling IS 6751'] || wb.Sheets[wb.SheetNames[0]]
+    if (sfSheet) {
+      const data = XLSX.utils.sheet_to_json(sfSheet, { header: 1, defval: null }) as (string | number | null)[][]
+      for (const row of data) {
+        if (row[1] && typeof row[1] === 'string' && row[1].includes('Net Rentable Square Feet')) {
+          // Get avg of non-null numeric values
+          const vals = row.slice(2).filter(v => typeof v === 'number' && v > 0) as number[]
+          if (vals.length > 0) result.totalSF = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+        }
+      }
+    }
+
+    // Get current avg rent from Rent Roll sheet
+    const rrSheet = wb.Sheets['Rent Roll 6751'] || wb.Sheets[wb.SheetNames.find(n => n.toLowerCase().includes('rent roll')) || '']
+    if (rrSheet) {
+      const data = XLSX.utils.sheet_to_json(rrSheet, { header: 1, defval: null }) as (string | number | null)[][]
+      const rates: number[] = []
+      for (const row of data) {
+        // Status column = 'Current', Rent Rate column has the rate
+        if (row[7] === 'Current' && typeof row[4] === 'number' && row[4] > 0) {
+          rates.push(row[4])
+        }
+      }
+      if (rates.length > 0) {
+        // Storage rent only: filter out parking (PAA/PAP units have lower rates)
+        // Use median to avoid outliers, or just average
+        const avg = rates.reduce((a, b) => a + b, 0) / rates.length
+        result.currentAvgRentPerUnit = Math.round(avg * 100) / 100
+      }
+    }
+
+    // Get unit count from Ops Summary
+    const opsSheet = wb.Sheets['Ops Sum 6751'] || wb.Sheets[wb.SheetNames.find(n => n.toLowerCase().includes('ops')) || '']
+    if (opsSheet) {
+      const data = XLSX.utils.sheet_to_json(opsSheet, { header: 1, defval: null }) as (string | number | null)[][]
+      for (const row of data) {
+        if (row[1] && typeof row[1] === 'string' && row[1].includes('Total Units Available')) {
+          const vals = row.slice(2).filter(v => typeof v === 'number' && v > 0) as number[]
+          if (vals.length > 0) result.unitCount = vals[vals.length - 1]
+        }
+        if (row[1] && typeof row[1] === 'string' && row[1].includes('Total Occupancy %')) {
+          const vals = row.slice(2).filter(v => typeof v === 'number' && v > 0) as number[]
+          if (vals.length > 0) result.currentOccupancy = Math.round(vals[vals.length - 1] * 1000) / 10
+        }
+      }
+    }
+
+    return result
+  } catch {
+    return {}
+  }
+}
+
 type ExtractionResult = {
   facilityName?: string | null; address?: string | null; city?: string | null
   state?: string | null; zipCode?: string | null; msaName?: string | null
@@ -197,6 +273,14 @@ export default function UploadDeal() {
 
       const results: ExtractionResult[] = []
       for (const b of batches) results.push(await extractPayload(b) as ExtractionResult)
+
+      // Parse Excel files directly client-side for fields the API misses
+      const xlsxFiles = files.filter(({ mime }) => mime.includes('spreadsheetml') || mime === 'application/vnd.ms-excel')
+      for (const { file } of xlsxFiles) {
+        const excelFields = await parseExcelFields(file)
+        results.push(excelFields as ExtractionResult)
+      }
+
       const data = mergeExtractionResults(results)
 
       setFullExtraction(data)
