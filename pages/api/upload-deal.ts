@@ -44,13 +44,11 @@ Return ONLY a valid JSON object — no markdown fences, no commentary, no extra 
   "sqft": number or null (total rentable square footage),
   "totalSF": number or null (same as sqft — total net rentable area),
   "broker1Name": string or null (look for listing broker, contact, or agent name),
-  "brokerageName": string or null (brokerage firm name e.g. CBRE, Marcus & Millichap),
   "broker2Name": string or null,
   "brokerPhone1": string or null,
   "brokerPhone2": string or null,
   "brokerEmail1": string or null,
   "brokerEmail2": string or null,
-  "brokerageName": string or null,
   "sellerY1": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
   "sellerY2": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
   "sellerY3": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
@@ -113,7 +111,7 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
     throw new Error(`Unsupported file type: ${mimeType}`)
   }
 
-  return [{ type: 'text', text: `--- File: ${label} ---\n\n${text.slice(0, 20000)}` }]
+  return [{ type: 'text', text: `--- File: ${label} ---\n\n${text.slice(0, 60000)}` }]
 }
 
 export const config = { api: { bodyParser: { sizeLimit: '20mb' } } }
