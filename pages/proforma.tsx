@@ -904,8 +904,121 @@ export default function Proforma() {
   const [maxOfferAnchor, setMaxOfferAnchor] = useState<'t12' | 'y1' | 'stabilized' | 'manual'>('y1')
   const [capRates, setCapRates] = useState(['6.50', '7.00', '7.25', '7.50'])
   const [revenueHaircut, setRevenueHaircut] = useState('8')
+  const [uploadFiles, setUploadFiles] = useState<FileList | null>(null)
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState('')
+  const [savedToPipeline, setSavedToPipeline] = useState(false)
   const setCapRate = (i: number, v: string) => setCapRates(prev => prev.map((c, idx) => idx === i ? v : c))
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
+
+  async function handleExtractOM() {
+    if (!uploadFiles || uploadFiles.length === 0) return
+    setExtracting(true)
+    setExtractError('')
+    try {
+      const files = await Promise.all(Array.from(uploadFiles).map(async (file) => {
+        const data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+        return { fileName: file.name, mimeType: file.type, data }
+      }))
+      const res = await fetch('/api/upload-deal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files }),
+      })
+      if (!res.ok) throw new Error('Extraction failed')
+      const data = await res.json()
+      setInputs(prev => ({
+        ...prev,
+        propertyName: data.facilityName ?? data.propertyName ?? prev.propertyName,
+        address: data.address ?? prev.address,
+        city: data.city ?? prev.city,
+        state: data.state ?? prev.state,
+        msaName: data.msaName ?? prev.msaName,
+        totalSF: data.sqft ? String(data.sqft) : (data.totalSF ? String(data.totalSF) : prev.totalSF),
+        yearBuilt: data.yearBuilt ? String(data.yearBuilt) : prev.yearBuilt,
+        totalUnits: data.unitCount ? String(data.unitCount) : (data.totalUnits ? String(data.totalUnits) : prev.totalUnits),
+        currentOccupancy: data.occupancy ? String(data.occupancy) : (data.currentOccupancy ? String(data.currentOccupancy) : prev.currentOccupancy),
+        targetOccupancy: data.targetOccupancy ? String(data.targetOccupancy) : prev.targetOccupancy,
+        monthsToStabilization: data.monthsToStabilization ? String(data.monthsToStabilization) : prev.monthsToStabilization,
+        currentAvgRent: data.currentAvgRentPerUnit ? String(data.currentAvgRentPerUnit) : (data.currentAvgRent ? String(data.currentAvgRent) : prev.currentAvgRent),
+        marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : (data.marketAvgRent ? String(data.marketAvgRent) : prev.marketAvgRent),
+        t12NOI: data.t12NOI ? String(data.t12NOI) : (data.noi ? String(data.noi) : prev.t12NOI),
+        t3NOI: data.t3NOI ? String(data.t3NOI) : prev.t3NOI,
+        t12Occupancy: data.t12Occupancy ? String(data.t12Occupancy) : prev.t12Occupancy,
+        t12Revenue: data.t12Revenue ? String(data.t12Revenue) : prev.t12Revenue,
+        t12TotalExpenses: data.t12TotalExpenses ? String(data.t12TotalExpenses) : prev.t12TotalExpenses,
+        t12Payroll: data.t12Payroll ? String(data.t12Payroll) : prev.t12Payroll,
+        t12ManagementFees: data.t12ManagementFees ? String(data.t12ManagementFees) : prev.t12ManagementFees,
+        t12Marketing: data.t12Marketing ? String(data.t12Marketing) : prev.t12Marketing,
+        t12Utilities: data.t12Utilities ? String(data.t12Utilities) : prev.t12Utilities,
+        t12OfficeEmployee: data.t12OfficeEmployee ? String(data.t12OfficeEmployee) : prev.t12OfficeEmployee,
+        t12Administrative: data.t12Administrative ? String(data.t12Administrative) : prev.t12Administrative,
+        t12RepairsMaintenance: data.t12RepairsMaintenance ? String(data.t12RepairsMaintenance) : prev.t12RepairsMaintenance,
+        t12Tax: data.t12Tax ? String(data.t12Tax) : prev.t12Tax,
+        t12Insurance: data.t12Insurance ? String(data.t12Insurance) : prev.t12Insurance,
+        t12OtherExpenses: data.t12OtherExpenses ? String(data.t12OtherExpenses) : prev.t12OtherExpenses,
+        broker1Name: data.broker1Name ?? prev.broker1Name,
+        broker2Name: data.broker2Name ?? prev.broker2Name,
+        brokerPhone1: data.brokerPhone1 ?? prev.brokerPhone1,
+        brokerPhone2: data.brokerPhone2 ?? prev.brokerPhone2,
+        brokerEmail1: data.brokerEmail1 ?? prev.brokerEmail1,
+        brokerEmail2: data.brokerEmail2 ?? prev.brokerEmail2,
+        brokerageName: data.brokerageName ?? prev.brokerageName,
+        sellerY1: { ...prev.sellerY1, ...(data.sellerY1 ?? {}) },
+        sellerY2: { ...prev.sellerY2, ...(data.sellerY2 ?? {}) },
+        sellerY3: { ...prev.sellerY3, ...(data.sellerY3 ?? {}) },
+        sellerY4: { ...prev.sellerY4, ...(data.sellerY4 ?? {}) },
+        sellerY5: { ...prev.sellerY5, ...(data.sellerY5 ?? {}) },
+      }))
+      setUploadFiles(null)
+    } catch (err) {
+      setExtractError(String(err))
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  function handleSaveToPipeline() {
+    const deal = {
+      id: `proforma-${Date.now()}`,
+      facilityName: inputs.propertyName || 'Unnamed Facility',
+      address: inputs.address,
+      city: inputs.city,
+      state: inputs.state,
+      unitCount: inputs.totalUnits ? parseInt(inputs.totalUnits) : 0,
+      yearBuilt: inputs.yearBuilt ? parseInt(inputs.yearBuilt) : 0,
+      estimatedValue: inputs.offerPrice ? parseFloat(inputs.offerPrice) : 0,
+      askingPrice: inputs.offerPrice ? parseFloat(inputs.offerPrice) : undefined,
+      noi: inputs.t12NOI ? parseFloat(inputs.t12NOI) : undefined,
+      occupancy: inputs.currentOccupancy ? parseFloat(inputs.currentOccupancy) : 0,
+      stage: 'identified',
+      priority: 'high',
+      source: 'broker',
+      addedDate: new Date().toISOString().split('T')[0],
+      notes: [
+        irrResult ? `Levered IRR: ${((irrResult.levered_irr ?? 0) * 100).toFixed(1)}%` : '',
+        waterfallResult ? `LP MOIC: ${waterfallResult.lpMOIC.toFixed(2)}x` : '',
+        inputs.brokerageName ? `Broker: ${inputs.brokerageName}` : '',
+      ].filter(Boolean).join('\n') || undefined,
+    }
+    try {
+      const existing = JSON.parse(localStorage.getItem('yem_pipeline_saved') || '[]')
+      const updated = [deal, ...existing.filter((d: {id: string}) => d.id !== deal.id)]
+      localStorage.setItem('yem_pipeline_saved', JSON.stringify(updated))
+    } catch { /* ignore */ }
+    fetch('/api/pipeline-ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([deal]),
+    }).catch(() => {})
+    setSavedToPipeline(true)
+    setTimeout(() => setSavedToPipeline(false), 3000)
+  }
 
   useEffect(() => {
     if (router.query.data) {
@@ -926,11 +1039,11 @@ export default function Proforma() {
           currentOccupancy: data.currentOccupancy ? String(data.currentOccupancy) : prev.currentOccupancy,
           targetOccupancy: data.targetOccupancy ? String(data.targetOccupancy) : prev.targetOccupancy,
           monthsToStabilization: data.monthsToStabilization ? String(data.monthsToStabilization) : prev.monthsToStabilization,
-          currentAvgRent: data.currentAvgRentPerUnit ? String(data.currentAvgRentPerUnit) : (data.currentAvgRent ? String(data.currentAvgRent) : prev.currentAvgRent),
-          marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : (data.marketAvgRent ? String(data.marketAvgRent) : prev.marketAvgRent),
+          currentAvgRent: data.currentAvgRentPerUnit ? String(data.currentAvgRentPerUnit) : data.currentAvgRent ? String(data.currentAvgRent) : data.avgRent ? String(data.avgRent) : data.avg_rent ? String(data.avg_rent) : prev.currentAvgRent,
+          marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : data.marketAvgRent ? String(data.marketAvgRent) : data.marketRent ? String(data.marketRent) : data.market_rent ? String(data.market_rent) : prev.marketAvgRent,
           // Historical data
-          t12NOI: data.t12NOI ? String(data.t12NOI) : prev.t12NOI,
-          t3NOI: data.t3NOI ? String(data.t3NOI) : prev.t3NOI,
+          t12NOI: data.t12NOI ? String(data.t12NOI) : data.t12Noi ? String(data.t12Noi) : data.noi ? String(data.noi) : prev.t12NOI,
+          t3NOI: data.t3NOI ? String(data.t3NOI) : data.t3Noi ? String(data.t3Noi) : data.trailing3NOI ? String(data.trailing3NOI) : data.t3_noi ? String(data.t3_noi) : prev.t3NOI,
           t12Occupancy: data.t12Occupancy ? String(data.t12Occupancy) : prev.t12Occupancy,
           t12Revenue: data.t12Revenue ? String(data.t12Revenue) : prev.t12Revenue,
           t12TotalExpenses: data.t12TotalExpenses ? String(data.t12TotalExpenses) : prev.t12TotalExpenses,
@@ -1235,6 +1348,28 @@ export default function Proforma() {
 
         <section className="py-14">
           <div className="section-container max-w-4xl space-y-10">
+
+            {/* OM Upload */}
+            <div className="border border-dark-border p-7">
+              <SectionHead title="Upload Offering Memorandum" subtitle="Drop your OM, T12, rent roll — Claude extracts all fields automatically" />
+              <div className="flex flex-col gap-4">
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.xlsx,.docx,.png,.jpg,.jpeg"
+                  className="block w-full text-sm text-dark-muted file:mr-4 file:py-2 file:px-4 file:border file:border-gold/50 file:text-sm file:font-semibold file:text-gold file:bg-gold/5 hover:file:bg-gold/10 cursor-pointer"
+                  onChange={e => setUploadFiles(e.target.files)}
+                />
+                {extractError && <p className="text-red-600 text-sm">{extractError}</p>}
+                <button
+                  onClick={handleExtractOM}
+                  disabled={!uploadFiles || uploadFiles.length === 0 || extracting}
+                  className="btn-gold disabled:opacity-50 px-8 py-3 w-full md:w-auto"
+                >
+                  {extracting ? 'Extracting with Claude...' : 'Extract & Populate'}
+                </button>
+              </div>
+            </div>
 
             {/* Deal Type */}
             <div className="border border-dark-border p-7">
@@ -1653,6 +1788,9 @@ export default function Proforma() {
                     <button onClick={handleContinueToModel} className="btn-gold text-base px-8 py-3">Continue to Full Model →</button>
                     <button onClick={handleGenerateLOI} className="px-8 py-3 border border-[#1B2B5E] text-[#1B2B5E] text-sm uppercase tracking-widest hover:bg-[#1B2B5E] hover:text-white transition-colors">
                       Generate LOI →
+                    </button>
+                    <button onClick={handleSaveToPipeline} className="px-8 py-3 border border-gold text-gold text-sm uppercase tracking-widest hover:bg-gold/10 transition-colors">
+                      {savedToPipeline ? '✓ Saved to Pipeline' : 'Save to Pipeline'}
                     </button>
                   </div>
                   <p className="text-dark-muted text-sm mt-3">
