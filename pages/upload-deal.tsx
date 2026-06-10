@@ -473,6 +473,14 @@ export default function UploadDeal() {
                       <label className="label-text">Sq Ft</label>
                       <input className="input-field" type="number" value={form.sqft} onChange={e => set('sqft', e.target.value)} placeholder="32000" />
                     </div>
+                    <div>
+                      <label className="label-text">Current Avg Rent/Unit ($/mo)</label>
+                      <input className="input-field" type="number" value={fullExtraction?.currentAvgRentPerUnit != null ? String(fullExtraction.currentAvgRentPerUnit) : ''} onChange={e => { if (fullExtraction) setFullExtraction({...fullExtraction, currentAvgRentPerUnit: parseFloat(e.target.value) || null}) }} placeholder="125" />
+                    </div>
+                    <div>
+                      <label className="label-text">Market Avg Rent/Unit ($/mo)</label>
+                      <input className="input-field" type="number" value={fullExtraction?.marketAvgRentPerUnit != null ? String(fullExtraction.marketAvgRentPerUnit) : ''} onChange={e => { if (fullExtraction) setFullExtraction({...fullExtraction, marketAvgRentPerUnit: parseFloat(e.target.value) || null}) }} placeholder="150" />
+                    </div>
                   </div>
                 </div>
 
