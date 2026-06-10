@@ -11,8 +11,8 @@ Return ONLY a valid JSON object — no markdown fences, no commentary, no extra 
 {
   "facilityName": string or null,
   "address": string or null,
-  "city": string or null (look for city name in address, property location, or market overview),
-  "state": string (2-letter code) or null (look in address line or property location),
+  "city": string or null (REQUIRED — parse from address field if needed, e.g. "Tulsa" from "12331 East 11th St, Tulsa, OK"),
+  "state": string (2-letter code) or null (REQUIRED — parse from address field if needed, e.g. "OK" from "Tulsa, OK"),
   "zipCode": string or null,
   "msaName": string or null (Metropolitan Statistical Area name if mentioned),
   "askingPrice": number (in dollars) or null,
