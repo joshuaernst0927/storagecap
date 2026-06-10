@@ -148,9 +148,8 @@ function LOIContent() {
         emd: data.emd || prev.emd,
       }))
 
-      if (data.propertyName && data.t12NOI && data.year3NOI) {
-        generateNarratives(data)
-      }
+      // Always attempt narrative generation with whatever data we have
+      generateNarratives(data)
     } catch { /* ignore */ }
   }, [router.query.data])
 
@@ -326,11 +325,26 @@ Return ONLY a JSON object with exactly two fields, no markdown:
 
             {/* Underwriting Narrative */}
             <Card>
-              <div className="pb-2 border-b border-dark-border mb-6">
-                <div className="section-label">Underwriting Narrative</div>
-                <p style={{ fontSize: '0.9rem', color: '#6B6860', marginTop: '4px' }}>
-                  Auto-generated from deal data. Edit as needed before generating PDF.
-                </p>
+              <div className="pb-2 border-b border-dark-border mb-6 flex items-start justify-between">
+                <div>
+                  <div className="section-label">Underwriting Narrative</div>
+                  <p style={{ fontSize: '0.9rem', color: '#6B6860', marginTop: '4px' }}>
+                    Auto-generated from deal data. Edit as needed before generating PDF.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      const data = JSON.parse(decodeURIComponent(router.query.data as string))
+                      generateNarratives(data)
+                    } catch { /* ignore */ }
+                  }}
+                  disabled={generatingNarrative}
+                  className="text-sm uppercase tracking-widest text-gold border border-gold/50 px-4 py-2 hover:bg-gold/10 transition-colors disabled:opacity-50 ml-4 flex-shrink-0"
+                >
+                  {generatingNarrative ? 'Generating...' : 'Regenerate'}
+                </button>
               </div>
               <div className="space-y-5">
                 <TextareaField
