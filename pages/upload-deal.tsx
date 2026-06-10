@@ -247,11 +247,24 @@ export default function UploadDeal() {
   function handleUnderwrite() {
     if (!fullExtraction) return
     const data = fullExtraction
+
+    // Parse city/state from address as fallback
+    let city = data.city ?? form.city ?? ''
+    let state = data.state ?? form.state ?? ''
+    if ((!city || !state) && form.address) {
+      const parts = form.address.split(',').map(s => s.trim())
+      if (parts.length >= 3 && !city) city = parts[parts.length - 2] ?? ''
+      if (parts.length >= 3 && !state) {
+        const lastPart = parts[parts.length - 1] ?? ''
+        state = lastPart.split(' ').find(s => /^[A-Z]{2}$/.test(s)) ?? ''
+      }
+    }
+
     const proformaData = {
       propertyName: data.facilityName ?? form.facilityName,
       address: data.address ?? form.address,
-      city: data.city ?? form.city,
-      state: data.state ?? form.state,
+      city,
+      state,
       msaName: data.msaName ?? '',
       totalUnits: String(data.unitCount ?? data.totalUnits ?? form.unitCount ?? ''),
       totalSF: String(data.sqft ?? data.totalSF ?? form.sqft ?? ''),
