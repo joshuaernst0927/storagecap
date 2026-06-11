@@ -95,8 +95,10 @@ function LOIContent() {
   const set = (name: keyof LOIForm, value: string) => setForm(f => ({ ...f, [name]: value }))
   const [persistReady, setPersistReady] = useState(false)
 
-  // If we arrived WITHOUT fresh proforma data in the URL (e.g. a refresh),
-  // restore the last form state from the browser instead of showing blanks.
+  // Once the router is ready, decide whether to restore from localStorage.
+  // If fresh proforma data is in the URL, skip the restore — the URL data
+  // effect below will populate the form and then clear the URL. Only restore
+  // from storage when there's no fresh data (e.g. a plain refresh or direct nav).
   useEffect(() => {
     if (!router.isReady) return
     if (!router.query.data) {
@@ -104,8 +106,10 @@ function LOIContent() {
         const saved = localStorage.getItem('yem_loi_form')
         if (saved) setForm(prev => ({ ...prev, ...JSON.parse(saved) }))
       } catch { /* ignore */ }
+      setPersistReady(true)
     }
-    setPersistReady(true)
+    // When router.query.data IS present, persistReady is set after the URL
+    // effect consumes and clears it (see below).
   }, [router.isReady, router.query.data])
 
   // Persist the form on every change (debounced) so edits survive refreshes.
@@ -178,6 +182,8 @@ function LOIContent() {
     // Strip the consumed snapshot from the URL. Otherwise a refresh or an old
     // tab re-applies outdated values (e.g. a previous offer price) forever.
     router.replace('/generate-loi', undefined, { shallow: true })
+    // Now safe to start persisting — URL data has been consumed.
+    setPersistReady(true)
   }, [router.query.data])
 
   async function generateNarratives(data: Record<string, string>) {
