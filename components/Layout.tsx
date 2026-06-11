@@ -47,13 +47,7 @@ const navItems: NavItem[] = [
       { href: '/investor-deal-access', label: 'Deal Access Request' },
     ],
   },
-  {
-    label: 'Underwrite',
-    dropdown: [
-      { href: '/underwrite', label: 'Underwrite Deal' },
-      { href: '/generate-loi', label: 'Generate LOI' },
-    ],
-  },
+
 ]
 
 function DropdownMenu({ item }: { item: Extract<NavItem, { dropdown: unknown }> }) {
@@ -251,7 +245,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <div className="flex flex-col gap-3">
                   <Link href="/" className="footer-link">Home</Link>
                   <Link href="/pipeline" className="footer-link">Acquisition Pipeline</Link>
-                  <Link href="/underwrite" className="footer-link">Underwrite</Link>
+
                   <Link href="/acquisitions" className="footer-link">Acquisitions</Link>
                 </div>
               </div>
