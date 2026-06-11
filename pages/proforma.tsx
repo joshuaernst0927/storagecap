@@ -551,7 +551,7 @@ function WaterfallBox({ waterfall, inputs, leverageType, loanType }: {
             <div>
               <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Stabilized Value</div>
               <div className="text-base font-semibold text-[#1B2B5E]">{fmt$(waterfall.stabilizedValue)}</div>
-              <div className="text-sm text-dark-muted">Y3 NOI ÷ {inputs.refiCapRate}% cap</div>
+              <div className="text-sm text-dark-muted">Month {n(inputs.refiMonth,36)} NOI ÷ {inputs.refiCapRate}% cap</div>
             </div>
             <div>
               <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">New Perm Loan</div>
@@ -1487,7 +1487,7 @@ export default function Proforma() {
                   <Field label="Refi Month" value={inputs.refiMonth} onChange={v => set('refiMonth', v)} suffix="mo" step="6" note={`Bridge runway: ${n(inputs.bridgeTerm,24)+n(inputs.bridgeExtensions,0)*6} mo. Refi can happen any month.`} />
                   <Field label="Refi Cap Rate (valuation)" value={inputs.refiCapRate} onChange={v => set('refiCapRate', v)} suffix="%" step="0.25" note="NOI for that year ÷ this = stabilized value" />
                   <Field label="Min DSCR" value={inputs.refiDSCR} onChange={v => set('refiDSCR', v)} suffix="x" step="0.05" note="1.30x standard" />
-                  <Field label="Perm Loan Rate (IO)" value={inputs.refiLoanRate} onChange={v => set('refiLoanRate', v)} suffix="%" step="0.25" note="Max loan = Y3 NOI ÷ DSCR ÷ rate" />
+                  <Field label="Perm Loan Rate (IO)" value={inputs.refiLoanRate} onChange={v => set('refiLoanRate', v)} suffix="%" step="0.25" note="Max loan = refi month NOI ÷ DSCR ÷ rate" />
                   <Field label="LTV Cap" value={inputs.refiLTV} onChange={v => set('refiLTV', v)} suffix="% of stabilized value" step="1" note="Takes lower of LTV or DSCR" />
                   <div>
                     <label className="label-text">GP Refi Fee</label>
@@ -1644,8 +1644,8 @@ export default function Proforma() {
             <div className="border border-dark-border p-7">
               <SectionHead title="Exit & Offer Price" subtitle="Exit defaults to Year 5 NOI ÷ exit cap rate — enter offer price to see your IRR" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => set('exitCapRate', v)} suffix="%" step="0.25" />
-                <Field label="Hold Period" value={inputs.exitMonth} onChange={v => set('exitMonth', v)} suffix="mo" />
+                <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => { set('exitCapRate', v); if (hasCalculated) setTimeout(() => handleCalculate(), 50) }} suffix="%" step="0.25" />
+                <Field label="Hold Period" value={inputs.exitMonth} onChange={v => { set('exitMonth', v); if (hasCalculated) setTimeout(() => handleCalculate(), 50) }} suffix="mo" />
                 <div className="md:col-span-2">
                   <label className="label-text">Your Offer Price <span className="text-gold text-sm">(enter to see your IRR)</span></label>
                   <input className="input-field border-gold/50" type="number" step="any" value={inputs.offerPrice}
