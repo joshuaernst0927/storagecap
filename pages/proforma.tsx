@@ -199,6 +199,8 @@ type WaterfallResult = {
   refiCashOut: number
   lpRemainingEquity: number
   stabilizedValue: number
+  refiOccurs: boolean
+  bridgeRunwayMonths: number
 }
 
 const EMPTY_SELLER: SellerYear = { revenue: '', expenses: '', noi: '' }
@@ -331,7 +333,14 @@ function computeWaterfall(
   let refiCashOut = 0
   let refiFeePaid = 0
 
-  if (leverageType === 'levered' && loanType === 'bridge-to-perm') {
+  // A refi only happens if the hold period outlasts the bridge term plus its
+  // 6-month extension options. If the bridge (with extensions) covers the full
+  // hold, we sell out of the bridge and never incur refi cost or time.
+  const bridgeRunwayMonths = n(inputs.bridgeTerm, 24) + n(inputs.bridgeExtensions, 0) * 6
+  const refiOccurs = leverageType === 'levered' && loanType === 'bridge-to-perm'
+    && n(inputs.exitMonth, 60) > bridgeRunwayMonths
+
+  if (refiOccurs) {
     const y3NOI = noiYears[2] ?? noiYears[noiYears.length - 1] ?? 0
     const refiCapRate = n(inputs.refiCapRate, 7) / 100
     const refiDSCR = n(inputs.refiDSCR, 1.30)
@@ -387,9 +396,11 @@ function computeWaterfall(
     refiLoanAmount,
     refiCashOut,
     lpRemainingEquity,
-    stabilizedValue: leverageType === 'levered' && loanType === 'bridge-to-perm' && noiYears[2]
+    stabilizedValue: refiOccurs && noiYears[2]
       ? (noiYears[2] ?? 0) / (n(inputs.refiCapRate, 7) / 100)
       : 0,
+    refiOccurs,
+    bridgeRunwayMonths,
   }
 }
 
@@ -508,7 +519,15 @@ function WaterfallBox({ waterfall, inputs, leverageType, loanType }: {
     <div className="border border-dark-border p-6">
       <div className="section-label-sm mb-4">GP / LP Waterfall at Exit</div>
 
-      {leverageType === 'levered' && loanType === 'bridge-to-perm' && waterfall.stabilizedValue > 0 && (
+      {leverageType === 'levered' && loanType === 'bridge-to-perm' && !waterfall.refiOccurs && (
+        <div className="mb-6 p-4 border border-dark-border bg-dark-surface/30">
+          <div className="text-sm text-dark-muted">
+            No refi event — the {n(inputs.bridgeTerm, 24)}-month bridge plus {n(inputs.bridgeExtensions, 0)} × 6-month extension options cover the {n(inputs.exitMonth, 60)}-month hold. Exit is a sale out of the bridge, avoiding refi fees and execution time.
+          </div>
+        </div>
+      )}
+
+      {waterfall.refiOccurs && waterfall.stabilizedValue > 0 && (
         <div className="mb-6 p-4 border border-gold/40 bg-gold/5">
           <div className="section-label-sm mb-3">Refi Event — Month 36</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
@@ -910,6 +929,28 @@ export default function Proforma() {
   const [savedToPipeline, setSavedToPipeline] = useState(false)
   const setCapRate = (i: number, v: string) => setCapRates(prev => prev.map((c, idx) => idx === i ? v : c))
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
+  const [restored, setRestored] = useState(false)
+
+  // Restore saved inputs on mount so the form survives navigating away
+  // (e.g. to Generate LOI) and coming back. Without this, all inputs reset
+  // to empty every time the page unmounts.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('yem_proforma_inputs')
+      if (saved) setInputs(prev => ({ ...prev, ...JSON.parse(saved) }))
+    } catch { /* ignore */ }
+    setRestored(true)
+  }, [])
+
+  // Persist inputs on every change (debounced) so the latest values —
+  // including offer price — are always what flows into the LOI.
+  useEffect(() => {
+    if (!restored) return
+    const t = setTimeout(() => {
+      try { localStorage.setItem('yem_proforma_inputs', JSON.stringify(inputs)) } catch { /* ignore */ }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [inputs, restored])
 
   async function handleExtractOM() {
     if (!uploadFiles || uploadFiles.length === 0) return
