@@ -93,6 +93,29 @@ function LOIContent() {
   const [success, setSuccess] = useState(false)
 
   const set = (name: keyof LOIForm, value: string) => setForm(f => ({ ...f, [name]: value }))
+  const [persistReady, setPersistReady] = useState(false)
+
+  // If we arrived WITHOUT fresh proforma data in the URL (e.g. a refresh),
+  // restore the last form state from the browser instead of showing blanks.
+  useEffect(() => {
+    if (!router.isReady) return
+    if (!router.query.data) {
+      try {
+        const saved = localStorage.getItem('yem_loi_form')
+        if (saved) setForm(prev => ({ ...prev, ...JSON.parse(saved) }))
+      } catch { /* ignore */ }
+    }
+    setPersistReady(true)
+  }, [router.isReady, router.query.data])
+
+  // Persist the form on every change (debounced) so edits survive refreshes.
+  useEffect(() => {
+    if (!persistReady) return
+    const t = setTimeout(() => {
+      try { localStorage.setItem('yem_loi_form', JSON.stringify(form)) } catch { /* ignore */ }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [form, persistReady])
 
   useEffect(() => {
     if (!router.query.data) return
@@ -151,6 +174,10 @@ function LOIContent() {
       // Always attempt narrative generation with whatever data we have
       generateNarratives(data)
     } catch { /* ignore */ }
+
+    // Strip the consumed snapshot from the URL. Otherwise a refresh or an old
+    // tab re-applies outdated values (e.g. a previous offer price) forever.
+    router.replace('/generate-loi', undefined, { shallow: true })
   }, [router.query.data])
 
   async function generateNarratives(data: Record<string, string>) {
