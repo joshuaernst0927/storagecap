@@ -241,6 +241,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
+  // ── Run Excel Model: send all inputs to droplet, get back all outputs ──
+  if (action === 'run-excel') {
+    try {
+      const { action: _a, ...params } = req.body
+      const doRes = await fetch(`${DO_API}/run-model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+        signal: AbortSignal.timeout(120000),
+      })
+      if (!doRes.ok) {
+        const err = await doRes.text()
+        return res.status(502).json({ error: 'Excel model error', detail: err })
+      }
+      const data = await doRes.json()
+      return res.status(200).json(data)
+    } catch (err) {
+      console.error('run-excel error:', err)
+      return res.status(500).json({ error: 'Excel model failed', detail: String(err) })
+    }
+  }
+
   // ── Build Proforma: proxy to DO server ────────────────────────────
   if (action === 'build-proforma') {
     try {
