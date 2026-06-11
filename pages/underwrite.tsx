@@ -379,12 +379,20 @@ export default function Underwrite() {
     setExtracting(true)
     setExtractError('')
     try {
-      const formData = new FormData()
-      files.forEach(({ file }) => formData.append('files', file, file.name))
+      const filePayloads = await Promise.all(files.map(async ({ file }) => {
+        const data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+        return { fileName: file.name, mimeType: file.type, data }
+      }))
 
-      const res = await fetch('https://api.yemacquisitions.com/extract', {
+      const res = await fetch('/api/upload-deal', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: filePayloads }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
