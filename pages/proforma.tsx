@@ -68,6 +68,7 @@ type ProformaInputs = {
   bridgeGuaranteedIOMonths: string
   bridgePrepaidInterestMonths: string
   // Refi
+  refiMonth: string
   refiLTV: string
   refiRate: string
   refiAmortYears: string
@@ -243,6 +244,7 @@ const EMPTY: ProformaInputs = {
   bridgeGuaranteedIOMonths: '12',
   bridgePrepaidInterestMonths: '12',
   // Refi
+  refiMonth: '36',
   refiLTV: '70',
   refiRate: '6.5',
   refiAmortYears: '30',
@@ -333,21 +335,31 @@ function computeWaterfall(
   let refiCashOut = 0
   let refiFeePaid = 0
 
-  // A refi only happens if the hold period outlasts the bridge term plus its
-  // 6-month extension options. If the bridge (with extensions) covers the full
-  // hold, we sell out of the bridge and never incur refi cost or time.
-  const bridgeRunwayMonths = n(inputs.bridgeTerm, 24) + n(inputs.bridgeExtensions, 0) * 6
+  // refiOccurs whenever the user is on bridge-to-perm — the refi month field
+  // controls WHEN the refi happens (and therefore which year's NOI sizes the
+  // perm loan). The user can refi in Y2, Y3, or any month they choose.
   const refiOccurs = leverageType === 'levered' && loanType === 'bridge-to-perm'
-    && n(inputs.exitMonth, 60) > bridgeRunwayMonths
+  const bridgeRunwayMonths = n(inputs.bridgeTerm, 24) + n(inputs.bridgeExtensions, 0) * 6
 
   if (refiOccurs) {
-    const y3NOI = noiYears[2] ?? noiYears[noiYears.length - 1] ?? 0
+    // True monthly interpolation: month 30 = halfway between Y2 and Y3 NOI.
+    // This means the perm loan is sized on the exact NOI for that month,
+    // not rounded to the nearest annual bucket.
+    const refiMonthVal = n(inputs.refiMonth, 36)
+    const refiYearExact = refiMonthVal / 12          // e.g. month 30 → 2.5
+    const lowerIdx = Math.max(0, Math.floor(refiYearExact) - 1)   // 0-based index of year before
+    const upperIdx = Math.min(noiYears.length - 1, lowerIdx + 1)  // 0-based index of year after
+    const frac = refiYearExact - Math.floor(refiYearExact)         // fractional part (0–1)
+    const lowerNOI = noiYears[lowerIdx] ?? 0
+    const upperNOI = noiYears[upperIdx] ?? lowerNOI
+    // Linear interpolation between the two surrounding annual NOI values
+    const refiNOI = lowerIdx === upperIdx ? lowerNOI : lowerNOI + frac * (upperNOI - lowerNOI)
     const refiCapRate = n(inputs.refiCapRate, 7) / 100
     const refiDSCR = n(inputs.refiDSCR, 1.30)
     const refiLoanRate = n(inputs.refiLoanRate, 6) / 100
-    const stabilizedValue = refiCapRate > 0 ? y3NOI / refiCapRate : 0
+    const stabilizedValue = refiCapRate > 0 ? refiNOI / refiCapRate : 0
     const ltvMaxLoan = stabilizedValue * (n(inputs.refiLTV) / 100)
-    const dscrMaxLoan = refiLoanRate > 0 ? y3NOI / refiDSCR / refiLoanRate : 0
+    const dscrMaxLoan = refiLoanRate > 0 ? refiNOI / refiDSCR / refiLoanRate : 0
     refiLoanAmount = Math.min(ltvMaxLoan, dscrMaxLoan)
     const grossCashOut = Math.max(0, refiLoanAmount - loanAmount)
     refiCashOut = Math.min(grossCashOut, equityBreakdown.total)
@@ -364,7 +376,8 @@ function computeWaterfall(
   const lpCapitalReturn = Math.min(netProceeds, lpRemainingEquity)
   const afterCapital = Math.max(0, netProceeds - lpRemainingEquity)
 
-  const lpPref = lpEquityAtClosing * (n(inputs.lpPreferredReturn) / 100) * (n(inputs.exitMonth) / 12)
+  // Preferred return accrues on exact months — no rounding to years
+  const lpPref = lpEquityAtClosing * (n(inputs.lpPreferredReturn) / 100) * (n(inputs.exitMonth, 60) / 12)
   const lpPreferredPaid = Math.min(afterCapital, lpPref)
   const afterPref = Math.max(0, afterCapital - lpPreferredPaid)
 
@@ -396,8 +409,20 @@ function computeWaterfall(
     refiLoanAmount,
     refiCashOut,
     lpRemainingEquity,
-    stabilizedValue: refiOccurs && noiYears[2]
-      ? (noiYears[2] ?? 0) / (n(inputs.refiCapRate, 7) / 100)
+    stabilizedValue: refiOccurs
+      ? ((() => {
+          // Same monthly interpolation used above — keep in sync
+          const rm = n(inputs.refiMonth, 36)
+          const ryExact = rm / 12
+          const li = Math.max(0, Math.floor(ryExact) - 1)
+          const ui = Math.min(noiYears.length - 1, li + 1)
+          const fr = ryExact - Math.floor(ryExact)
+          const lNOI = noiYears[li] ?? 0
+          const uNOI = noiYears[ui] ?? lNOI
+          const rNOI = li === ui ? lNOI : lNOI + fr * (uNOI - lNOI)
+          const rc = n(inputs.refiCapRate, 7) / 100
+          return rc > 0 ? rNOI / rc : 0
+        })())
       : 0,
     refiOccurs,
     bridgeRunwayMonths,
@@ -519,17 +544,9 @@ function WaterfallBox({ waterfall, inputs, leverageType, loanType }: {
     <div className="border border-dark-border p-6">
       <div className="section-label-sm mb-4">GP / LP Waterfall at Exit</div>
 
-      {leverageType === 'levered' && loanType === 'bridge-to-perm' && !waterfall.refiOccurs && (
-        <div className="mb-6 p-4 border border-dark-border bg-dark-surface/30">
-          <div className="text-sm text-dark-muted">
-            No refi event — the {n(inputs.bridgeTerm, 24)}-month bridge plus {n(inputs.bridgeExtensions, 0)} × 6-month extension options cover the {n(inputs.exitMonth, 60)}-month hold. Exit is a sale out of the bridge, avoiding refi fees and execution time.
-          </div>
-        </div>
-      )}
-
       {waterfall.refiOccurs && waterfall.stabilizedValue > 0 && (
         <div className="mb-6 p-4 border border-gold/40 bg-gold/5">
-          <div className="section-label-sm mb-3">Refi Event — Month 36</div>
+          <div className="section-label-sm mb-3">Refi Event — Month {n(inputs.refiMonth, 36)}</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
             <div>
               <div className="text-sm text-dark-muted uppercase tracking-widest mb-0.5">Stabilized Value</div>
@@ -1229,6 +1246,7 @@ export default function Proforma() {
           purchase_price: offerPriceVal,
           noi_years: noiYears,
           exit_cap_rate: exitCapVal,
+          exit_month: n(inputs.exitMonth, 60),
           exit_value_override: exitSalePriceVal > 0 ? exitSalePriceVal : null,
           selling_costs_pct: 0.02,
           closing_costs_pct: n(inputs.closingCostsPct, 3) / 100,
@@ -1238,6 +1256,13 @@ export default function Proforma() {
           interest_rate: rate,
           amort_years: amortYears,
           io_months: ioMonths,
+          // Refi params — only sent when bridge-to-perm
+          refi_month: loanType === 'bridge-to-perm' ? n(inputs.refiMonth, 36) : null,
+          refi_ltv: loanType === 'bridge-to-perm' ? n(inputs.refiLTV, 70) / 100 : null,
+          refi_rate: loanType === 'bridge-to-perm' ? n(inputs.refiLoanRate, 6) / 100 : null,
+          refi_amort_years: 30,
+          refi_dscr: loanType === 'bridge-to-perm' ? n(inputs.refiDSCR, 1.30) : null,
+          refi_fee_pct: loanType === 'bridge-to-perm' ? n(inputs.refiFeePct, 1) / 100 : null,
         }
 
         const irrRes = await fetch('/api/underwrite', {
@@ -1457,9 +1482,10 @@ export default function Proforma() {
                   <Field label="Guaranteed IO Months" value={inputs.bridgeGuaranteedIOMonths} onChange={v => set('bridgeGuaranteedIOMonths', v)} suffix="months" step="1" note="Minimum IO commitment" />
                   <Field label="Prepaid Interest Months" value={inputs.bridgePrepaidInterestMonths} onChange={v => set('bridgePrepaidInterestMonths', v)} suffix="months" step="1" note="Funded by LP at closing as a closing cost" />
                 </div>
-                <SectionHead title="Refinance at Month 36" subtitle="Perm loan sized by DSCR test on Year 3 NOI — pays off bridge" />
+                <SectionHead title={`Refinance Settings`} subtitle="Perm loan sized by DSCR test on the NOI for the year of the refi month — pays off bridge" />
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <Field label="Refi Cap Rate (valuation)" value={inputs.refiCapRate} onChange={v => set('refiCapRate', v)} suffix="%" step="0.25" note="Y3 NOI ÷ this = stabilized value" />
+                  <Field label="Refi Month" value={inputs.refiMonth} onChange={v => set('refiMonth', v)} suffix="mo" step="6" note={`Bridge runway: ${n(inputs.bridgeTerm,24)+n(inputs.bridgeExtensions,0)*6} mo. Refi can happen any month.`} />
+                  <Field label="Refi Cap Rate (valuation)" value={inputs.refiCapRate} onChange={v => set('refiCapRate', v)} suffix="%" step="0.25" note="NOI for that year ÷ this = stabilized value" />
                   <Field label="Min DSCR" value={inputs.refiDSCR} onChange={v => set('refiDSCR', v)} suffix="x" step="0.05" note="1.30x standard" />
                   <Field label="Perm Loan Rate (IO)" value={inputs.refiLoanRate} onChange={v => set('refiLoanRate', v)} suffix="%" step="0.25" note="Max loan = Y3 NOI ÷ DSCR ÷ rate" />
                   <Field label="LTV Cap" value={inputs.refiLTV} onChange={v => set('refiLTV', v)} suffix="% of stabilized value" step="1" note="Takes lower of LTV or DSCR" />
