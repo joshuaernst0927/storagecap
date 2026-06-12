@@ -1267,7 +1267,7 @@ export default function Proforma() {
           noi_years: noiYears,
           exit_cap_rate: exitCapVal,
           exit_month: n(effectiveInputs.exitMonth, 60),
-          exit_value_override: exitSalePriceVal > 0 ? exitSalePriceVal : null,
+          exit_value_override: (exitSalePriceVal > 0 && exitDriver === 'override') ? exitSalePriceVal : null,
           selling_costs_pct: 0.02,
           closing_costs_pct: n(inputs.closingCostsPct, 3) / 100,
           acquisition_fee_pct: n(inputs.acquisitionFeePct, 2) / 100,
