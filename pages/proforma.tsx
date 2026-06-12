@@ -1142,10 +1142,16 @@ export default function Proforma() {
   async function handleCalculate(anchorOverride?: string, inputOverrides?: Partial<ProformaInputs>) {
     setCalculating(true)
     setCalcError('')
-    const effectiveInputs = inputOverrides ? { ...inputs, ...inputOverrides } : inputs
-    if (!effectiveInputs.exitSalePrice || effectiveInputs.exitSalePrice === '') {
+    // Always default to cap rate driver unless this call explicitly passes an exitSalePrice
+    const overrideHasExitPrice = inputOverrides?.exitSalePrice && inputOverrides.exitSalePrice !== ''
+    if (!overrideHasExitPrice) {
+      // Clear any stale exit sale price — cap rate is always the default
+      set('exitSalePrice', '')
       setExitDriver('caprate')
     }
+    const effectiveInputs = inputOverrides
+      ? { ...inputs, ...inputOverrides }
+      : { ...inputs, exitSalePrice: overrideHasExitPrice ? inputs.exitSalePrice : '' }
     try {
       const t12Data = {
         total_revenue:       n(inputs.t12Revenue) || n(inputs.t12NOI) / 0.6,
