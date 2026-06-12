@@ -1134,9 +1134,11 @@ export default function Proforma() {
     }
   }, [router.query.data])
 
-  async function handleCalculate(anchorOverride?: string) {
+  async function handleCalculate(anchorOverride?: string, inputOverrides?: Partial<ProformaInputs>) {
     setCalculating(true)
     setCalcError('')
+    // Merge any immediate overrides so we use the latest value, not stale state
+    const effectiveInputs = inputOverrides ? { ...inputs, ...inputOverrides } : inputs
     try {
       const t12Data = {
         total_revenue:       n(inputs.t12Revenue) || n(inputs.t12NOI) / 0.6,
@@ -1209,7 +1211,7 @@ export default function Proforma() {
       const offerPriceVal = n(inputs.offerPrice)
       const exitSalePriceVal = n(inputs.exitSalePrice)
 
-      const exitCapVal = n(inputs.exitCapRate, 7.25) / 100
+      const exitCapVal = n(effectiveInputs.exitCapRate, 7.25) / 100
       const defaultExitValue = exitCapVal > 0 ? y5NOI / exitCapVal : offerPriceVal
       const exitValue = exitSalePriceVal > 0 ? exitSalePriceVal : defaultExitValue
 
@@ -1246,7 +1248,7 @@ export default function Proforma() {
           purchase_price: offerPriceVal,
           noi_years: noiYears,
           exit_cap_rate: exitCapVal,
-          exit_month: n(inputs.exitMonth, 60),
+          exit_month: n(effectiveInputs.exitMonth, 60),
           exit_value_override: exitSalePriceVal > 0 ? exitSalePriceVal : null,
           selling_costs_pct: 0.02,
           closing_costs_pct: n(inputs.closingCostsPct, 3) / 100,
@@ -1644,8 +1646,8 @@ export default function Proforma() {
             <div className="border border-dark-border p-7">
               <SectionHead title="Exit & Offer Price" subtitle="Exit defaults to Year 5 NOI ÷ exit cap rate — enter offer price to see your IRR" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => { set('exitCapRate', v); if (hasCalculated) setTimeout(() => handleCalculate(), 50) }} suffix="%" step="0.25" />
-                <Field label="Hold Period" value={inputs.exitMonth} onChange={v => { set('exitMonth', v); if (hasCalculated) setTimeout(() => handleCalculate(), 50) }} suffix="mo" />
+                <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => { set('exitCapRate', v); if (hasCalculated) setTimeout(() => handleCalculate(undefined, { exitCapRate: v }), 50) }} suffix="%" step="0.25" />
+                <Field label="Hold Period" value={inputs.exitMonth} onChange={v => { set('exitMonth', v); if (hasCalculated) setTimeout(() => handleCalculate(undefined, { exitMonth: v }), 50) }} suffix="mo" />
                 <div className="md:col-span-2">
                   <label className="label-text">Your Offer Price <span className="text-gold text-sm">(enter to see your IRR)</span></label>
                   <input className="input-field border-gold/50" type="number" step="any" value={inputs.offerPrice}
