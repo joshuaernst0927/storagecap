@@ -1,5 +1,7 @@
-/**
+/**a
  * /api/underwrite
+ * calc-irr-v2 runs entirely on Vercel — no droplet needed.
+ * All other actions proxy to the droplet as before.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
@@ -171,12 +173,221 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
   return [{ type: 'text', text: `--- File: ${label} ---\n\n${text.slice(0, 25000)}` }]
 }
 
+// ── IRR Engine (runs on Vercel, no droplet needed) ────────────────────────────
+
+function interpNOIAtMonth(noiYears: number[], month: number): number {
+  if (!noiYears.length) return 0
+  const yearExact = month / 12
+  const lowerIdx = Math.max(0, Math.floor(yearExact) - 1)
+  const upperIdx = Math.min(noiYears.length - 1, lowerIdx + 1)
+  const frac = yearExact - Math.floor(yearExact)
+  const lowerNOI = lowerIdx < noiYears.length ? noiYears[lowerIdx] : 0
+  const upperNOI = upperIdx < noiYears.length ? noiYears[upperIdx] : lowerNOI
+  if (lowerIdx === upperIdx || frac === 0) return lowerNOI
+  return lowerNOI + frac * (upperNOI - lowerNOI)
+}
+
+function calcLoanBalance(originalLoan: number, interestRate: number, amortYears: number, ioMonths: number, monthsElapsed: number): number {
+  if (monthsElapsed <= ioMonths) return originalLoan
+  const amortMonthsElapsed = Math.floor(monthsElapsed - ioMonths)
+  if (amortYears <= 0 || interestRate <= 0) return originalLoan
+  const monthlyRate = interestRate / 12
+  const nPayments = amortYears * 12
+  const monthlyPayment = originalLoan * (monthlyRate * Math.pow(1 + monthlyRate, nPayments)) / (Math.pow(1 + monthlyRate, nPayments) - 1)
+  let balance = originalLoan
+  for (let i = 0; i < amortMonthsElapsed; i++) {
+    const interest = balance * monthlyRate
+    const principal = monthlyPayment - interest
+    balance -= principal
+  }
+  return Math.max(0, balance)
+}
+
+function irrCalc(cashflows: number[]): number {
+  const npv = (r: number) => cashflows.reduce((sum, cf, i) => sum + cf / Math.pow(1 + r, i), 0)
+  let lo = -0.9, hi = 10.0
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2
+    if (npv(mid) > 0) lo = mid
+    else hi = mid
+  }
+  return (lo + hi) / 2
+}
+
+interface CalcIRRV2Params {
+  purchase_price: number
+  noi_years: number[]
+  exit_cap_rate?: number
+  exit_month?: number
+  exit_value_override?: number | null
+  selling_costs_pct?: number
+  closing_costs_pct?: number
+  acquisition_fee_pct?: number
+  initial_repairs?: number
+  ltv?: number
+  interest_rate?: number
+  amort_years?: number
+  io_months?: number
+  refi_month?: number | null
+  refi_ltv?: number | null
+  refi_rate?: number | null
+  refi_amort_years?: number | null
+  refi_dscr?: number | null
+  refi_fee_pct?: number | null
+}
+
+function calcIRRv2(p: CalcIRRV2Params) {
+  const {
+    purchase_price,
+    noi_years,
+    exit_cap_rate = 0.075,
+    exit_month = 60,
+    exit_value_override = null,
+    selling_costs_pct = 0.02,
+    closing_costs_pct = 0.03,
+    acquisition_fee_pct = 0.02,
+    initial_repairs = 0,
+    ltv = 0,
+    interest_rate = 0.07,
+    amort_years = 30,
+    io_months = 0,
+    refi_month = null,
+    refi_ltv = null,
+    refi_rate = null,
+    refi_amort_years = null,
+    refi_dscr = null,
+    refi_fee_pct = null,
+  } = p
+
+  const holdMonths = Math.round(exit_month)
+  const holdYears = noi_years.length
+  const exitYear = Math.max(1, Math.min(holdYears, Math.round(holdMonths / 12)))
+  const totalCost = purchase_price * (1 + closing_costs_pct + acquisition_fee_pct) + initial_repairs
+  const exitNOI = interpNOIAtMonth(noi_years, holdMonths)
+  const exitValue = (exit_value_override && exit_value_override > 0)
+    ? exit_value_override
+    : (exit_cap_rate > 0 ? exitNOI / exit_cap_rate : 0)
+  const netSale = exitValue * (1 - selling_costs_pct)
+
+  // Unlevered cash flows
+  const ucf: number[] = [-totalCost]
+  for (let yr = 1; yr <= exitYear; yr++) {
+    const noi = yr <= noi_years.length ? noi_years[yr - 1] : noi_years[noi_years.length - 1]
+    ucf.push(yr === exitYear ? noi + netSale : noi)
+  }
+
+  // Levered cash flows
+  const loan = purchase_price * ltv
+  const equity = totalCost - loan
+  const ioYears = Math.floor(io_months / 12)
+  const annualDsIO = loan * interest_rate
+
+  let annualDsBridge = loan * interest_rate
+  if (amort_years > 0 && interest_rate > 0) {
+    const mr = interest_rate / 12
+    const np = amort_years * 12
+    const mp = loan * (mr * Math.pow(1 + mr, np)) / (Math.pow(1 + mr, np) - 1)
+    annualDsBridge = mp * 12
+  }
+
+  let refiCashOut = 0
+  let refiFeePaid = 0
+  let newLoan = loan
+  let newLoanDs = annualDsBridge
+  let refiYear: number | null = null
+  let rr = interest_rate
+  let ra = amort_years
+  const refiOccurs = !!(refi_month && refi_month > 0 && ltv > 0)
+
+  if (refiOccurs && refi_month) {
+    refiYear = Math.max(1, Math.min(exitYear, Math.round(refi_month / 12)))
+    const refiNOI = interpNOIAtMonth(noi_years, refi_month)
+    rr = refi_rate ?? interest_rate
+    ra = refi_amort_years ?? 30
+    const rc = refi_ltv ?? 0.70
+    const rd = refi_dscr ?? 1.30
+    const rf = refi_fee_pct ?? 0.01
+    const goingInCap = noi_years[0] / purchase_price
+    const refiStabValue = goingInCap > 0 ? refiNOI / goingInCap : 0
+    const ltvMax = refiStabValue * rc
+    const dscrMax = rr > 0 ? refiNOI / rd / rr : 0
+    newLoan = Math.min(ltvMax, dscrMax)
+    const bridgeBalance = calcLoanBalance(loan, interest_rate, amort_years, io_months, refi_month)
+    refiCashOut = Math.max(0, newLoan - bridgeBalance)
+    refiFeePaid = newLoan * rf
+    if (ra > 0 && rr > 0) {
+      const mr2 = rr / 12
+      const np2 = ra * 12
+      const mp2 = newLoan * (mr2 * Math.pow(1 + mr2, np2)) / (Math.pow(1 + mr2, np2) - 1)
+      newLoanDs = mp2 * 12
+    } else {
+      newLoanDs = newLoan * rr
+    }
+  }
+
+  const lcf: number[] = [-equity]
+  for (let yr = 1; yr <= exitYear; yr++) {
+    const noi = yr <= noi_years.length ? noi_years[yr - 1] : noi_years[noi_years.length - 1]
+    let ds: number
+    if (refiOccurs && refiYear && yr > refiYear) ds = newLoanDs
+    else if (yr <= ioYears) ds = annualDsIO
+    else ds = annualDsBridge
+
+    if (yr < exitYear) {
+      let cf = noi - ds
+      if (refiOccurs && refiYear && yr === refiYear) cf += refiCashOut - refiFeePaid
+      lcf.push(cf)
+    } else {
+      const monthsSinceRefi = refiOccurs && refiYear ? (exitYear - refiYear) * 12 : 0
+      const remainingBalance = (refiOccurs && refiYear)
+        ? calcLoanBalance(newLoan, rr, ra, 0, monthsSinceRefi)
+        : calcLoanBalance(loan, interest_rate, amort_years, io_months, holdMonths)
+      let cf = noi - ds + netSale - remainingBalance
+      if (refiOccurs && refiYear && yr === refiYear) cf += refiCashOut - refiFeePaid
+      lcf.push(cf)
+    }
+  }
+
+  const uIRR = irrCalc(ucf)
+  const lIRR = ltv > 0 ? irrCalc(lcf) : uIRR
+  const equityMultiple = equity > 0 ? lcf.filter(cf => cf > 0).reduce((a, b) => a + b, 0) / equity : 0
+  const annualDsDisplay = refiOccurs ? newLoanDs : annualDsBridge
+
+  return {
+    unlevered_irr:       Math.round(uIRR * 10000) / 10000,
+    levered_irr:         Math.round(lIRR * 10000) / 10000,
+    equity_multiple:     Math.round(equityMultiple * 100) / 100,
+    equity_required:     Math.round(equity),
+    loan_amount:         Math.round(loan),
+    annual_debt_service: Math.round(annualDsDisplay),
+    going_in_cap:        purchase_price > 0 ? Math.round(noi_years[0] / purchase_price * 10000) / 10000 : 0,
+    stabilized_cap:      purchase_price > 0 ? Math.round(exitNOI / purchase_price * 10000) / 10000 : 0,
+    exit_value:          Math.round(exitValue),
+    refi_cash_out:       Math.round(refiCashOut),
+    refi_fee_paid:       Math.round(refiFeePaid),
+    new_loan:            Math.round(newLoan),
+  }
+}
+
+// ── API Handler ───────────────────────────────────────────────────────────────
+
 export const config = { api: { bodyParser: { sizeLimit: '50mb' } } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { action } = req.body as { action: string }
+
+  // ── Calc IRR v2 — runs on Vercel, no droplet ──────────────────────
+  if (action === 'calc-irr-v2') {
+    try {
+      const result = calcIRRv2(req.body as CalcIRRV2Params)
+      return res.status(200).json(result)
+    } catch (err) {
+      console.error('calc-irr-v2 error:', err)
+      return res.status(500).json({ error: 'IRR calculation failed', detail: String(err) })
+    }
+  }
 
   // ── Max Offer: proxy to DO server ─────────────────────────────────
   if (action === 'max-offer') {
@@ -199,7 +410,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Calc IRR at Price: proxy to DO server ─────────────────────────
+  // ── Calc IRR: proxy to DO server ──────────────────────────────────
   if (action === 'calc-irr') {
     try {
       const { action: _a, ...params } = req.body
@@ -220,28 +431,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Calc IRR v2 (Levered + Unlevered): proxy to DO server ─────────
-  if (action === 'calc-irr-v2') {
-    try {
-      const { action: _a, ...params } = req.body
-      const doRes = await fetch(`${DO_API}/calc-irr-v2`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      })
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        return res.status(502).json({ error: 'DO server error', detail: err })
-      }
-      const data = await doRes.json()
-      return res.status(200).json(data)
-    } catch (err) {
-      console.error('calc-irr-v2 proxy error:', err)
-      return res.status(500).json({ error: 'IRR v2 calculation failed', detail: String(err) })
-    }
-  }
-
-  // ── Run Excel Model: send all inputs to droplet, get back all outputs ──
+  // ── Run Excel Model: proxy to DO server ───────────────────────────
   if (action === 'run-excel') {
     try {
       const { action: _a, ...params } = req.body
