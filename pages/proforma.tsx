@@ -957,7 +957,6 @@ export default function Proforma() {
       const saved = localStorage.getItem('yem_proforma_inputs')
       if (saved) {
         const parsed = JSON.parse(saved)
-        // Never restore exitSalePrice — always start fresh with cap rate as driver
         delete parsed.exitSalePrice
         setInputs(prev => ({ ...prev, ...parsed }))
       }
@@ -1143,9 +1142,7 @@ export default function Proforma() {
   async function handleCalculate(anchorOverride?: string, inputOverrides?: Partial<ProformaInputs>) {
     setCalculating(true)
     setCalcError('')
-    // Merge any immediate overrides so we use the latest value, not stale state
     const effectiveInputs = inputOverrides ? { ...inputs, ...inputOverrides } : inputs
-    // If no exit sale price is set, always use cap rate as the driver
     if (!effectiveInputs.exitSalePrice || effectiveInputs.exitSalePrice === '') {
       setExitDriver('caprate')
     }
