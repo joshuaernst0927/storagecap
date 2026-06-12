@@ -166,6 +166,7 @@ type IRRResult = {
   in_place_noi: number
   stabilized_noi: number
   method: string
+  exit_value?: number
 }
 
 type EquityBreakdown = {
@@ -666,13 +667,15 @@ function WaterfallBox({ waterfall, inputs, leverageType, loanType }: {
 function IRRBox({ result, offerPrice, exitSalePrice, equityBreakdown }: {
   result: IRRResult; offerPrice: string; exitSalePrice?: string; equityBreakdown?: EquityBreakdown
 }) {
-  const displayPrice = exitSalePrice && parseInt(exitSalePrice) > 0 ? exitSalePrice : offerPrice
+  const isOverride = !!(exitSalePrice && parseInt(exitSalePrice) > 0)
+  const exitVal = isOverride ? parseInt(exitSalePrice!) : (result.exit_value ?? 0)
+  const displayPrice = exitVal > 0 ? exitVal : parseInt(offerPrice)
   const hasDebt = result.levered_irr !== undefined && result.levered_irr !== result.unlevered_irr
   return (
     <div className="border-2 border-gold bg-gold/5 p-6">
       <div className="section-label-sm text-gold mb-4">
-        Returns at {displayPrice ? '$' + parseInt(displayPrice).toLocaleString() : 'This Offer'}
-        {exitSalePrice && parseInt(exitSalePrice) > 0 ? ' (exit override)' : ''}
+        Returns at {displayPrice ? '$' + displayPrice.toLocaleString() : 'This Offer'}
+        {isOverride ? ' (exit override)' : ' (cap rate exit)'}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="border border-gold/30 p-4 bg-white/50">
@@ -1321,6 +1324,7 @@ export default function Proforma() {
             in_place_noi: anchorNOI,
             stabilized_noi: y5NOI,
             method: '',
+            exit_value: irrData.exit_value ?? Math.round(exitValue),
           })
 
           const wf = computeWaterfall(inputs, breakdown, exitValue, loanAmount, leverageType, loanType, noiYears)
