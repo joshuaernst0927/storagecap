@@ -944,6 +944,7 @@ export default function Proforma() {
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState('')
   const [savedToPipeline, setSavedToPipeline] = useState(false)
+  const [exitDriver, setExitDriver] = useState<'caprate' | 'override'>('caprate')
   const setCapRate = (i: number, v: string) => setCapRates(prev => prev.map((c, idx) => idx === i ? v : c))
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
   const [restored, setRestored] = useState(false)
@@ -1207,6 +1208,15 @@ export default function Proforma() {
       const activeAnchor = anchorOverride ?? maxOfferAnchor
       const y1NOI = proformaData.years[0]?.noi ?? 0
       const y5NOI = proformaData.years[4]?.noi ?? y1NOI
+      // Exit NOI: interpolate based on actual hold period months, not hardcoded Y5
+      const exitMonthVal = n(effectiveInputs.exitMonth, 60)
+      const exitYearExact = exitMonthVal / 12
+      const exitLowerIdx = Math.max(0, Math.floor(exitYearExact) - 1)
+      const exitUpperIdx = Math.min(proformaData.years.length - 1, exitLowerIdx + 1)
+      const exitFrac = exitYearExact - Math.floor(exitYearExact)
+      const exitLowerNOI = proformaData.years[exitLowerIdx]?.noi ?? y1NOI
+      const exitUpperNOI = proformaData.years[exitUpperIdx]?.noi ?? exitLowerNOI
+      const exitNOI = exitLowerIdx === exitUpperIdx ? exitLowerNOI : exitLowerNOI + exitFrac * (exitUpperNOI - exitLowerNOI)
       const t12NOIval = n(inputs.t12NOI) || proformaData.t12.noi
       const manualNOIval = n(inputs.manualNOI)
 
@@ -1219,8 +1229,9 @@ export default function Proforma() {
       const exitSalePriceVal = n(inputs.exitSalePrice)
 
       const exitCapVal = n(effectiveInputs.exitCapRate, 7.25) / 100
-      const defaultExitValue = exitCapVal > 0 ? y5NOI / exitCapVal : offerPriceVal
-      const exitValue = exitSalePriceVal > 0 ? exitSalePriceVal : defaultExitValue
+      const capRateExitValue = exitCapVal > 0 ? exitNOI / exitCapVal : offerPriceVal
+      // exitDriver tracks which was touched last — cap rate field or override button
+      const exitValue = (exitSalePriceVal > 0 && exitDriver === 'override') ? exitSalePriceVal : capRateExitValue
 
       let loanAmount = 0
       if (leverageType === 'levered') {
@@ -1662,7 +1673,7 @@ export default function Proforma() {
             <div className="border border-dark-border p-7">
               <SectionHead title="Exit & Offer Price" subtitle="Exit defaults to Year 5 NOI ÷ exit cap rate — enter offer price to see your IRR" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => { set('exitCapRate', v); if (hasCalculated) setTimeout(() => handleCalculate(undefined, { exitCapRate: v }), 50) }} suffix="%" step="0.25" />
+                <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => { set('exitCapRate', v); setExitDriver('caprate'); if (hasCalculated) setTimeout(() => handleCalculate(undefined, { exitCapRate: v, exitSalePrice: '' }), 50) }} suffix="%" step="0.25" />
                 <Field label="Hold Period" value={inputs.exitMonth} onChange={v => { set('exitMonth', v); if (hasCalculated) setTimeout(() => handleCalculate(undefined, { exitMonth: v }), 50) }} suffix="mo" />
                 <div className="md:col-span-2">
                   <label className="label-text">Your Offer Price <span className="text-gold text-sm">(enter to see your IRR)</span></label>
@@ -1794,6 +1805,7 @@ export default function Proforma() {
                           key={i}
                           onClick={() => {
                             set('exitSalePrice', String(exitVal))
+                            setExitDriver('override')
                             setTimeout(() => handleCalculate(), 50)
                           }}
                           disabled={!inputs.offerPrice || calculating}
@@ -1812,7 +1824,7 @@ export default function Proforma() {
                     <label className="label-text">Override Exit Sale Price <span className="text-gold text-sm">(optional)</span></label>
                     <div className="flex gap-2 items-center">
                       <input className="input-field border-gold/50 flex-1" type="number" step="any" value={inputs.exitSalePrice}
-                        onChange={e => set('exitSalePrice', e.target.value)} placeholder="Leave blank to use cap rate exit" />
+                        onChange={e => { set('exitSalePrice', e.target.value); setExitDriver(e.target.value ? 'override' : 'caprate') }} placeholder="Leave blank to use cap rate exit" />
                       <button onClick={() => handleCalculate()} disabled={calculating || !inputs.offerPrice}
                         className="btn-gold disabled:opacity-40 px-4 py-2 text-sm whitespace-nowrap">
                         Recalculate
