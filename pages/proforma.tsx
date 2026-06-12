@@ -955,7 +955,12 @@ export default function Proforma() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('yem_proforma_inputs')
-      if (saved) setInputs(prev => ({ ...prev, ...JSON.parse(saved) }))
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // Never restore exitSalePrice — always start fresh with cap rate as driver
+        delete parsed.exitSalePrice
+        setInputs(prev => ({ ...prev, ...parsed }))
+      }
     } catch { /* ignore */ }
     setRestored(true)
   }, [])
@@ -1230,7 +1235,7 @@ export default function Proforma() {
       else if (activeAnchor === 'manual' && manualNOIval > 0) anchorNOI = manualNOIval
 
       const offerPriceVal = n(inputs.offerPrice)
-      const exitSalePriceVal = n(inputs.exitSalePrice)
+      const exitSalePriceVal = n(effectiveInputs.exitSalePrice)
 
       const exitCapVal = n(effectiveInputs.exitCapRate, 7.25) / 100
       const capRateExitValue = exitCapVal > 0 ? exitNOI / exitCapVal : offerPriceVal
