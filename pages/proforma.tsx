@@ -1140,6 +1140,10 @@ export default function Proforma() {
     setCalcError('')
     // Merge any immediate overrides so we use the latest value, not stale state
     const effectiveInputs = inputOverrides ? { ...inputs, ...inputOverrides } : inputs
+    // If no exit sale price is set, always use cap rate as the driver
+    if (!effectiveInputs.exitSalePrice || effectiveInputs.exitSalePrice === '') {
+      setExitDriver('caprate')
+    }
     try {
       const t12Data = {
         total_revenue:       n(inputs.t12Revenue) || n(inputs.t12NOI) / 0.6,
@@ -1674,7 +1678,7 @@ export default function Proforma() {
             <div className="border border-dark-border p-7">
               <SectionHead title="Exit & Offer Price" subtitle="Exit defaults to Year 5 NOI ÷ exit cap rate — enter offer price to see your IRR" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => { set('exitCapRate', v); setExitDriver('caprate'); if (hasCalculated) setTimeout(() => handleCalculate(undefined, { exitCapRate: v, exitSalePrice: '' }), 50) }} suffix="%" step="0.25" />
+                <Field label="Exit Cap Rate" value={inputs.exitCapRate} onChange={v => { set('exitCapRate', v); set('exitSalePrice', ''); setExitDriver('caprate'); if (hasCalculated) setTimeout(() => handleCalculate(undefined, { exitCapRate: v, exitSalePrice: '' }), 50) }} suffix="%" step="0.25" />
                 <Field label="Hold Period" value={inputs.exitMonth} onChange={v => { set('exitMonth', v); if (hasCalculated) setTimeout(() => handleCalculate(undefined, { exitMonth: v }), 50) }} suffix="mo" />
                 <div className="md:col-span-2">
                   <label className="label-text">Your Offer Price <span className="text-gold text-sm">(enter to see your IRR)</span></label>
