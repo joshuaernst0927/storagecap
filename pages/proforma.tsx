@@ -1165,13 +1165,20 @@ export default function Proforma() {
         tax_insurance_growth: 0.02,
         mgmt_fee_pct:         0.05,
         revenue_haircut:      n(revenueHaircut) / 100,
-        occ_schedule: [
-          Math.min(n(inputs.targetOccupancy, 80) / 100, 0.92),
-          Math.min((n(inputs.targetOccupancy, 80) + 6) / 100, 0.92),
-          Math.min((n(inputs.targetOccupancy, 80) + 10) / 100, 0.92),
-          Math.min((n(inputs.targetOccupancy, 80) + 11) / 100, 0.92),
-          Math.min((n(inputs.targetOccupancy, 80) + 12) / 100, 0.92),
-        ],
+        occ_schedule: (() => {
+          // Ramp linearly from current occupancy to target over monthsToStabilization.
+          // After stabilization, hold at target. Never exceed target.
+          const current = n(inputs.currentOccupancy, 70) / 100
+          const target = n(inputs.targetOccupancy, 90) / 100
+          const stabMonths = n(inputs.monthsToStabilization, 24)
+          const years = [1, 2, 3, 4, 5]
+          return years.map(yr => {
+            const monthsElapsed = yr * 12
+            if (stabMonths <= 0) return target
+            const progress = Math.min(monthsElapsed / stabMonths, 1)
+            return Math.min(current + progress * (target - current), target)
+          })
+        })(),
       }
 
       const sellerYearsData = [
@@ -1585,11 +1592,20 @@ export default function Proforma() {
 
             {/* Historical Data */}
             <div className="border border-dark-border p-7">
-              <SectionHead title="Historical Data" subtitle="From T12, T3, and available occupancy records" />
+              <SectionHead title="Historical Data" subtitle="Auto-populated from OM extraction" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <Field label="T-12 NOI" value={inputs.t12NOI} onChange={v => set('t12NOI', v)} suffix="$" />
-                <Field label="T-3 NOI (annualized)" value={inputs.t3NOI} onChange={v => set('t3NOI', v)} suffix="$" note="Last 3 months × 4" />
-                <Field label="Current Occupancy" value={inputs.t12Occupancy} onChange={v => set('t12Occupancy', v)} suffix="%" />
+                <div>
+                  <label className="label-text">T-12 NOI <span className="text-dark-muted text-xs">(from OM)</span></label>
+                  <div className="input-field bg-dark-surface/50 text-[#1B2B5E] font-semibold">{inputs.t12NOI ? '$' + Number(inputs.t12NOI).toLocaleString() : '—'}</div>
+                </div>
+                <div>
+                  <label className="label-text">T-3 NOI <span className="text-dark-muted text-xs">(annualized, from OM)</span></label>
+                  <div className="input-field bg-dark-surface/50 text-[#1B2B5E] font-semibold">{inputs.t3NOI ? '$' + Number(inputs.t3NOI).toLocaleString() : '—'}</div>
+                </div>
+                <div>
+                  <label className="label-text">Current Occupancy <span className="text-dark-muted text-xs">(from OM)</span></label>
+                  <div className="input-field bg-dark-surface/50 text-[#1B2B5E] font-semibold">{inputs.t12Occupancy ? inputs.t12Occupancy + '%' : '—'}</div>
+                </div>
               </div>
             </div>
 
