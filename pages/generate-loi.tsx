@@ -94,6 +94,7 @@ function LOIContent() {
 
   const set = (name: keyof LOIForm, value: string) => setForm(f => ({ ...f, [name]: value }))
   const [persistReady, setPersistReady] = useState(false)
+  const [loiSourceData, setLoiSourceData] = useState<Record<string, string>>({})
 
   // Once the router is ready, decide whether to restore from localStorage.
   // If fresh proforma data is in the URL, skip the restore — the URL data
@@ -173,7 +174,13 @@ function LOIContent() {
         lp_irr: data.lpIRR || prev.lp_irr,
         gp_moic: data.gpMOIC || prev.gp_moic,
         emd: data.emd || prev.emd,
+        dd_days: data.ddDays || prev.dd_days,
+        closing_days: data.closingDays || prev.closing_days,
+        gp_irr: data.gpIRR || prev.gp_irr,
       }))
+
+      // Store data for regenerate button (URL gets stripped below)
+      setLoiSourceData(data)
 
       // Always attempt narrative generation with whatever data we have
       generateNarratives(data)
@@ -368,10 +375,14 @@ Return ONLY a JSON object with exactly two fields, no markdown:
                 <button
                   type="button"
                   onClick={() => {
-                    try {
-                      const data = JSON.parse(decodeURIComponent(router.query.data as string))
-                      generateNarratives(data)
-                    } catch { /* ignore */ }
+                    if (Object.keys(loiSourceData).length > 0) {
+                      generateNarratives(loiSourceData)
+                    } else {
+                      try {
+                        const data = JSON.parse(decodeURIComponent(router.query.data as string))
+                        generateNarratives(data)
+                      } catch { /* ignore */ }
+                    }
                   }}
                   disabled={generatingNarrative}
                   className="text-sm uppercase tracking-widest text-gold border border-gold/50 px-4 py-2 hover:bg-gold/10 transition-colors disabled:opacity-50 ml-4 flex-shrink-0"
