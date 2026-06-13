@@ -1,7 +1,6 @@
-/**a
- * /api/underwrite
- * calc-irr-v2 runs entirely on Vercel — no droplet needed.
- * All other actions proxy to the droplet as before.
+/**
+ * /api/underwrite — YEM Acquisitions
+ * All computation runs on Vercel. No droplet dependency.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
@@ -12,14 +11,14 @@ import path from 'path'
 import os from 'os'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
 const DO_API = 'http://157.230.186.240:8000'
 
+// ── Extraction prompt ─────────────────────────────────────────────────────────
 const EXTRACTION_PROMPT = `You are analyzing self-storage acquisition documents (rent roll, T12 P&L, offering memorandum, proforma, or deal memo).
 
 Extract ALL available inputs for financial underwriting. Return ONLY a valid JSON object — no markdown fences, no commentary, no extra text. Use null for any field you cannot find.
 
-IMPORTANT: Extract the SELLER'S projected numbers exactly as presented. Do not adjust or haircut them — that happens separately.
+IMPORTANT: Extract the SELLER'S projected numbers exactly as presented. Do not adjust or haircut them.
 
 {
   "propertyName": string,
@@ -28,96 +27,54 @@ IMPORTANT: Extract the SELLER'S projected numbers exactly as presented. Do not a
   "state": string,
   "msaName": string,
   "dealType": "value-add" | "stabilized" | "distressed" | null,
-
   "totalUnits": number,
-  "totalSF": number (net rentable square feet — self storage units only, not parking),
+  "totalSF": number,
   "yearBuilt": number,
-  "currentOccupancy": number (percent, e.g. 85 for 85%),
-  "occupancy12MonthsAgo": number (percent, if available),
-  "occupancy24MonthsAgo": number (percent, if available),
-  "currentAvgRentPerUnit": number (monthly $/unit),
-  "marketAvgRentPerUnit": number (monthly $/unit — from market comparables in doc),
-
-  "broker1Name": string (first listing broker full name),
-  "broker2Name": string (second listing broker full name, if any),
+  "currentOccupancy": number,
+  "currentAvgRentPerUnit": number,
+  "marketAvgRentPerUnit": number,
+  "broker1Name": string,
+  "broker2Name": string,
   "brokerPhone1": string,
   "brokerPhone2": string,
   "brokerEmail1": string,
   "brokerEmail2": string,
-  "brokerageName": string (brokerage firm name, e.g. CBRE, Marcus and Millichap),
-
-  "t12NOI": number (dollars — trailing 12 month NOI),
-  "t3NOI": number (dollars — last 3 months NOI annualized, i.e. multiply by 4),
-  "t12Revenue": number (dollars — trailing 12 month gross revenue),
-  "t12Expenses": number (dollars — trailing 12 month total expenses),
-  "t12ExpenseRatio": number (decimal, e.g. 0.38 for 38%),
-
-  "t12Payroll": number (dollars — T-12 payroll / labor costs),
-  "t12ManagementFees": number (dollars — T-12 management fees),
-  "t12Marketing": number (dollars — T-12 marketing / advertising),
-  "t12Utilities": number (dollars — T-12 utilities),
-  "t12OfficeEmployee": number (dollars — T-12 office / employee expenses),
-  "t12Administrative": number (dollars — T-12 administrative expenses),
-  "t12RepairsMaintenance": number (dollars — T-12 repairs and maintenance),
-  "t12Tax": number (dollars — T-12 property tax),
-  "t12Insurance": number (dollars — T-12 insurance),
-  "t12OtherExpenses": number (dollars — T-12 any other expenses not listed above),
-
-  "sellerY1Revenue": number (dollars — seller projected Year 1 revenue),
-  "sellerY1Expenses": number (dollars — seller projected Year 1 expenses),
-  "sellerY1NOI": number (dollars — seller projected Year 1 NOI),
-  "sellerY2Revenue": number (dollars — seller projected Year 2 revenue),
-  "sellerY2Expenses": number (dollars — seller projected Year 2 expenses),
-  "sellerY2NOI": number (dollars — seller projected Year 2 NOI),
-  "sellerY3Revenue": number (dollars — seller projected Year 3 revenue),
-  "sellerY3Expenses": number (dollars — seller projected Year 3 expenses),
-  "sellerY3NOI": number (dollars — seller projected Year 3 NOI),
-  "sellerY4Revenue": number (dollars — seller projected Year 4 revenue, if available),
-  "sellerY4NOI": number (dollars — seller projected Year 4 NOI, if available),
-  "sellerY5Revenue": number (dollars — seller projected Year 5 revenue, if available),
-  "sellerY5NOI": number (dollars — seller projected Year 5 NOI, if available),
-
-  "monthsToStabilization": number (seller's projected months to stabilization),
-  "projectedStabilizedOccupancy": number (percent — seller's stabilized occupancy target),
-  "projectedStabilizedNOI": number (dollars — seller's stabilized NOI),
-
-  "purchasePrice": number (dollars — asking price),
-  "closingCostsPct": number (decimal e.g. 0.03 for 3%),
-  "initialRepairs": number (dollars),
-  "acquisitionFeePct": number (decimal),
-  "assetMgmtFeePct": number (decimal),
-  "dispositionFeePct": number (decimal),
-  "startOccupancy": number (decimal e.g. 0.85 for 85%),
-  "stabilizedOccupancy": number (decimal),
-  "annualRentGrowth": number (decimal),
-  "opexGrowth": number (decimal),
-  "initialLTV": number (decimal),
-  "initialRate": number (decimal),
-  "initialAmortYears": number,
-  "ioPeriodMonths": number,
-  "minDSCR": number,
-  "refiMonth": number,
-  "refiLTV": number (decimal),
-  "refiRate": number (decimal),
-  "refiAmortYears": number,
-  "exitCapRate": number (decimal),
+  "brokerageName": string,
+  "t12NOI": number,
+  "t3NOI": number,
+  "t12Revenue": number,
+  "t12Expenses": number,
+  "t12ExpenseRatio": number,
+  "t12Payroll": number,
+  "t12ManagementFees": number,
+  "t12Marketing": number,
+  "t12Utilities": number,
+  "t12OfficeEmployee": number,
+  "t12Administrative": number,
+  "t12RepairsMaintenance": number,
+  "t12Tax": number,
+  "t12Insurance": number,
+  "t12OtherExpenses": number,
+  "sellerY1Revenue": number,
+  "sellerY1Expenses": number,
+  "sellerY1NOI": number,
+  "sellerY2Revenue": number,
+  "sellerY2Expenses": number,
+  "sellerY2NOI": number,
+  "sellerY3Revenue": number,
+  "sellerY3Expenses": number,
+  "sellerY3NOI": number,
+  "sellerY4Revenue": number,
+  "sellerY4NOI": number,
+  "sellerY5Revenue": number,
+  "sellerY5NOI": number,
+  "monthsToStabilization": number,
+  "projectedStabilizedOccupancy": number,
+  "projectedStabilizedNOI": number,
+  "purchasePrice": number,
+  "exitCapRate": number,
   "exitMonth": number,
-  "sellingCostsPct": number (decimal),
-  "preferredReturn": number (decimal),
-  "lpCatchUp": number (decimal),
-  "gpCatchUp": number (decimal),
-  "lpResidual": number (decimal),
-  "gpResidual": number (decimal),
-
-  "unitMix": [
-    {
-      "type": "5x5" | "5x10" | "10x10" | "10x15" | "10x20" | "other",
-      "units": number,
-      "sqft": number,
-      "currentRent": number (monthly $/unit),
-      "marketRent": number (monthly $/unit)
-    }
-  ]
+  "unitMix": [{ "type": string, "units": number, "sqft": number, "currentRent": number, "marketRent": number }]
 }`
 
 type UWData = Record<string, unknown>
@@ -127,21 +84,18 @@ type FileInput = { fileName?: string; mimeType: string; data: string }
 async function fileToBlocks(f: FileInput): Promise<any[]> {
   const { fileName, mimeType, data } = f
   const label = fileName || 'document'
-
   if (mimeType === 'application/pdf') {
     return [
       { type: 'text', text: `--- File: ${label} ---` },
       { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } },
     ]
   }
-
   if (mimeType.startsWith('image/')) {
     return [
       { type: 'text', text: `--- File: ${label} ---` },
       { type: 'image', source: { type: 'base64', media_type: mimeType, data } },
     ]
   }
-
   let text = ''
   if (mimeType.includes('spreadsheetml') || fileName?.toLowerCase().endsWith('.xlsx')) {
     const xlsx = await import('xlsx')
@@ -157,9 +111,7 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
     const JSZip = (await import('jszip')).default
     const buf = Buffer.from(data, 'base64')
     const zip = await JSZip.loadAsync(buf)
-    const slideFiles = Object.keys(zip.files)
-      .filter(sf => /ppt\/slides\/slide\d+\.xml$/.test(sf))
-      .sort()
+    const slideFiles = Object.keys(zip.files).filter(sf => /ppt\/slides\/slide\d+\.xml$/.test(sf)).sort()
     const parts: string[] = []
     for (const sf of slideFiles) {
       const xml = await zip.files[sf].async('text')
@@ -169,11 +121,215 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
   } else {
     throw new Error(`Unsupported file type: ${mimeType}`)
   }
-
   return [{ type: 'text', text: `--- File: ${label} ---\n\n${text.slice(0, 25000)}` }]
 }
 
-// ── IRR Engine (runs on Vercel, no droplet needed) ────────────────────────────
+// ── Proforma Engine (Vercel-native) ───────────────────────────────────────────
+
+interface T12Data {
+  total_revenue: number
+  payroll: number
+  management_fees: number
+  marketing: number
+  utilities: number
+  office_employee: number
+  administrative: number
+  repairs_maintenance: number
+  tax: number
+  insurance: number
+  other_expenses: number
+  total_expenses: number
+  noi: number
+  seller_years?: { revenue: number; expenses: number; noi: number }[]
+}
+
+interface Assumptions {
+  total_units: number
+  current_occupancy: number
+  rent_uplift_y1: number
+  rent_growth: number
+  opex_growth: number
+  tax_insurance_growth: number
+  mgmt_fee_pct: number
+  revenue_haircut: number
+  occ_schedule: number[]
+}
+
+interface OurYear {
+  year: number
+  occupancy: number
+  avg_rent_mo: number
+  revenue: number
+  expenses: {
+    payroll: number
+    management_fees: number
+    marketing: number
+    utilities: number
+    office_employee: number
+    administrative: number
+    repairs_maintenance: number
+    tax: number
+    insurance: number
+    other: number
+    total: number
+  }
+  noi: number
+  noi_margin: number
+  expense_ratio: number
+}
+
+function buildProforma(t12: T12Data, assumptions: Assumptions): {
+  t12: {
+    revenue: number; expenses: number; noi: number; occupancy: number; avg_rent_mo: number
+    expense_breakdown: {
+      payroll: number; management_fees: number; marketing: number; utilities: number
+      office_employee: number; administrative: number; repairs_maintenance: number
+      tax: number; insurance: number; other: number
+    }
+  }
+  years: OurYear[]
+  broker_years?: OurYear[]
+} {
+  const {
+    total_units,
+    current_occupancy,
+    rent_uplift_y1 = 0.12,
+    rent_growth = 0.04,
+    opex_growth = 0.02,
+    tax_insurance_growth = 0.02,
+    mgmt_fee_pct = 0.05,
+    revenue_haircut = 0,
+    occ_schedule = [0.75, 0.82, 0.88, 0.90, 0.90],
+  } = assumptions
+
+  // Derive T12 base metrics
+  const t12Revenue = t12.total_revenue || 0
+  const t12NOI = t12.noi || (t12Revenue - (t12.total_expenses || t12Revenue * 0.38))
+  const t12Expenses = t12.total_expenses || (t12Revenue - t12NOI)
+  const t12Occupancy = current_occupancy || 0.80
+  const avgRentMo = total_units > 0 && t12Occupancy > 0
+    ? t12Revenue / (total_units * t12Occupancy * 12)
+    : 0
+
+  // T12 expense breakdown
+  const expBreak = {
+    payroll:             t12.payroll || 0,
+    management_fees:     t12.management_fees || t12Revenue * mgmt_fee_pct,
+    marketing:           t12.marketing || 0,
+    utilities:           t12.utilities || 0,
+    office_employee:     t12.office_employee || 0,
+    administrative:      t12.administrative || 0,
+    repairs_maintenance: t12.repairs_maintenance || 0,
+    tax:                 t12.tax || 0,
+    insurance:           t12.insurance || 0,
+    other:               t12.other_expenses || 0,
+  }
+
+  // If breakdown doesn't add up, scale to match total
+  const breakdownTotal = Object.values(expBreak).reduce((a, b) => a + b, 0)
+  let scaledBreak = { ...expBreak }
+  if (breakdownTotal > 0 && Math.abs(breakdownTotal - t12Expenses) / Math.max(t12Expenses, 1) > 0.05) {
+    const scale = t12Expenses / breakdownTotal
+    scaledBreak = Object.fromEntries(Object.entries(expBreak).map(([k, v]) => [k, v * scale])) as typeof expBreak
+  }
+
+  // Build 5-year projection
+  const years: OurYear[] = []
+  for (let yr = 1; yr <= 5; yr++) {
+    const occ = occ_schedule[yr - 1] ?? occ_schedule[occ_schedule.length - 1] ?? 0.90
+    const rentGrowthFactor = yr === 1 ? (1 + rent_uplift_y1) : (1 + rent_uplift_y1) * Math.pow(1 + rent_growth, yr - 1)
+    const baseRent = avgRentMo > 0 ? avgRentMo : (t12Revenue / Math.max(total_units * t12Occupancy * 12, 1))
+    const projRent = baseRent * rentGrowthFactor
+    const revenue = Math.round(total_units * occ * projRent * 12 * (1 - revenue_haircut))
+    const opexFactor = Math.pow(1 + opex_growth, yr - 1)
+    const tiFactor = Math.pow(1 + tax_insurance_growth, yr - 1)
+    const mgmtFees = Math.round(revenue * mgmt_fee_pct)
+    const payroll = Math.round((scaledBreak.payroll || 0) * opexFactor)
+    const marketing = Math.round((scaledBreak.marketing || 0) * opexFactor)
+    const utilities = Math.round((scaledBreak.utilities || 0) * opexFactor)
+    const officeEmployee = Math.round((scaledBreak.office_employee || 0) * opexFactor)
+    const administrative = Math.round((scaledBreak.administrative || 0) * opexFactor)
+    const repairsMaint = Math.round((scaledBreak.repairs_maintenance || 0) * opexFactor)
+    const tax = Math.round((scaledBreak.tax || 0) * tiFactor)
+    const insurance = Math.round((scaledBreak.insurance || 0) * tiFactor)
+    const other = Math.round((scaledBreak.other || 0) * opexFactor)
+    const totalExp = mgmtFees + payroll + marketing + utilities + officeEmployee + administrative + repairsMaint + tax + insurance + other
+    const noi = revenue - totalExp
+
+    years.push({
+      year: yr,
+      occupancy: Math.round(occ * 1000) / 1000,
+      avg_rent_mo: Math.round(projRent * 100) / 100,
+      revenue,
+      expenses: {
+        payroll,
+        management_fees: mgmtFees,
+        marketing,
+        utilities,
+        office_employee: officeEmployee,
+        administrative,
+        repairs_maintenance: repairsMaint,
+        tax,
+        insurance,
+        other,
+        total: totalExp,
+      },
+      noi,
+      noi_margin: revenue > 0 ? Math.round(noi / revenue * 1000) / 1000 : 0,
+      expense_ratio: revenue > 0 ? Math.round(totalExp / revenue * 1000) / 1000 : 0,
+    })
+  }
+
+  // Broker years from seller_years if provided
+  let brokerYears: OurYear[] | undefined
+  if (t12.seller_years && t12.seller_years.length > 0) {
+    brokerYears = t12.seller_years.map((sy, i) => {
+      const revenue = sy.revenue || 0
+      const noi = sy.noi || (revenue - (sy.expenses || 0))
+      const expenses = sy.expenses || (revenue - noi)
+      return {
+        year: i + 1,
+        occupancy: 0,
+        avg_rent_mo: 0,
+        revenue,
+        expenses: {
+          payroll: 0, management_fees: 0, marketing: 0, utilities: 0,
+          office_employee: 0, administrative: 0, repairs_maintenance: 0,
+          tax: 0, insurance: 0, other: 0, total: expenses,
+        },
+        noi,
+        noi_margin: revenue > 0 ? noi / revenue : 0,
+        expense_ratio: revenue > 0 ? expenses / revenue : 0,
+      }
+    })
+  }
+
+  return {
+    t12: {
+      revenue: Math.round(t12Revenue),
+      expenses: Math.round(t12Expenses),
+      noi: Math.round(t12NOI),
+      occupancy: t12Occupancy,
+      avg_rent_mo: Math.round(avgRentMo * 100) / 100,
+      expense_breakdown: {
+        payroll:             Math.round(scaledBreak.payroll || 0),
+        management_fees:     Math.round(scaledBreak.management_fees || 0),
+        marketing:           Math.round(scaledBreak.marketing || 0),
+        utilities:           Math.round(scaledBreak.utilities || 0),
+        office_employee:     Math.round(scaledBreak.office_employee || 0),
+        administrative:      Math.round(scaledBreak.administrative || 0),
+        repairs_maintenance: Math.round(scaledBreak.repairs_maintenance || 0),
+        tax:                 Math.round(scaledBreak.tax || 0),
+        insurance:           Math.round(scaledBreak.insurance || 0),
+        other:               Math.round(scaledBreak.other || 0),
+      },
+    },
+    years,
+    broker_years: brokerYears,
+  }
+}
+
+// ── IRR Engine ────────────────────────────────────────────────────────────────
 
 function interpNOIAtMonth(noiYears: number[], month: number): number {
   if (!noiYears.length) return 0
@@ -191,14 +347,12 @@ function calcLoanBalance(originalLoan: number, interestRate: number, amortYears:
   if (monthsElapsed <= ioMonths) return originalLoan
   const amortMonthsElapsed = Math.floor(monthsElapsed - ioMonths)
   if (amortYears <= 0 || interestRate <= 0) return originalLoan
-  const monthlyRate = interestRate / 12
-  const nPayments = amortYears * 12
-  const monthlyPayment = originalLoan * (monthlyRate * Math.pow(1 + monthlyRate, nPayments)) / (Math.pow(1 + monthlyRate, nPayments) - 1)
+  const mr = interestRate / 12
+  const np = amortYears * 12
+  const mp = originalLoan * (mr * Math.pow(1 + mr, np)) / (Math.pow(1 + mr, np) - 1)
   let balance = originalLoan
   for (let i = 0; i < amortMonthsElapsed; i++) {
-    const interest = balance * monthlyRate
-    const principal = monthlyPayment - interest
-    balance -= principal
+    balance -= (mp - balance * mr)
   }
   return Math.max(0, balance)
 }
@@ -269,34 +423,25 @@ function calcIRRv2(p: CalcIRRV2Params) {
     : (exit_cap_rate > 0 ? exitNOI / exit_cap_rate : 0)
   const netSale = exitValue * (1 - selling_costs_pct)
 
-  // Unlevered cash flows
   const ucf: number[] = [-totalCost]
   for (let yr = 1; yr <= exitYear; yr++) {
     const noi = yr <= noi_years.length ? noi_years[yr - 1] : noi_years[noi_years.length - 1]
     ucf.push(yr === exitYear ? noi + netSale : noi)
   }
 
-  // Levered cash flows
   const loan = purchase_price * ltv
   const equity = totalCost - loan
   const ioYears = Math.floor(io_months / 12)
   const annualDsIO = loan * interest_rate
-
   let annualDsBridge = loan * interest_rate
   if (amort_years > 0 && interest_rate > 0) {
     const mr = interest_rate / 12
     const np = amort_years * 12
-    const mp = loan * (mr * Math.pow(1 + mr, np)) / (Math.pow(1 + mr, np) - 1)
-    annualDsBridge = mp * 12
+    annualDsBridge = loan * (mr * Math.pow(1 + mr, np)) / (Math.pow(1 + mr, np) - 1) * 12
   }
 
-  let refiCashOut = 0
-  let refiFeePaid = 0
-  let newLoan = loan
-  let newLoanDs = annualDsBridge
-  let refiYear: number | null = null
-  let rr = interest_rate
-  let ra = amort_years
+  let refiCashOut = 0, refiFeePaid = 0, newLoan = loan, newLoanDs = annualDsBridge
+  let refiYear: number | null = null, rr = interest_rate, ra = amort_years
   const refiOccurs = !!(refi_month && refi_month > 0 && ltv > 0)
 
   if (refiOccurs && refi_month) {
@@ -318,8 +463,7 @@ function calcIRRv2(p: CalcIRRV2Params) {
     if (ra > 0 && rr > 0) {
       const mr2 = rr / 12
       const np2 = ra * 12
-      const mp2 = newLoan * (mr2 * Math.pow(1 + mr2, np2)) / (Math.pow(1 + mr2, np2) - 1)
-      newLoanDs = mp2 * 12
+      newLoanDs = newLoan * (mr2 * Math.pow(1 + mr2, np2)) / (Math.pow(1 + mr2, np2) - 1) * 12
     } else {
       newLoanDs = newLoan * rr
     }
@@ -328,11 +472,7 @@ function calcIRRv2(p: CalcIRRV2Params) {
   const lcf: number[] = [-equity]
   for (let yr = 1; yr <= exitYear; yr++) {
     const noi = yr <= noi_years.length ? noi_years[yr - 1] : noi_years[noi_years.length - 1]
-    let ds: number
-    if (refiOccurs && refiYear && yr > refiYear) ds = newLoanDs
-    else if (yr <= ioYears) ds = annualDsIO
-    else ds = annualDsBridge
-
+    const ds = (refiOccurs && refiYear && yr > refiYear) ? newLoanDs : (yr <= ioYears ? annualDsIO : annualDsBridge)
     if (yr < exitYear) {
       let cf = noi - ds
       if (refiOccurs && refiYear && yr === refiYear) cf += refiCashOut - refiFeePaid
@@ -351,7 +491,6 @@ function calcIRRv2(p: CalcIRRV2Params) {
   const uIRR = irrCalc(ucf)
   const lIRR = ltv > 0 ? irrCalc(lcf) : uIRR
   const equityMultiple = equity > 0 ? lcf.filter(cf => cf > 0).reduce((a, b) => a + b, 0) / equity : 0
-  const annualDsDisplay = refiOccurs ? newLoanDs : annualDsBridge
 
   return {
     unlevered_irr:       Math.round(uIRR * 10000) / 10000,
@@ -359,13 +498,39 @@ function calcIRRv2(p: CalcIRRV2Params) {
     equity_multiple:     Math.round(equityMultiple * 100) / 100,
     equity_required:     Math.round(equity),
     loan_amount:         Math.round(loan),
-    annual_debt_service: Math.round(annualDsDisplay),
+    annual_debt_service: Math.round(refiOccurs ? newLoanDs : annualDsBridge),
     going_in_cap:        purchase_price > 0 ? Math.round(noi_years[0] / purchase_price * 10000) / 10000 : 0,
     stabilized_cap:      purchase_price > 0 ? Math.round(exitNOI / purchase_price * 10000) / 10000 : 0,
     exit_value:          Math.round(exitValue),
+    exit_noi:            Math.round(exitNOI),
     refi_cash_out:       Math.round(refiCashOut),
-    refi_fee_paid:       Math.round(refiFeePaid),
     new_loan:            Math.round(newLoan),
+  }
+}
+
+// ── Max Offer (Vercel-native) ─────────────────────────────────────────────────
+
+function findMaxOffer(params: CalcIRRV2Params & { target_irr: number }): {
+  max_offer: number; irr_at_max: number; exit_value: number; exit_noi: number
+} {
+  const { target_irr, ...baseParams } = params
+  let lo = 100000, hi = 50000000
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2
+    try {
+      const r = calcIRRv2({ ...baseParams, purchase_price: mid })
+      const irr = baseParams.ltv ? r.levered_irr : r.unlevered_irr
+      if (irr >= target_irr) lo = mid
+      else hi = mid
+    } catch { hi = mid }
+  }
+  const maxOffer = Math.round((lo + hi) / 2 / 1000) * 1000
+  const result = calcIRRv2({ ...baseParams, purchase_price: maxOffer })
+  return {
+    max_offer: maxOffer,
+    irr_at_max: baseParams.ltv ? result.levered_irr : result.unlevered_irr,
+    exit_value: result.exit_value,
+    exit_noi: result.exit_noi,
   }
 }
 
@@ -378,7 +543,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { action } = req.body as { action: string }
 
-  // ── Calc IRR v2 — runs on Vercel, no droplet ──────────────────────
+  // ── Build Proforma — Vercel-native ────────────────────────────────
+  if (action === 'build-proforma') {
+    try {
+      const { t12_data, assumptions } = req.body as { t12_data: T12Data; assumptions: Assumptions }
+      const result = buildProforma(t12_data, assumptions)
+      return res.status(200).json(result)
+    } catch (err) {
+      console.error('build-proforma error:', err)
+      return res.status(500).json({ error: 'Proforma build failed', detail: String(err) })
+    }
+  }
+
+  // ── Calc IRR v2 — Vercel-native ───────────────────────────────────
   if (action === 'calc-irr-v2') {
     try {
       const result = calcIRRv2(req.body as CalcIRRV2Params)
@@ -389,154 +566,89 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ── Max Offer: proxy to DO server ─────────────────────────────────
+  // ── Max Offer — Vercel-native ─────────────────────────────────────
   if (action === 'max-offer') {
     try {
-      const { action: _a, ...params } = req.body
-      const doRes = await fetch(`${DO_API}/max-offer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      })
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        return res.status(502).json({ error: 'DO server error', detail: err })
-      }
-      const data = await doRes.json()
-      return res.status(200).json(data)
+      const result = findMaxOffer(req.body as CalcIRRV2Params & { target_irr: number })
+      return res.status(200).json(result)
     } catch (err) {
-      console.error('max-offer proxy error:', err)
-      return res.status(500).json({ error: 'Max offer calculation failed', detail: String(err) })
+      console.error('max-offer error:', err)
+      return res.status(500).json({ error: 'Max offer failed', detail: String(err) })
     }
   }
 
-  // ── Calc IRR: proxy to DO server ──────────────────────────────────
+  // ── Calc IRR (legacy) — proxy to droplet ──────────────────────────
   if (action === 'calc-irr') {
     try {
       const { action: _a, ...params } = req.body
       const doRes = await fetch(`${DO_API}/calc-irr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       })
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        return res.status(502).json({ error: 'DO server error', detail: err })
-      }
-      const data = await doRes.json()
-      return res.status(200).json(data)
+      if (!doRes.ok) return res.status(502).json({ error: 'DO server error', detail: await doRes.text() })
+      return res.status(200).json(await doRes.json())
     } catch (err) {
-      console.error('calc-irr proxy error:', err)
       return res.status(500).json({ error: 'IRR calculation failed', detail: String(err) })
     }
   }
 
-  // ── Run Excel Model: proxy to DO server ───────────────────────────
+  // ── Run Excel Model — proxy to droplet ────────────────────────────
   if (action === 'run-excel') {
     try {
       const { action: _a, ...params } = req.body
       const doRes = await fetch(`${DO_API}/run-model`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-        signal: AbortSignal.timeout(120000),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params), signal: AbortSignal.timeout(120000),
       })
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        return res.status(502).json({ error: 'Excel model error', detail: err })
-      }
-      const data = await doRes.json()
-      return res.status(200).json(data)
+      if (!doRes.ok) return res.status(502).json({ error: 'Excel model error', detail: await doRes.text() })
+      return res.status(200).json(await doRes.json())
     } catch (err) {
-      console.error('run-excel error:', err)
       return res.status(500).json({ error: 'Excel model failed', detail: String(err) })
     }
   }
 
-  // ── Build Proforma: proxy to DO server ────────────────────────────
-  if (action === 'build-proforma') {
-    try {
-      const { action: _a, ...params } = req.body
-      const doRes = await fetch(`${DO_API}/build-proforma`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      })
-      if (!doRes.ok) {
-        const err = await doRes.text()
-        return res.status(502).json({ error: 'DO server error', detail: err })
-      }
-      const data = await doRes.json()
-      return res.status(200).json(data)
-    } catch (err) {
-      console.error('build-proforma proxy error:', err)
-      return res.status(500).json({ error: 'Proforma build failed', detail: String(err) })
-    }
-  }
-
-  // ── Extract: call Claude to parse documents ───────────────────────
+  // ── Extract — Claude ──────────────────────────────────────────────
   if (action === 'extract') {
     const { files } = req.body as { files: FileInput[] }
     if (!files?.length) return res.status(400).json({ error: 'No files provided' })
-
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const contentBlocks: any[] = []
-      for (const f of files) {
-        const blocks = await fileToBlocks(f)
-        contentBlocks.push(...blocks)
-      }
+      for (const f of files) contentBlocks.push(...await fileToBlocks(f))
       contentBlocks.push({ type: 'text', text: EXTRACTION_PROMPT })
-
       const msg = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 3000,
+        model: 'claude-sonnet-4-6', max_tokens: 3000,
         messages: [{ role: 'user', content: contentBlocks }],
       })
       const raw = ((msg.content[0] as { type: string; text: string }).text ?? '').trim()
       const extracted: UWData = JSON.parse(raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, ''))
       return res.status(200).json(extracted)
     } catch (err) {
-      console.error('underwrite extract error:', err)
       return res.status(500).json({ error: 'Extraction failed', detail: String(err) })
     }
   }
 
-  // ── Build: populate Excel template via Python ─────────────────────
+  // ── Build Excel — Python ──────────────────────────────────────────
   if (action === 'build') {
     const { inputs, propertyAddress } = req.body as { inputs: UWData; propertyAddress?: string }
     if (!inputs) return res.status(400).json({ error: 'Missing inputs' })
-
     const ts = Date.now()
     const tmpDir = os.tmpdir()
     const inputsFile = path.join(tmpDir, `uw_in_${ts}.json`)
     const outputFile = path.join(tmpDir, `uw_out_${ts}.xlsx`)
-
     try {
       fs.writeFileSync(inputsFile, JSON.stringify(inputs), 'utf-8')
-
       const script = path.join(process.cwd(), 'backend', 'underwrite.py')
-      execFileSync('python', [script, '--inputs-file', inputsFile, '--output', outputFile], {
-        timeout: 30_000,
-        encoding: 'utf-8',
-      })
-
+      execFileSync('python', [script, '--inputs-file', inputsFile, '--output', outputFile], { timeout: 30_000, encoding: 'utf-8' })
       const buffer = fs.readFileSync(outputFile)
-      const safeName = (propertyAddress || 'underwrite')
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '_')
-        .slice(0, 60)
-
+      const safeName = (propertyAddress || 'underwrite').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 60)
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       res.setHeader('Content-Disposition', `attachment; filename="${safeName}_UW.xlsx"`)
       return res.end(buffer)
     } catch (err) {
-      console.error('underwrite build error:', err)
       return res.status(500).json({ error: 'Model build failed', detail: String(err) })
     } finally {
-      for (const f of [inputsFile, outputFile]) {
-        try { fs.unlinkSync(f) } catch { /* ignore */ }
-      }
+      for (const f of [inputsFile, outputFile]) { try { fs.unlinkSync(f) } catch { /* ignore */ } }
     }
   }
 
