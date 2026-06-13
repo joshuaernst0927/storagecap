@@ -839,8 +839,8 @@ function BrokerInvestorTable({ proformaResult, sellerYears, revenueHaircut, capR
     return ((investorNOI[i] as number) - b) / b
   })
 
-  const brokerY5 = brokerNOI[5]
-  const investorY5 = investorNOI[5]
+  const brokerY5 = brokerNOI[5] ?? (sellerYears.length >= 5 ? brokerNOI[sellerYears.length] : null)
+  const investorY5 = proformaResult.years[4]?.noi ?? investorNOI[5] ?? null
 
   function Row({ label, values, bold, red, pct }: {
     label: string; values: (number | null)[]; bold?: boolean; red?: boolean; pct?: boolean
