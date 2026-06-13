@@ -233,14 +233,15 @@ function buildProforma(t12: T12Data, assumptions: Assumptions): {
     scaledBreak = Object.fromEntries(Object.entries(expBreak).map(([k, v]) => [k, v * scale])) as typeof expBreak
   }
 
-  // Build 5-year projection
+  // Build 5-year projection — grow revenue directly from T12 base
+  const baseRevenue = t12Revenue > 0 ? t12Revenue : (t12NOI / 0.62)
   const years: OurYear[] = []
   for (let yr = 1; yr <= 5; yr++) {
     const occ = occ_schedule[yr - 1] ?? occ_schedule[occ_schedule.length - 1] ?? 0.90
+    const occFactor = t12Occupancy > 0 ? occ / t12Occupancy : 1
     const rentGrowthFactor = yr === 1 ? (1 + rent_uplift_y1) : (1 + rent_uplift_y1) * Math.pow(1 + rent_growth, yr - 1)
-    const baseRent = avgRentMo > 0 ? avgRentMo : (t12Revenue / Math.max(total_units * t12Occupancy * 12, 1))
-    const projRent = baseRent * rentGrowthFactor
-    const revenue = Math.round(total_units * occ * projRent * 12 * (1 - revenue_haircut))
+    const projRent = avgRentMo * rentGrowthFactor
+    const revenue = Math.round(baseRevenue * occFactor * rentGrowthFactor * (1 - revenue_haircut))
     const opexFactor = Math.pow(1 + opex_growth, yr - 1)
     const tiFactor = Math.pow(1 + tax_insurance_growth, yr - 1)
     const mgmtFees = Math.round(revenue * mgmt_fee_pct)
