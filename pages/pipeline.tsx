@@ -13,7 +13,7 @@ import {
   statusLabel,
   statusColor,
 } from '@/lib/pipelineData'
-import { loadSavedProperties, saveProperty } from '@/lib/pipelineStore'
+import { loadSavedProperties, saveProperty, migrateLocalStorageToGitHub } from '@/lib/pipelineStore'
 import AuthGate from '@/components/AuthGate'
 import DealScoreBadge from '@/components/DealScoreBadge'
 
@@ -1331,6 +1331,20 @@ export default function Pipeline() {
       .finally(() => setSourcesLoaded(n => n + 1))
   }, [])
 
+  // Load from GitHub-backed pipeline.json (durable store) and run migration
+  useEffect(() => {
+    fetch('/data/pipeline.json')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: PipelineProperty[]) => {
+        mergeProperties(data)
+        // Migrate any localStorage deals missing from GitHub (one-time, silent)
+        const githubIds = new Set<string>(data.map((p: PipelineProperty) => p.id))
+        migrateLocalStorageToGitHub(githubIds).catch(() => {})
+      })
+      .catch(() => {})
+      .finally(() => setSourcesLoaded(n => n + 1))
+  }, [])
+
 
   const addNote = (id: string, text: string) => {
     setProperties(prev => prev.map(p => {
@@ -1455,7 +1469,12 @@ export default function Pipeline() {
   }
 
   const updateNotes = (id: string, notes: string) => {
-    setProperties(prev => prev.map(p => p.id === id ? { ...p, notes } : p))
+    setProperties(prev => prev.map(p => {
+      if (p.id !== id) return p
+      const updated = { ...p, notes }
+      saveProperty(updated)
+      return updated
+    }))
   }
 
   const addProperty = (p: PipelineProperty) => {

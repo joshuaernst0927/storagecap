@@ -9,8 +9,21 @@ export default function Portfolio() {
   const [closedDeals, setClosedDeals] = useState<PipelineProperty[]>([])
 
   useEffect(() => {
-    const all = loadSavedProperties()
-    setClosedDeals(all.filter(p => p.stage === 'closed' && p.portfolioEntry))
+    // Load from localStorage (fast, synchronous)
+    const local = loadSavedProperties()
+    const localClosed = local.filter(p => p.stage === 'closed' && p.portfolioEntry)
+    if (localClosed.length > 0) setClosedDeals(localClosed)
+
+    // Also load from GitHub-backed pipeline.json (durable, catches cross-device saves)
+    fetch('/data/pipeline.json')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: PipelineProperty[]) => {
+        const allIds = new Set(local.map(p => p.id))
+        const fromGitHub = (data as PipelineProperty[]).filter(p => !allIds.has(p.id))
+        const combined = [...local, ...fromGitHub]
+        setClosedDeals(combined.filter(p => p.stage === 'closed' && p.portfolioEntry))
+      })
+      .catch(() => {})
   }, [])
 
   const totalPurchase = closedDeals.reduce((s, p) => s + (p.portfolioEntry?.finalPurchasePrice ?? 0), 0)
