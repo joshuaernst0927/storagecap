@@ -1,10 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { requireAuth } from '@/lib/serverAuth'
 import Anthropic from '@anthropic-ai/sdk'
 import { UNIVERSAL_CRITERIA, SPECIFIC_CRITERIA, type DealType, type DealScoreInputs } from '@/lib/dealScore'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!requireAuth(req, res)) return
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { facilityName, address, city, state, askingPrice, noi, capRate, occupancy, unitCount, yearBuilt, sqft, highlights } = req.body

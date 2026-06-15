@@ -8,6 +8,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import * as XLSX from 'xlsx'
+import { requireAuth } from '@/lib/serverAuth'
 import path from 'path'
 import fs from 'fs'
 
@@ -82,6 +83,7 @@ function setCell(sheet: XLSX.WorkSheet, ref: string, value: number | string): vo
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!requireAuth(req, res)) return
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {

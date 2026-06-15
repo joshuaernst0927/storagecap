@@ -1,97 +1,30 @@
 import { useState, useEffect, ReactNode, FormEvent } from 'react'
-import {
-  isAuthenticated, setAuthenticated,
-  getCustomPassword, setCustomPassword, verifyPassword,
-} from '@/lib/auth'
+import { isAuthenticated, verifyPassword, clearAuth } from '@/lib/auth'
 
 // ─── Change Password Form ─────────────────────────────────────────────────────
+// Password changes now require contacting admin — client-side password storage
+// has been removed for security. This form is kept for UI continuity but
+// informs the user that password changes are managed server-side.
 
-export function ChangePasswordForm({ onBack, onSuccess }: {
-  onBack?: () => void
-  onSuccess?: () => void
-}) {
-  const [currentPw, setCurrentPw] = useState('')
-  const [newPw, setNewPw] = useState('')
-  const [confirmPw, setConfirmPw] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (newPw.length < 4) { setError('New password must be at least 4 characters.'); return }
-    if (newPw !== confirmPw) { setError('Passwords do not match.'); return }
-    setLoading(true)
-    const ok = await verifyPassword(currentPw)
-    setLoading(false)
-    if (!ok) { setError('Current password is incorrect.'); return }
-    setCustomPassword(newPw)
-    setSuccess(true)
-    onSuccess?.()
-  }
-
-  if (success) {
-    return (
-      <div className="text-center py-2 space-y-4">
-        <div className="gold-divider mx-auto" />
-        <p className="text-green-700 text-sm font-medium">Password updated successfully.</p>
-        <p className="text-dark-muted text-xs">Your new password is saved and will be used next time you log in.</p>
-        {onBack && (
-          <button onClick={onBack} className="text-gold text-xs uppercase tracking-widest hover:text-gold/80 transition-colors">
-            ← Back to Login
-          </button>
-        )}
-      </div>
-    )
-  }
-
+export function ChangePasswordForm({ onBack }: { onBack?: () => void }) {
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="label-text">Current Password</label>
-        <input
-          type="password"
-          className="input-field"
-          value={currentPw}
-          onChange={e => setCurrentPw(e.target.value)}
-          placeholder="Current password"
-          autoFocus
-          required
-        />
-      </div>
-      <div>
-        <label className="label-text">New Password</label>
-        <input
-          type="password"
-          className="input-field"
-          value={newPw}
-          onChange={e => setNewPw(e.target.value)}
-          placeholder="New password"
-          required
-        />
-      </div>
-      <div>
-        <label className="label-text">Confirm New Password</label>
-        <input
-          type="password"
-          className="input-field"
-          value={confirmPw}
-          onChange={e => setConfirmPw(e.target.value)}
-          placeholder="Confirm new password"
-          required
-        />
-      </div>
-      {error && <p className="text-red-600 text-xs">{error}</p>}
-      <button type="submit" disabled={loading} className="btn-gold w-full disabled:opacity-50">
-        {loading ? 'Verifying...' : 'Update Password'}
-      </button>
+    <div className="text-center py-2 space-y-4">
+      <div className="gold-divider mx-auto" />
+      <p className="text-dark-muted text-sm">
+        Password changes are managed through your server environment variables.
+      </p>
+      <p className="text-dark-muted text-xs">
+        Update <code className="text-gold">ADMIN_PASSWORD</code> in Vercel to change the platform password.
+      </p>
       {onBack && (
-        <button type="button" onClick={onBack} className="w-full text-center text-dark-muted text-xs uppercase tracking-widest hover:text-[#1a1a18] transition-colors pt-1">
+        <button
+          onClick={onBack}
+          className="text-gold text-xs uppercase tracking-widest hover:text-gold/80 transition-colors"
+        >
           ← Back to Login
         </button>
       )}
-    </form>
+    </div>
   )
 }
 
@@ -104,8 +37,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Validate session server-side on mount
   useEffect(() => {
-    setAuthed(isAuthenticated())
+    isAuthenticated().then(ok => setAuthed(ok))
   }, [])
 
   if (authed === null) return null
@@ -118,7 +52,6 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     const ok = await verifyPassword(password)
     setLoading(false)
     if (ok) {
-      setAuthenticated()
       setAuthed(true)
     } else {
       setError('Incorrect password.')

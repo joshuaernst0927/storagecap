@@ -8,6 +8,7 @@
 import fs from 'fs'
 import path from 'path'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { requireAuth } from '@/lib/serverAuth'
 import type { PipelineProperty } from '@/lib/pipelineData'
 
 // Vercel's project root is read-only; /tmp is the only writable path in prod.
@@ -36,6 +37,7 @@ function writeStored(properties: PipelineProperty[]) {
 }
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!requireAuth(req, res)) return
   const secret = process.env.NEXTJS_API_SECRET
   if (secret && req.headers['x-api-secret'] !== secret) {
     return res.status(401).json({ error: 'Unauthorized' })

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useState, FormEvent } from 'react'
 import { saveProperty } from '@/lib/pipelineStore'
 import type { PipelineProperty, DistressSignals } from '@/lib/pipelineData'
+import AuthGate from '@/components/AuthGate'
 
 interface Form {
   propertyName: string; city: string; state: string; unitCount: string
@@ -118,6 +119,7 @@ export default function Analyze() {
     : []
 
   return (
+    <AuthGate>
     <>
       <Head>
         <title>AI Property Analyzer — YEM Acquisitions</title>
@@ -252,5 +254,6 @@ export default function Analyze() {
         </div>
       </section>
     </>
+    </AuthGate>
   )
 }

@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { requireAuth } from '@/lib/serverAuth'
 import { Lead, ContactInfo } from '@/lib/leadsData'
 
-const CL_TOKEN = process.env.COURTLISTENER_TOKEN || '25e0d81f7c377dbdd866ba6165afe7af4fa9c99e'
+const CL_TOKEN = process.env.COURTLISTENER_TOKEN || ''
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 const APOLLO_API_KEY = process.env.APOLLO_API_KEY
 const REPO_OWNER = 'joshuaernst0927'
@@ -199,6 +200,7 @@ async function enrichFromCourtListener(sourceUrl: string): Promise<{ contactInfo
 // Client sends { leadId, sourceUrl }. We look up CL and return enriched
 // contactInfo directly — no filesystem reads/writes needed on Vercel.
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!requireAuth(req, res)) return
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { leadId, sourceUrl } = req.body as { leadId?: string; sourceUrl?: string }

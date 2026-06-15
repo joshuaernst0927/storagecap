@@ -1,32 +1,71 @@
-const AUTH_KEY = 'yem_auth'
-const CUSTOM_PW_KEY = 'yem_custom_password'
+/**
+ * lib/auth.ts — client-side auth helpers.
+ *
+ * Password validation is now entirely server-side via /api/auth.
+ * Session state is validated server-side via /api/session.
+ * No password or secret is ever stored or compared client-side.
+ */
 
-export function isAuthenticated(): boolean {
-  if (typeof window === 'undefined') return false
-  return sessionStorage.getItem(AUTH_KEY) === 'true'
+/**
+ * Check session validity by pinging the server.
+ * Returns true if the HTTP-only session cookie is present and valid.
+ */
+export async function isAuthenticated(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/session', { method: 'GET', credentials: 'same-origin' })
+    if (!res.ok) return false
+    const data = await res.json()
+    return data.ok === true
+  } catch {
+    return false
+  }
 }
 
-export function setAuthenticated(): void {
-  if (typeof window !== 'undefined') sessionStorage.setItem(AUTH_KEY, 'true')
-}
-
-export function clearAuth(): void {
-  if (typeof window !== 'undefined') sessionStorage.removeItem(AUTH_KEY)
-}
-
-export function getCustomPassword(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem(CUSTOM_PW_KEY)
-}
-
-export function setCustomPassword(pw: string): void {
-  if (typeof window !== 'undefined') localStorage.setItem(CUSTOM_PW_KEY, pw)
-}
-
-// Check against localStorage custom password first, then hardcoded default.
-// Fully client-side — no API call, works identically on localhost and Vercel.
+/**
+ * Attempt login by posting password to /api/auth.
+ * Server sets HTTP-only cookie on success.
+ * Returns true on success, false on incorrect password.
+ */
 export async function verifyPassword(password: string): Promise<boolean> {
-  const custom = getCustomPassword()
-  if (custom !== null) return password === custom
-  return password === 'YEM2025'
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ password }),
+    })
+    const data = await res.json()
+    return data.ok === true
+  } catch {
+    return false
+  }
 }
+
+/**
+ * Clear session by calling /api/auth logout action.
+ * Server clears the HTTP-only cookie.
+ */
+export async function clearAuth(): Promise<void> {
+  try {
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ action: 'logout' }),
+    })
+  } catch {
+    // Best effort
+  }
+}
+
+// ── Legacy stubs — kept so existing callers don't break at compile time ────────
+// These are no-ops. The real work is now done server-side.
+
+/** @deprecated — session is now server-side. Use isAuthenticated() (async). */
+export function setAuthenticated(): void { /* no-op */ }
+
+/** @deprecated — custom passwords are no longer supported client-side. */
+export function getCustomPassword(): string | null { return null }
+
+/** @deprecated — custom passwords are no longer supported client-side. */
+export function setCustomPassword(_pw: string): void { /* no-op */ }

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { requireAuth } from '@/lib/serverAuth'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 
 export const config = { api: { bodyParser: { sizeLimit: '1mb' } } }
@@ -88,6 +89,7 @@ function addFooter(page: Page, propertyName: string, italic: Font, regular: Font
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!requireAuth(req, res)) return
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {

@@ -8,6 +8,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Anthropic from '@anthropic-ai/sdk'
+import { requireAuth } from '@/lib/serverAuth'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -459,6 +460,7 @@ function buildProforma(t12: T12Data, assumptions: Assumptions) {
 export const config = { api: { bodyParser: { sizeLimit: '50mb' } } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!requireAuth(req, res)) return
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { action } = req.body as { action: string }

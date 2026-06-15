@@ -97,7 +97,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           </div>
           <button onClick={onClose} className="text-dark-muted hover:text-[#1a1a18] transition-colors text-lg leading-none">✕</button>
         </div>
-        <ChangePasswordForm onSuccess={onClose} />
+        <ChangePasswordForm onBack={onClose} />
       </div>
     </div>
   )
@@ -111,11 +111,11 @@ export default function Layout({ children }: { children: ReactNode }) {
   const isPipeline = router.pathname === '/pipeline'
 
   useEffect(() => {
-    setAuthed(isAuthenticated())
+    isAuthenticated().then(ok => setAuthed(ok))
   }, [router.pathname])
 
-  const handleLogout = () => {
-    clearAuth()
+  const handleLogout = async () => {
+    await clearAuth()
     setAuthed(false)
     router.push('/')
   }
