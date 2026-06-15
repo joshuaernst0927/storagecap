@@ -6,6 +6,12 @@
     }
   ],
   "functions": {
+    "pages/api/run-excel.ts": {
+      "maxDuration": 120
+    },
+    "pages/api/underwrite.ts": {
+      "maxDuration": 60
+    },
     "pages/api/run-leads.ts": {
       "maxDuration": 60
     },
@@ -19,22 +25,7 @@
       "maxDuration": 30
     },
     "pages/api/upload-deal.ts": {
-      "maxDuration": 300
-    },
-    "pages/api/underwrite.ts": {
-      "maxDuration": 300
+      "maxDuration": 60
     }
-  },
-  "routes": [
-    {
-      "src": "/api/underwrite",
-      "dest": "/api/underwrite",
-      "methods": [
-        "POST"
-      ],
-      "headers": {
-        "x-vercel-body-parser-size-limit": "50mb"
-      }
-    }
-  ]
+  }
 }
