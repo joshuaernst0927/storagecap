@@ -471,14 +471,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       if (!files?.length) return res.status(400).json({ error: 'No files provided' })
 
-      const contentParts: Anthropic.MessageParam['content'] = []
+      const contentParts: any[] = []
       for (const f of files) {
         const mt = f.mimeType as 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
         if (mt === 'application/pdf' || mt.startsWith('image/')) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           contentParts.push({
             type: mt === 'application/pdf' ? 'document' : 'image',
             source: { type: 'base64', media_type: mt, data: f.data },
-          } as Anthropic.DocumentBlockParam | Anthropic.ImageBlockParam)
+          } as any)
         }
       }
       contentParts.push({ type: 'text', text: EXTRACTION_PROMPT })
