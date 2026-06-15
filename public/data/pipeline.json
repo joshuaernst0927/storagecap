@@ -1,5 +1,136 @@
 [
   {
+    "id": "upload-1780516997570",
+    "facilityName": "Extra Space Storage",
+    "address": "12331 East 11th Street",
+    "city": "Tulsa",
+    "state": "OK",
+    "zipCode": "74128",
+    "unitCount": 534,
+    "unitMix": "",
+    "yearBuilt": 0,
+    "landAcres": 0,
+    "climatePercent": 0,
+    "estimatedValue": 5000000,
+    "askingPrice": 6000000,
+    "noi": 175425,
+    "occupancy": 0,
+    "ownerName": "Extra Space Storage (ESMI)",
+    "ownerEntity": "",
+    "ownerEntityState": "OK",
+    "ownerMailingAddress": "",
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "codeViolations": [],
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "deferredMaintenance": false,
+      "outOfStateOwner": false
+    },
+    "motivationScore": 24,
+    "stage": "loi",
+    "currentStatus": "outreach-sent",
+    "priority": "medium",
+    "source": "broker",
+    "addedDate": "2026-06-03",
+    "notes": "LOI sent May 20 2026, expired June 4. Likely outbid. Passed — 3.51% going-in cap on $5M ask, T-3 NOI only $175,425. Declined to pay for pro forma upside we'd have to create ourselves.\n\nHighlights:\n• 14.6-acre site with 63,220 NRSF storage plus 76,964 NRSF uncovered vehicle/RV/boat parking\n• Year 1 NOI of $175,425 based on T-3 annualized actuals from ESMI owner financials (Dec 2025–Feb 2026)\n• Two acquisition structures offered: all-cash (LP IRR 12.9%, MOIC 2.48x) or 65% LTV bridge at SOFR+400bps with 12-month interest reserve (LP IRR 17.1%, MOIC 2.74x)\n• Value-add upside identified: $39,917/year rent-to-market gap (zero capex), 5+ acres surplus land for MF rezoning or sale, and climate-controlled storage expansion opportunity\n• Cell tower excluded from sale; ground-level drive-up and interior non-climate-controlled units with uncovered parking; exit underwritten at 6.5% cap rate on Year 5 NOI of $480,803\nCap Rate: 3.51%",
+    "scoreBreakdown": {
+      "motivation": 0,
+      "ownerProfile": 0,
+      "dealQuality": 11,
+      "valueAdd": 13,
+      "offerDeal": 0,
+      "businessPlan": 0,
+      "negatives": 0,
+      "override": 0
+    },
+    "scoreExplanation": "Limited distress and value-add signals — primarily a financial-quality play. Below-average occupancy and deferred maintenance create a clear basis-play opportunity.",
+    "lastScored": "2026-06-04T13:56:29.518Z",
+    "scoreHistory": [
+      {
+        "score": 24,
+        "date": "2026-06-04T12:21:29.523Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T12:26:29.515Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T12:31:29.531Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T12:36:29.515Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T12:41:29.518Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T12:46:29.514Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T12:51:29.515Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T12:56:29.515Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:01:29.526Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:06:29.514Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:11:29.514Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:16:29.517Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:21:29.517Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:26:29.515Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:31:29.528Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:36:29.515Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:41:29.514Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:46:29.515Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:51:29.516Z"
+      },
+      {
+        "score": 24,
+        "date": "2026-06-04T13:56:29.518Z"
+      }
+    ]
+  },
+  {
     "id": "upload-1780526411713",
     "facilityName": "Texas Store & Go",
     "address": "2980 I-30",
