@@ -1,1 +1,182 @@
-[]
+[
+  {
+    "id": "upload-1780526411713",
+    "facilityName": "Texas Store & Go",
+    "address": "2980 I-30",
+    "city": "Greenville",
+    "state": "TX",
+    "zipCode": "75401",
+    "unitCount": 451,
+    "unitMix": "",
+    "yearBuilt": 2024,
+    "landAcres": 0,
+    "climatePercent": 0,
+    "estimatedValue": 5200000,
+    "askingPrice": 5200000,
+    "noi": 203188,
+    "occupancy": 33,
+    "ownerName": "",
+    "ownerEntity": "",
+    "ownerEntityState": "TX",
+    "ownerMailingAddress": "",
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "codeViolations": [],
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "deferredMaintenance": false,
+      "outOfStateOwner": false
+    },
+    "motivationScore": 19,
+    "stage": "identified",
+    "currentStatus": "outreach-sent",
+    "priority": "medium",
+    "source": "broker",
+    "addedDate": "2026-06-03",
+    "notes": "Highlights:\n• Lease-up opportunity at 33% occupancy with significant NOI upside to 7.98% cap rate by Year 3\n• Below replacement cost basis at $46.57/RSF for a 2024-vintage facility\n• 195 units not yet delivered with $92,335 door package providing low-cost path to additional revenue\n• High-visibility direct I-30 frontage with 43,000+ vehicles per day\n• Balanced unit mix of climate-controlled, non-climate, and parking units across 13 acres with on-site residence\nCap Rate: 3.91%",
+    "dealScore": 61,
+    "dealType": "value-add",
+    "dealScoreBreakdown": {
+      "locationMarket": 12,
+      "priceValue": 17,
+      "sellerMotivation": 1,
+      "specific": 31
+    },
+    "dealScoreInputs": {
+      "dealType": "value-add",
+      "highwayVisibility": 5,
+      "populationGrowth": 3,
+      "supplyConstraints": 2,
+      "rentTrajectory": 2,
+      "priceVsReplacement": 5,
+      "currentVsFutureNOI": 5,
+      "goingInCapVsMarket": 4,
+      "pricePerUnitVsComps": 3,
+      "distressLevel": 0,
+      "timePressure": 0,
+      "offMarketBonus": 1,
+      "rentToMarketGap": 8,
+      "occupancyUpside": 13,
+      "expansionOptionality": 7,
+      "expenseReduction": 3,
+      "goingInCapThreshold": 0,
+      "occupancyStability": 0,
+      "expenseRatioEfficiency": 0,
+      "refinanceHoldOption": 0,
+      "ownerVsAssetProblem": 0,
+      "physicalBones": 13,
+      "pathToStabilization": 8
+    },
+    "dealScoredAt": "2026-06-03T22:40:11.713Z",
+    "scoreBreakdown": {
+      "motivation": 0,
+      "ownerProfile": 0,
+      "dealQuality": 11,
+      "valueAdd": 13,
+      "offerDeal": 0,
+      "businessPlan": 0,
+      "negatives": -5,
+      "override": 0
+    },
+    "scoreExplanation": "Limited distress and value-add signals — primarily a financial-quality play. Recently built facility — limited value-add runway, pricing should reflect stabilized yield.",
+    "lastScored": "2026-06-04T13:56:29.519Z",
+    "scoreHistory": [
+      {
+        "score": 19,
+        "date": "2026-06-04T12:21:29.524Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T12:26:29.515Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T12:31:29.531Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T12:36:29.517Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T12:41:29.523Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T12:46:29.515Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T12:51:29.515Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T12:56:29.515Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:01:29.527Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:06:29.515Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:11:29.515Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:16:29.517Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:21:29.518Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:26:29.516Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:31:29.528Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:36:29.516Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:41:29.515Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:46:29.515Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:51:29.516Z"
+      },
+      {
+        "score": 19,
+        "date": "2026-06-04T13:56:29.519Z"
+      }
+    ],
+    "noteLog": [
+      {
+        "id": "1781556383320-lpq3",
+        "text": "Test",
+        "createdAt": "2026-06-15T20:46:23.320Z"
+      }
+    ],
+    "activityLog": [
+      {
+        "id": "1781556383321-byx4",
+        "type": "note_added",
+        "description": "Note: \"Test\"",
+        "createdAt": "2026-06-15T20:46:23.321Z"
+      }
+    ]
+  }
+]
