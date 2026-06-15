@@ -105,14 +105,14 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [authed, setAuthed] = useState(false)
+  const [authed, setAuthed] = useState<boolean | null>(null)
   const [showChangePw, setShowChangePw] = useState(false)
   const router = useRouter()
   const isPipeline = router.pathname === '/pipeline'
 
   useEffect(() => {
     isAuthenticated().then(ok => setAuthed(ok))
-  }, [router.pathname])
+  }, [])
 
   const handleLogout = async () => {
     await clearAuth()
@@ -161,7 +161,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 )
               )}
 
-              {authed && (
+              {authed === true && (
                 <div className="flex items-center gap-3 pl-5 ml-2 border-l border-dark-border">
                   <button onClick={() => setShowChangePw(true)}
                     className="text-dark-muted text-[0.65rem] uppercase tracking-widest hover:text-[#1a1a18] transition-colors">
@@ -212,7 +212,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   </Link>
                 )
               )}
-              {authed && (
+              {authed === true && (
                 <div className="flex gap-4 pt-2 border-t border-dark-border mt-1">
                   <button onClick={() => { setMobileOpen(false); setShowChangePw(true) }}
                     className="text-dark-muted text-xs uppercase tracking-widest">Change Password</button>
