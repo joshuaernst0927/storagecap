@@ -271,9 +271,28 @@ export default function Analyze() {
         ;(data as any)[f] = results.map(r => r[f]).find(v => v != null) ?? null
       }
       const allHighlights = results.flatMap(r => Array.isArray(r.highlights) ? r.highlights as string[] : [])
-      data.highlights = Array.from(new Set(allHighlights)).slice(0, 5)
+data.highlights = Array.from(new Set(allHighlights)).slice(0, 5)
 
-      setFullExtraction(data)
+// Merge operatingExpenses arrays across all batch results.
+// Cannot use first-non-null (scalarFields) because this is an array that must be
+// concatenated — each batch may cover different documents with different expense rows.
+const allExpenses = results.flatMap(r =>
+  Array.isArray(r.operatingExpenses) ? r.operatingExpenses : []
+)
+
+// Deduplicate by label+amount
+const seenExpenseKeys = new Set<string>()
+
+data.operatingExpenses = allExpenses.length > 0
+  ? allExpenses.filter(e => {
+      const key = `${String(e.label).trim().toLowerCase()}|${e.amount}`
+      if (seenExpenseKeys.has(key)) return false
+      seenExpenseKeys.add(key)
+      return true
+    })
+  : null
+
+setFullExtraction(data)
 
       // Auto-fill form from extraction
       const occ = data.currentOccupancy ?? data.occupancy
