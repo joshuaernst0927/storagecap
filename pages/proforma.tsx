@@ -961,15 +961,23 @@ export default function Proforma() {
   // Restore saved inputs on mount so the form survives navigating away
   // (e.g. to Generate LOI) and coming back. Without this, all inputs reset
   // to empty every time the page unmounts.
+  //
+  // IMPORTANT: if a ?data= query param is present, we skip localStorage restore.
+  // A query param means an explicit deal is being routed in (from Analyze or Pipeline).
+  // Merging localStorage on top would contaminate the new deal with stale assumptions.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('yem_proforma_inputs')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        delete parsed.exitSalePrice
-        setInputs(prev => ({ ...prev, ...parsed }))
-      }
-    } catch { /* ignore */ }
+    const hasQueryData = typeof window !== 'undefined' &&
+      window.location.search.includes('data=')
+    if (!hasQueryData) {
+      try {
+        const saved = localStorage.getItem('yem_proforma_inputs')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          delete parsed.exitSalePrice
+          setInputs(prev => ({ ...prev, ...parsed }))
+        }
+      } catch { /* ignore */ }
+    }
     setRestored(true)
   }, [])
 
@@ -1096,54 +1104,57 @@ export default function Proforma() {
     if (router.query.data) {
       try {
         const data = JSON.parse(decodeURIComponent(router.query.data as string))
-        setInputs(prev => ({
-          ...prev,
+        // Start from EMPTY, not from prev. This prevents stale localStorage values
+        // from contaminating the incoming deal. Only fields present in the query
+        // param will be non-empty; everything else resets to defaults.
+        setInputs({
+          ...EMPTY,
           // Property info
-          propertyName: data.propertyName ?? prev.propertyName,
-          address: data.address ?? prev.address,
-          city: data.city ?? prev.city,
-          state: data.state ?? prev.state,
-          msaName: data.msaName ?? prev.msaName,
-          totalSF: data.totalSF ? String(data.totalSF) : prev.totalSF,
-          yearBuilt: data.yearBuilt ? String(data.yearBuilt) : prev.yearBuilt,
+          propertyName: data.propertyName ?? EMPTY.propertyName,
+          address: data.address ?? EMPTY.address,
+          city: data.city ?? EMPTY.city,
+          state: data.state ?? EMPTY.state,
+          msaName: data.msaName ?? EMPTY.msaName,
+          totalSF: data.totalSF ? String(data.totalSF) : EMPTY.totalSF,
+          yearBuilt: data.yearBuilt ? String(data.yearBuilt) : EMPTY.yearBuilt,
           // Unit economics
-          totalUnits: data.totalUnits ? String(data.totalUnits) : prev.totalUnits,
-          currentOccupancy: data.currentOccupancy ? String(data.currentOccupancy) : prev.currentOccupancy,
-          targetOccupancy: data.targetOccupancy ? String(data.targetOccupancy) : prev.targetOccupancy,
-          monthsToStabilization: data.monthsToStabilization ? String(data.monthsToStabilization) : prev.monthsToStabilization,
-          currentAvgRent: data.currentAvgRentPerUnit ? String(data.currentAvgRentPerUnit) : data.currentAvgRent ? String(data.currentAvgRent) : data.avgRent ? String(data.avgRent) : data.avg_rent ? String(data.avg_rent) : prev.currentAvgRent,
-          marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : data.marketAvgRent ? String(data.marketAvgRent) : data.marketRent ? String(data.marketRent) : data.market_rent ? String(data.market_rent) : prev.marketAvgRent,
+          totalUnits: data.totalUnits ? String(data.totalUnits) : EMPTY.totalUnits,
+          currentOccupancy: data.currentOccupancy ? String(data.currentOccupancy) : EMPTY.currentOccupancy,
+          targetOccupancy: data.targetOccupancy ? String(data.targetOccupancy) : EMPTY.targetOccupancy,
+          monthsToStabilization: data.monthsToStabilization ? String(data.monthsToStabilization) : EMPTY.monthsToStabilization,
+          currentAvgRent: data.currentAvgRentPerUnit ? String(data.currentAvgRentPerUnit) : data.currentAvgRent ? String(data.currentAvgRent) : data.avgRent ? String(data.avgRent) : data.avg_rent ? String(data.avg_rent) : EMPTY.currentAvgRent,
+          marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : data.marketAvgRent ? String(data.marketAvgRent) : data.marketRent ? String(data.marketRent) : data.market_rent ? String(data.market_rent) : EMPTY.marketAvgRent,
           // Historical data
-          t12NOI: data.t12NOI ? String(data.t12NOI) : data.t12Noi ? String(data.t12Noi) : data.noi ? String(data.noi) : prev.t12NOI,
-          t3NOI: data.t3NOI ? String(data.t3NOI) : data.t3Noi ? String(data.t3Noi) : data.trailing3NOI ? String(data.trailing3NOI) : data.t3_noi ? String(data.t3_noi) : prev.t3NOI,
-          t12Occupancy: data.t12Occupancy ? String(data.t12Occupancy) : prev.t12Occupancy,
-          t12Revenue: data.t12Revenue ? String(data.t12Revenue) : prev.t12Revenue,
-          t12TotalExpenses: data.t12TotalExpenses ? String(data.t12TotalExpenses) : prev.t12TotalExpenses,
-          t12Payroll: data.t12Payroll ? String(data.t12Payroll) : prev.t12Payroll,
-          t12ManagementFees: data.t12ManagementFees ? String(data.t12ManagementFees) : prev.t12ManagementFees,
-          t12Marketing: data.t12Marketing ? String(data.t12Marketing) : prev.t12Marketing,
-          t12Utilities: data.t12Utilities ? String(data.t12Utilities) : prev.t12Utilities,
-          t12OfficeEmployee: data.t12OfficeEmployee ? String(data.t12OfficeEmployee) : prev.t12OfficeEmployee,
-          t12Administrative: data.t12Administrative ? String(data.t12Administrative) : prev.t12Administrative,
-          t12RepairsMaintenance: data.t12RepairsMaintenance ? String(data.t12RepairsMaintenance) : prev.t12RepairsMaintenance,
-          t12Tax: data.t12Tax ? String(data.t12Tax) : prev.t12Tax,
-          t12Insurance: data.t12Insurance ? String(data.t12Insurance) : prev.t12Insurance,
-          t12OtherExpenses: data.t12OtherExpenses ? String(data.t12OtherExpenses) : prev.t12OtherExpenses,
+          t12NOI: data.t12NOI ? String(data.t12NOI) : data.t12Noi ? String(data.t12Noi) : data.noi ? String(data.noi) : EMPTY.t12NOI,
+          t3NOI: data.t3NOI ? String(data.t3NOI) : data.t3Noi ? String(data.t3Noi) : data.trailing3NOI ? String(data.trailing3NOI) : data.t3_noi ? String(data.t3_noi) : EMPTY.t3NOI,
+          t12Occupancy: data.t12Occupancy ? String(data.t12Occupancy) : EMPTY.t12Occupancy,
+          t12Revenue: data.t12Revenue ? String(data.t12Revenue) : EMPTY.t12Revenue,
+          t12TotalExpenses: data.t12TotalExpenses ? String(data.t12TotalExpenses) : EMPTY.t12TotalExpenses,
+          t12Payroll: data.t12Payroll ? String(data.t12Payroll) : EMPTY.t12Payroll,
+          t12ManagementFees: data.t12ManagementFees ? String(data.t12ManagementFees) : EMPTY.t12ManagementFees,
+          t12Marketing: data.t12Marketing ? String(data.t12Marketing) : EMPTY.t12Marketing,
+          t12Utilities: data.t12Utilities ? String(data.t12Utilities) : EMPTY.t12Utilities,
+          t12OfficeEmployee: data.t12OfficeEmployee ? String(data.t12OfficeEmployee) : EMPTY.t12OfficeEmployee,
+          t12Administrative: data.t12Administrative ? String(data.t12Administrative) : EMPTY.t12Administrative,
+          t12RepairsMaintenance: data.t12RepairsMaintenance ? String(data.t12RepairsMaintenance) : EMPTY.t12RepairsMaintenance,
+          t12Tax: data.t12Tax ? String(data.t12Tax) : EMPTY.t12Tax,
+          t12Insurance: data.t12Insurance ? String(data.t12Insurance) : EMPTY.t12Insurance,
+          t12OtherExpenses: data.t12OtherExpenses ? String(data.t12OtherExpenses) : EMPTY.t12OtherExpenses,
           // Broker info
-          broker1Name: data.broker1Name ?? prev.broker1Name,
-          broker2Name: data.broker2Name ?? prev.broker2Name,
-          brokerPhone1: data.brokerPhone1 ?? prev.brokerPhone1,
-          brokerPhone2: data.brokerPhone2 ?? prev.brokerPhone2,
-          brokerEmail1: data.brokerEmail1 ?? prev.brokerEmail1,
-          brokerEmail2: data.brokerEmail2 ?? prev.brokerEmail2,
-          brokerageName: data.brokerageName ?? prev.brokerageName,
+          broker1Name: data.broker1Name ?? EMPTY.broker1Name,
+          broker2Name: data.broker2Name ?? EMPTY.broker2Name,
+          brokerPhone1: data.brokerPhone1 ?? EMPTY.brokerPhone1,
+          brokerPhone2: data.brokerPhone2 ?? EMPTY.brokerPhone2,
+          brokerEmail1: data.brokerEmail1 ?? EMPTY.brokerEmail1,
+          brokerEmail2: data.brokerEmail2 ?? EMPTY.brokerEmail2,
+          brokerageName: data.brokerageName ?? EMPTY.brokerageName,
           // Seller years
-          sellerY1: { ...prev.sellerY1, ...(data.sellerY1 ?? {}) },
-          sellerY2: { ...prev.sellerY2, ...(data.sellerY2 ?? {}) },
-          sellerY3: { ...prev.sellerY3, ...(data.sellerY3 ?? {}) },
-          sellerY4: { ...prev.sellerY4, ...(data.sellerY4 ?? {}) },
-          sellerY5: { ...prev.sellerY5, ...(data.sellerY5 ?? {}) },
-        }))
+          sellerY1: { ...EMPTY.sellerY1, ...(data.sellerY1 ?? {}) },
+          sellerY2: { ...EMPTY.sellerY2, ...(data.sellerY2 ?? {}) },
+          sellerY3: { ...EMPTY.sellerY3, ...(data.sellerY3 ?? {}) },
+          sellerY4: { ...EMPTY.sellerY4, ...(data.sellerY4 ?? {}) },
+          sellerY5: { ...EMPTY.sellerY5, ...(data.sellerY5 ?? {}) },
+        })
       } catch { /* ignore */ }
     }
   }, [router.query.data])
@@ -1536,6 +1547,54 @@ export default function Proforma() {
             Enter your offer price and see your actual IRR, equity required, and GP/LP waterfall.
           </p>
         </section>
+
+        {/* ── Deal Identity Banner ──────────────────────────────────────── */}
+        <div className={`border-b ${
+          (inputs.propertyName || inputs.address)
+            ? 'border-gold/30 bg-gold/5'
+            : 'border-dark-border bg-dark-surface'
+        }`}>
+          <div className="section-container max-w-4xl">
+            <div className="flex items-center justify-between py-3 gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`text-[0.6rem] uppercase tracking-widest flex-shrink-0 ${
+                  (inputs.propertyName || inputs.address) ? 'text-gold' : 'text-dark-muted'
+                }`}>
+                  {(inputs.propertyName || inputs.address) ? 'Loaded Deal' : 'No Deal Loaded'}
+                </span>
+                <span className="text-sm text-dark-primary truncate">
+                  {inputs.propertyName || inputs.address
+                    ? [
+                        inputs.propertyName,
+                        [inputs.city, inputs.state].filter(Boolean).join(', '),
+                      ].filter(Boolean).join(' — ')
+                    : 'New Underwriting — no deal loaded'}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  const dealName = inputs.propertyName || inputs.address
+                  const confirmed = !dealName ||
+                    window.confirm(`Clear "${dealName}" and start a new underwriting?`)
+                  if (!confirmed) return
+                  setInputs(EMPTY)
+                  setProformaResult(null)
+                  setIrrResult(null)
+                  setWaterfallResult(null)
+                  setHasCalculated(false)
+                  setExcelOutputs(null)
+                  setExcelError('')
+                  setExcelElapsed(null)
+                  try { localStorage.removeItem('yem_proforma_inputs') } catch { /* ignore */ }
+                }}
+                className="flex-shrink-0 text-[0.6rem] uppercase tracking-widest border px-3 py-1.5 transition-colors
+                  border-dark-border text-dark-muted hover:border-gold hover:text-gold"
+              >
+                New Underwriting
+              </button>
+            </div>
+          </div>
+        </div>
 
         <section className="py-14">
           <div className="section-container max-w-4xl space-y-10">

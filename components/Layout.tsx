@@ -38,6 +38,15 @@ const navItems: NavItem[] = [
     ],
   },
   { href: '/pipeline', label: 'Pipeline', dot: true },
+  {
+    label: 'Underwriting',
+    dropdown: [
+      { href: '/analyze',     label: 'Analyze Deal' },
+      { href: '/upload-deal', label: 'Import Deal (OM)' },
+      { href: '/proforma',    label: 'Build Proforma' },
+      { href: '/score-deal',  label: 'Score Deal' },
+    ],
+  },
   { href: '/deals', label: 'Deals' },
   { href: '/portfolio', label: 'Portfolio' },
   {
