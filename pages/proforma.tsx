@@ -2,6 +2,8 @@ import Head from 'next/head'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import AuthGate from '@/components/AuthGate'
+import { loadSavedProperties } from '@/lib/pipelineStore'
+import type { PipelineProperty } from '@/lib/pipelineData'
 
 type DealType = 'value-add' | 'stabilized' | 'distressed'
 type LeverageType = 'all-cash' | 'levered'
@@ -958,23 +960,63 @@ export default function Proforma() {
   const set = (k: keyof ProformaInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
   const [restored, setRestored] = useState(false)
 
-  // Restore saved inputs on mount so the form survives navigating away
-  // (e.g. to Generate LOI) and coming back. Without this, all inputs reset
-  // to empty every time the page unmounts.
-  //
-  // IMPORTANT: if a ?data= query param is present, we skip localStorage restore.
-  // A query param means an explicit deal is being routed in (from Analyze or Pipeline).
-  // Merging localStorage on top would contaminate the new deal with stale assumptions.
+  // Active deal dropdown
+  const [activeDeals, setActiveDeals]         = useState<PipelineProperty[]>([])
+  const [selectedDealId, setSelectedDealId]   = useState<string>('')
+
+  // Draft resume prompt — shown when localStorage has unsaved data
+  // and no deal is explicitly selected
+  const [draftData, setDraftData]             = useState<Partial<ProformaInputs> | null>(null)
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false)
+
+  // On mount:
+  // 1. Load active deals from localStorage + /data/pipeline.json for the dropdown.
+  // 2. Check for a saved localStorage draft.
+  //    - If a ?data= query param is present: ignore draft (explicit deal load).
+  //    - Otherwise: show a visible Resume/Start Fresh prompt instead of silently loading.
+  // 3. Never silently auto-load stale assumptions.
   useEffect(() => {
+    // Load active deals for dropdown
+    const INACTIVE = new Set(['dead', 'closed'])
+    const isActive = (p: PipelineProperty) =>
+      !INACTIVE.has(p.stage) && !p.portfolioEntry
+
+    const localDeals = loadSavedProperties().filter(isActive)
+    setActiveDeals(localDeals)
+
+    // Also fetch /data/pipeline.json for deals saved from other devices
+    fetch('/data/pipeline.json')
+      .then(r => r.ok ? r.json() : [])
+      .then((remote: PipelineProperty[]) => {
+        const localIds = new Set(localDeals.map(p => p.id))
+        const merged = [
+          ...localDeals,
+          ...remote.filter(p => !localIds.has(p.id) && isActive(p)),
+        ]
+        // Sort: most recently added first
+        merged.sort((a, b) =>
+          (b.addedDate ?? '').localeCompare(a.addedDate ?? '')
+        )
+        setActiveDeals(merged)
+      })
+      .catch(() => {})
+
+    // Handle localStorage draft
     const hasQueryData = typeof window !== 'undefined' &&
       window.location.search.includes('data=')
     if (!hasQueryData) {
       try {
         const saved = localStorage.getItem('yem_proforma_inputs')
         if (saved) {
-          const parsed = JSON.parse(saved)
+          const parsed = JSON.parse(saved) as Partial<ProformaInputs>
           delete parsed.exitSalePrice
-          setInputs(prev => ({ ...prev, ...parsed }))
+          // Only show prompt if the draft has meaningful content
+          const hasMeaningfulContent = !!(parsed.propertyName || parsed.address ||
+            parsed.offerPrice || parsed.t12NOI)
+          if (hasMeaningfulContent) {
+            setDraftData(parsed)
+            setShowDraftPrompt(true)
+          }
         }
       } catch { /* ignore */ }
     }
@@ -1158,6 +1200,61 @@ export default function Proforma() {
       } catch { /* ignore */ }
     }
   }, [router.query.data])
+
+  // ── Deal dropdown helpers ─────────────────────────────────────────────────
+
+  // Phase A mapping: PipelineProperty → ProformaInputs (property + basic financials only).
+  // All underwriting assumptions (debt, exit, waterfall) fall back to EMPTY defaults.
+  function mapDealToProforma(deal: PipelineProperty): ProformaInputs {
+    return {
+      ...EMPTY,
+      // Property identity
+      propertyName:   deal.facilityName ?? EMPTY.propertyName,
+      address:        deal.address ?? EMPTY.address,
+      city:           deal.city ?? EMPTY.city,
+      state:          deal.state ?? EMPTY.state,
+      // Basic financials
+      totalUnits:     deal.unitCount  > 0 ? String(deal.unitCount)  : EMPTY.totalUnits,
+      // Pipeline stores occupancy as 0-100; Proforma field is also 0-100 string
+      currentOccupancy: deal.occupancy > 0 ? String(deal.occupancy) : EMPTY.currentOccupancy,
+      t12NOI:         deal.noi        ? String(Math.round(deal.noi))          : EMPTY.t12NOI,
+      t12Revenue:     deal.grossRevenue ? String(Math.round(deal.grossRevenue)) : EMPTY.t12Revenue,
+      // askingPrice pre-fills offer price as a starting-point only
+      offerPrice:     deal.askingPrice ? String(Math.round(deal.askingPrice))  : EMPTY.offerPrice,
+      yearBuilt:      deal.yearBuilt   > 0 ? String(deal.yearBuilt)  : EMPTY.yearBuilt,
+      // Broker info from extraction
+      brokerageName:  EMPTY.brokerageName,
+    }
+  }
+
+  function handleSelectDeal(dealId: string) {
+    setSelectedDealId(dealId)
+    setShowDraftPrompt(false) // dismiss draft prompt when explicitly selecting
+    setDraftData(null)
+    // Reset all calculation results
+    setProformaResult(null)
+    setIrrResult(null)
+    setWaterfallResult(null)
+    setHasCalculated(false)
+    setExcelOutputs(null)
+    setExcelError('')
+    setExcelElapsed(null)
+
+    if (dealId === '' || dealId === '__new__') {
+      // New Underwriting or blank selection — clear everything
+      setInputs(EMPTY)
+      try { localStorage.removeItem('yem_proforma_inputs') } catch { /* ignore */ }
+      return
+    }
+
+    const deal = activeDeals.find(d => d.id === dealId)
+    if (!deal) return
+
+    const mapped = mapDealToProforma(deal)
+    setInputs(mapped)
+    // Save the mapped inputs to localStorage so LOI generation etc. can use them
+    try { localStorage.setItem('yem_proforma_inputs', JSON.stringify(mapped)) } catch { /* ignore */ }
+  }
 
   // ── Institutional Model (Excel Engine) ──────────────────────────────────
   async function handleRunInstitutionalModel() {
@@ -1548,51 +1645,110 @@ export default function Proforma() {
           </p>
         </section>
 
-        {/* ── Deal Identity Banner ──────────────────────────────────────── */}
-        <div className={`border-b ${
-          (inputs.propertyName || inputs.address)
-            ? 'border-gold/30 bg-gold/5'
-            : 'border-dark-border bg-dark-surface'
-        }`}>
+        {/* ── Deal Banner: dropdown + identity + draft prompt ──────────── */}
+        <div className="border-b border-dark-border bg-dark-surface">
           <div className="section-container max-w-4xl">
-            <div className="flex items-center justify-between py-3 gap-4">
+
+            {/* Row 1: Deal dropdown + New Underwriting */}
+            <div className="flex items-center gap-3 py-3 border-b border-dark-border/50">
+              <span className="text-[0.6rem] uppercase tracking-widest text-dark-muted flex-shrink-0">
+                Deal
+              </span>
+              <select
+                value={selectedDealId}
+                onChange={e => handleSelectDeal(e.target.value)}
+                className="flex-1 min-w-0 bg-transparent border border-dark-border text-sm
+                  text-dark-primary px-3 py-1.5 focus:outline-none focus:border-gold
+                  transition-colors cursor-pointer"
+              >
+                <option value="">— Select a deal to underwrite —</option>
+                {activeDeals.map(deal => (
+                  <option key={deal.id} value={deal.id}>
+                    {[
+                      deal.facilityName,
+                      [deal.city, deal.state].filter(Boolean).join(', '),
+                      deal.stage ? `(${deal.stage})` : '',
+                    ].filter(Boolean).join(' — ')}
+                  </option>
+                ))}
+                <option value="__new__">── New Underwriting ──</option>
+              </select>
+              {activeDeals.length === 0 && (
+                <span className="text-xs text-dark-muted flex-shrink-0">No active deals in pipeline</span>
+              )}
+            </div>
+
+            {/* Row 2: Identity line — shows current loaded deal or blank state */}
+            <div className="flex items-center justify-between py-2.5 gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <span className={`text-[0.6rem] uppercase tracking-widest flex-shrink-0 ${
                   (inputs.propertyName || inputs.address) ? 'text-gold' : 'text-dark-muted'
                 }`}>
-                  {(inputs.propertyName || inputs.address) ? 'Loaded Deal' : 'No Deal Loaded'}
+                  {(inputs.propertyName || inputs.address) ? 'Loaded' : 'Empty'}
                 </span>
-                <span className="text-sm text-dark-primary truncate">
+                <span className="text-xs text-dark-primary truncate">
                   {inputs.propertyName || inputs.address
                     ? [
                         inputs.propertyName,
                         [inputs.city, inputs.state].filter(Boolean).join(', '),
+                        inputs.offerPrice ? `$${Number(inputs.offerPrice).toLocaleString()}` : '',
                       ].filter(Boolean).join(' — ')
-                    : 'New Underwriting — no deal loaded'}
+                    : 'No deal loaded — select above or fill in manually'}
                 </span>
               </div>
               <button
-                onClick={() => {
-                  const dealName = inputs.propertyName || inputs.address
-                  const confirmed = !dealName ||
-                    window.confirm(`Clear "${dealName}" and start a new underwriting?`)
-                  if (!confirmed) return
-                  setInputs(EMPTY)
-                  setProformaResult(null)
-                  setIrrResult(null)
-                  setWaterfallResult(null)
-                  setHasCalculated(false)
-                  setExcelOutputs(null)
-                  setExcelError('')
-                  setExcelElapsed(null)
-                  try { localStorage.removeItem('yem_proforma_inputs') } catch { /* ignore */ }
-                }}
-                className="flex-shrink-0 text-[0.6rem] uppercase tracking-widest border px-3 py-1.5 transition-colors
-                  border-dark-border text-dark-muted hover:border-gold hover:text-gold"
+                onClick={() => handleSelectDeal('__new__')}
+                className="flex-shrink-0 text-[0.6rem] uppercase tracking-widest border px-3 py-1
+                  transition-colors border-dark-border text-dark-muted hover:border-gold hover:text-gold"
               >
-                New Underwriting
+                Clear
               </button>
             </div>
+
+            {/* Row 3: Draft resume prompt — only shown when a draft exists and no deal selected */}
+            {showDraftPrompt && draftData && (
+              <div className="flex items-center justify-between gap-4 py-2.5 border-t border-dark-border/50
+                bg-amber-50/80 px-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-[0.6rem] uppercase tracking-widest text-amber-700 flex-shrink-0">
+                    Unsaved Draft
+                  </span>
+                  <span className="text-xs text-amber-800 truncate">
+                    {[
+                      draftData.propertyName,
+                      draftData.address,
+                      [draftData.city, draftData.state].filter(Boolean).join(', '),
+                    ].filter(Boolean).join(' — ') || 'Draft with no property name'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      setInputs(prev => ({ ...prev, ...draftData }))
+                      setShowDraftPrompt(false)
+                      setDraftData(null)
+                    }}
+                    className="text-[0.6rem] uppercase tracking-widest border border-amber-600
+                      text-amber-700 px-3 py-1 hover:bg-amber-100 transition-colors"
+                  >
+                    Resume Draft
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDraftPrompt(false)
+                      setDraftData(null)
+                      setInputs(EMPTY)
+                      try { localStorage.removeItem('yem_proforma_inputs') } catch { /* ignore */ }
+                    }}
+                    className="text-[0.6rem] uppercase tracking-widest border border-dark-border
+                      text-dark-muted px-3 py-1 hover:border-gold hover:text-gold transition-colors"
+                  >
+                    Start Fresh
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 
