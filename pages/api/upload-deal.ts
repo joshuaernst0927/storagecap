@@ -4,82 +4,101 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const EXTRACTION_PROMPT = `You are reading one or more documents about a self-storage facility for sale.
-The documents may include an offering memorandum, rent roll, T12, photos, broker package, or any combination.
-Extract all available deal information and merge it into one complete profile.
-Return ONLY a valid JSON object — no markdown fences, no commentary, no extra text. Use null for any field you cannot find.
-
-{
-  "facilityName": string or null,
-  "address": string or null,
-  "city": string or null (REQUIRED — parse from address field if needed, e.g. "Tulsa" from "12331 East 11th St, Tulsa, OK"),
-  "state": string (2-letter code) or null (REQUIRED — parse from address field if needed, e.g. "OK" from "Tulsa, OK"),
-  "zipCode": string or null,
-  "msaName": string or null (Metropolitan Statistical Area name if mentioned),
-  "askingPrice": number (in dollars) or null,
-  "unitCount": number or null,
-  "totalUnits": number or null,
-  "capRate": number (as decimal e.g. 0.065 for 6.5%) or null,
-  "noi": number (annual, in dollars) or null,
-  "t12NOI": number (trailing 12-month NOI in dollars) or null,
-  "t3NOI": number (trailing 3-month NOI annualized — look for a section labeled T-3, Trailing 3, Last 3 Months, Q4 Actuals, or similar. It will be a DIFFERENT and typically LOWER number than t12NOI. Multiply the 3-month NOI by 4 to annualize. If you find it, extract it. Do NOT return the same value as t12NOI) or null,
-  "t12Revenue": number (trailing 12-month total revenue in dollars) or null,
-  "t12TotalExpenses": number (trailing 12-month total expenses in dollars) or null,
-  "t12Payroll": number or null,
-  "t12ManagementFees": number or null,
-  "t12Marketing": number or null,
-  "t12Utilities": number or null,
-  "t12OfficeEmployee": number or null,
-  "t12Administrative": number or null,
-  "t12RepairsMaintenance": number or null,
-  "t12Tax": number or null,
-  "t12Insurance": number or null,
-  "t12OtherExpenses": number or null,
-  "occupancy": number (percentage 0-100) or null,
-  "currentOccupancy": number (percentage 0-100) or null,
-  "targetOccupancy": number (percentage 0-100) or null,
-  "currentAvgRentPerUnit": number (average monthly rent per unit in dollars) or null,
-  "marketAvgRentPerUnit": number (market rate average monthly rent per unit in dollars — look at rent comparables, competitor rents, or market rate tables and average them if needed) or null,
-  "monthsToStabilization": number or null,
-  "yearBuilt": number or null (look for year built, year constructed, or built in XXXX),
-  "sqft": number or null (total rentable square footage),
-  "totalSF": number or null (same as sqft — total net rentable area),
-  "broker1Name": string or null (look for listing broker, contact, or agent name),
-  "broker2Name": string or null,
-  "brokerPhone1": string or null,
-  "brokerPhone2": string or null,
-  "brokerEmail1": string or null,
-  "brokerEmail2": string or null,
-  "sellerY1": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
-  "sellerY2": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
-  "sellerY3": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
-  "sellerY4": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
-  "sellerY5": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
-  "highlights": array of up to 5 key deal highlight strings,
-  ""operatingExpensesDetailAvailable": boolean — true if you found individual named expense rows (e.g. "Property Taxes", "Insurance", "Utilities"), false if the document shows only a single total or no expense detail at all,
-  "operatingExpenses": IMPORTANT EXTRACTION RULES:
-    1. Extract EVERY individual named expense row. Preserve the original label exactly as it appears.
-    2. If individual rows exist, DO NOT include any summary/total rows. Exclude rows whose label is or contains: "Total Operating Expenses", "Total Expenses", "Operating Expenses", "Other Expenses", "Total", "Expenses Total", or any label that is purely a subtotal or grand total.
-    3. Only return a total/summary row if NO individual rows exist at all in the document.
-    4. For multi-column T12 sheets (monthly columns + annual total): use the annual total column (rightmost number) as the amount. If no total column exists, sum the monthly columns.
-    5. Do not include revenue lines. Do not double-count.
-    6. If no expense detail of any kind exists, return null.
-  EXAMPLE of correct output when individual rows exist:
-  [
-    { "label": "Property Taxes", "amount": 37200, "source": "T12", "confidence": 0.97 },
-    { "label": "Insurance", "amount": 16800, "source": "T12", "confidence": 0.95 },
-    { "label": "Utilities - Electric", "amount": 6750, "source": "T12", "confidence": 0.92 },
-    { "label": "Snow Removal", "amount": 1720, "source": "T12", "confidence": 0.88 },
-    { "label": "Merchant Processing Fees", "amount": 1410, "source": "T12", "confidence": 0.85 }
-  ]
-  Each element:
-  {
-    "label": string (exact label from document, e.g. "Snow Removal", "Call Center - StoragePRO", "Merchant Processing Fees", "Ground Lease"),
-    "amount": number (annual dollars — if document shows monthly figures multiply by 12; if quarterly multiply by 4),
-    "source": string or null ("T12", "P&L", "OM", "Excel", "Rent Roll" — whichever document this line came from),
-    "confidence": number (0.0 to 1.0 — certainty this is a real operating expense at this amount; use lower values for estimated or unclear items)
-  }
-}`
+const EXTRACTION_PROMPT = [
+  'You are reading one or more documents about a self-storage facility for sale.',
+  'The documents may include an offering memorandum, rent roll, T12, photos, broker package, or any combination.',
+  'Extract all available deal information and merge it into one complete profile.',
+  '',
+  'CRITICAL OUTPUT FORMAT - YOU MUST FOLLOW THESE RULES EXACTLY:',
+  '- Return ONLY a single raw JSON object. Nothing before it. Nothing after it.',
+  '- No markdown. No backticks. No ```json fences. No code blocks of any kind.',
+  '- No comments, explanations, or prose outside the JSON.',
+  '- No trailing commas. No JavaScript-style comments inside JSON.',
+  '- Every key and string value must use double quotes.',
+  '- Use null (not the string "null") for any field you cannot find.',
+  '- The entire response must be valid JSON parseable by JSON.parse() with zero preprocessing.',
+  '',
+  'Return ONLY the following JSON object filled in with extracted values:',
+  '{',
+  '  "facilityName": null,',
+  '  "address": null,',
+  '  "city": null,',
+  '  "state": null,',
+  '  "zipCode": null,',
+  '  "msaName": null,',
+  '  "askingPrice": null,',
+  '  "unitCount": null,',
+  '  "totalUnits": null,',
+  '  "capRate": null,',
+  '  "noi": null,',
+  '  "t12NOI": null,',
+  '  "t3NOI": null,',
+  '  "t12Revenue": null,',
+  '  "t12TotalExpenses": null,',
+  '  "t12Payroll": null,',
+  '  "t12ManagementFees": null,',
+  '  "t12Marketing": null,',
+  '  "t12Utilities": null,',
+  '  "t12OfficeEmployee": null,',
+  '  "t12Administrative": null,',
+  '  "t12RepairsMaintenance": null,',
+  '  "t12Tax": null,',
+  '  "t12Insurance": null,',
+  '  "t12OtherExpenses": null,',
+  '  "occupancy": null,',
+  '  "currentOccupancy": null,',
+  '  "targetOccupancy": null,',
+  '  "currentAvgRentPerUnit": null,',
+  '  "marketAvgRentPerUnit": null,',
+  '  "monthsToStabilization": null,',
+  '  "yearBuilt": null,',
+  '  "sqft": null,',
+  '  "totalSF": null,',
+  '  "broker1Name": null,',
+  '  "broker2Name": null,',
+  '  "brokerPhone1": null,',
+  '  "brokerPhone2": null,',
+  '  "brokerEmail1": null,',
+  '  "brokerEmail2": null,',
+  '  "brokerageName": null,',
+  '  "sellerY1": { "revenue": null, "expenses": null, "noi": null },',
+  '  "sellerY2": { "revenue": null, "expenses": null, "noi": null },',
+  '  "sellerY3": { "revenue": null, "expenses": null, "noi": null },',
+  '  "sellerY4": { "revenue": null, "expenses": null, "noi": null },',
+  '  "sellerY5": { "revenue": null, "expenses": null, "noi": null },',
+  '  "highlights": [],',
+  '  "operatingExpensesDetailAvailable": false,',
+  '  "operatingExpenses": null',
+  '}',
+  '',
+  'FIELD NOTES:',
+  '- city: REQUIRED. Parse from address if needed e.g. "Tulsa" from "12331 East 11th St, Tulsa, OK"',
+  '- state: REQUIRED. 2-letter code. Parse from address if needed e.g. "OK" from "Tulsa, OK"',
+  '- capRate: decimal e.g. 0.065 for 6.5%',
+  '- t3NOI: trailing 3-month NOI annualized (multiply 3-month figure by 4). Must differ from t12NOI. null if not found.',
+  '- currentAvgRentPerUnit: average monthly rent per unit in dollars',
+  '- marketAvgRentPerUnit: market rate average monthly rent per unit in dollars',
+  '',
+  'OPERATING EXPENSE EXTRACTION RULES:',
+  '1. Extract EVERY individual named expense row. Preserve original label exactly as it appears.',
+  '2. If individual rows exist, EXCLUDE all summary and total rows.',
+  '   Never include rows labeled: "Total Operating Expenses", "Total Expenses", "Operating Expenses",',
+  '   "Other Expenses", "Total", "Expenses Total". These are summaries - skip them.',
+  '3. Only include a summary row if NO individual rows exist anywhere in the documents.',
+  '4. Multi-column T12 with 12 monthly columns plus annual total: use the annual total column as amount.',
+  '5. Do not include revenue lines. Do not double-count rows.',
+  '6. If no expense detail exists at all, set operatingExpenses to null and operatingExpensesDetailAvailable to false.',
+  '7. If you find individual rows, set operatingExpensesDetailAvailable to true.',
+  '',
+  'EXAMPLE - correct operatingExpenses when individual rows exist:',
+  '[',
+  '  { "label": "Property Taxes", "amount": 37200, "source": "T12", "confidence": 0.97 },',
+  '  { "label": "Insurance", "amount": 16800, "source": "T12", "confidence": 0.95 },',
+  '  { "label": "Snow Removal", "amount": 1720, "source": "T12", "confidence": 0.88 },',
+  '  { "label": "Merchant Processing Fees", "amount": 1410, "source": "T12", "confidence": 0.85 }',
+  ']',
+  'Each operatingExpenses element: label (string), amount (number, annual dollars), source (string or null), confidence (number 0.0-1.0)',
+].join('\n')
 
 type FileInput = { fileName?: string; mimeType: string; data: string }
 
@@ -162,7 +181,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       messages: [{ role: 'user', content: contentBlocks }],
     })
     const raw = ((msg.content[0] as { type: string; text: string }).text ?? '').trim()
-    const extracted = JSON.parse(raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, ''))
+
+    // Strip markdown fences then isolate the JSON object between first { and last }
+    let jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
+    const jsonStart = jsonStr.indexOf('{')
+    const jsonEnd   = jsonStr.lastIndexOf('}')
+    if (jsonStart !== -1 && jsonEnd > jsonStart) {
+      jsonStr = jsonStr.slice(jsonStart, jsonEnd + 1)
+    }
+
+    let extracted: unknown
+    try {
+      extracted = JSON.parse(jsonStr)
+    } catch (parseErr) {
+      console.error('[upload-deal] JSON.parse failed:', String(parseErr))
+      console.error('[upload-deal] raw output (first 2000):', raw.slice(0, 2000))
+      throw parseErr
+    }
+
     return res.status(200).json(extracted)
   } catch (err: unknown) {
     let detail = String(err)
