@@ -56,7 +56,22 @@ Return ONLY a valid JSON object — no markdown fences, no commentary, no extra 
   "sellerY4": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
   "sellerY5": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
   "highlights": array of up to 5 key deal highlight strings,
-  "operatingExpenses": array or null — extract EVERY operating expense line item visible in any document (T12, P&L, OM, Excel, rent roll). Do NOT collapse into preset buckets. Preserve the original label exactly as it appears in the document. Include subtotals only if no line-item detail exists. Do not include revenue lines. Do not double-count total rows.
+  ""operatingExpensesDetailAvailable": boolean — true if you found individual named expense rows (e.g. "Property Taxes", "Insurance", "Utilities"), false if the document shows only a single total or no expense detail at all,
+  "operatingExpenses": IMPORTANT EXTRACTION RULES:
+    1. Extract EVERY individual named expense row. Preserve the original label exactly as it appears.
+    2. If individual rows exist, DO NOT include any summary/total rows. Exclude rows whose label is or contains: "Total Operating Expenses", "Total Expenses", "Operating Expenses", "Other Expenses", "Total", "Expenses Total", or any label that is purely a subtotal or grand total.
+    3. Only return a total/summary row if NO individual rows exist at all in the document.
+    4. For multi-column T12 sheets (monthly columns + annual total): use the annual total column (rightmost number) as the amount. If no total column exists, sum the monthly columns.
+    5. Do not include revenue lines. Do not double-count.
+    6. If no expense detail of any kind exists, return null.
+  EXAMPLE of correct output when individual rows exist:
+  [
+    { "label": "Property Taxes", "amount": 37200, "source": "T12", "confidence": 0.97 },
+    { "label": "Insurance", "amount": 16800, "source": "T12", "confidence": 0.95 },
+    { "label": "Utilities - Electric", "amount": 6750, "source": "T12", "confidence": 0.92 },
+    { "label": "Snow Removal", "amount": 1720, "source": "T12", "confidence": 0.88 },
+    { "label": "Merchant Processing Fees", "amount": 1410, "source": "T12", "confidence": 0.85 }
+  ]
   Each element:
   {
     "label": string (exact label from document, e.g. "Snow Removal", "Call Center - StoragePRO", "Merchant Processing Fees", "Ground Lease"),
