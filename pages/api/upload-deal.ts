@@ -4,101 +4,147 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const EXTRACTION_PROMPT = [
-  'You are reading one or more documents about a self-storage facility for sale.',
-  'The documents may include an offering memorandum, rent roll, T12, photos, broker package, or any combination.',
-  'Extract all available deal information and merge it into one complete profile.',
-  '',
-  'CRITICAL OUTPUT FORMAT - YOU MUST FOLLOW THESE RULES EXACTLY:',
-  '- Return ONLY a single raw JSON object. Nothing before it. Nothing after it.',
-  '- No markdown. No backticks. No ```json fences. No code blocks of any kind.',
-  '- No comments, explanations, or prose outside the JSON.',
-  '- No trailing commas. No JavaScript-style comments inside JSON.',
-  '- Every key and string value must use double quotes.',
-  '- Use null (not the string "null") for any field you cannot find.',
-  '- The entire response must be valid JSON parseable by JSON.parse() with zero preprocessing.',
-  '',
-  'Return ONLY the following JSON object filled in with extracted values:',
-  '{',
-  '  "facilityName": null,',
-  '  "address": null,',
-  '  "city": null,',
-  '  "state": null,',
-  '  "zipCode": null,',
-  '  "msaName": null,',
-  '  "askingPrice": null,',
-  '  "unitCount": null,',
-  '  "totalUnits": null,',
-  '  "capRate": null,',
-  '  "noi": null,',
-  '  "t12NOI": null,',
-  '  "t3NOI": null,',
-  '  "t12Revenue": null,',
-  '  "t12TotalExpenses": null,',
-  '  "t12Payroll": null,',
-  '  "t12ManagementFees": null,',
-  '  "t12Marketing": null,',
-  '  "t12Utilities": null,',
-  '  "t12OfficeEmployee": null,',
-  '  "t12Administrative": null,',
-  '  "t12RepairsMaintenance": null,',
-  '  "t12Tax": null,',
-  '  "t12Insurance": null,',
-  '  "t12OtherExpenses": null,',
-  '  "occupancy": null,',
-  '  "currentOccupancy": null,',
-  '  "targetOccupancy": null,',
-  '  "currentAvgRentPerUnit": null,',
-  '  "marketAvgRentPerUnit": null,',
-  '  "monthsToStabilization": null,',
-  '  "yearBuilt": null,',
-  '  "sqft": null,',
-  '  "totalSF": null,',
-  '  "broker1Name": null,',
-  '  "broker2Name": null,',
-  '  "brokerPhone1": null,',
-  '  "brokerPhone2": null,',
-  '  "brokerEmail1": null,',
-  '  "brokerEmail2": null,',
-  '  "brokerageName": null,',
-  '  "sellerY1": { "revenue": null, "expenses": null, "noi": null },',
-  '  "sellerY2": { "revenue": null, "expenses": null, "noi": null },',
-  '  "sellerY3": { "revenue": null, "expenses": null, "noi": null },',
-  '  "sellerY4": { "revenue": null, "expenses": null, "noi": null },',
-  '  "sellerY5": { "revenue": null, "expenses": null, "noi": null },',
-  '  "highlights": [],',
-  '  "operatingExpensesDetailAvailable": false,',
-  '  "operatingExpenses": null',
-  '}',
-  '',
-  'FIELD NOTES:',
-  '- city: REQUIRED. Parse from address if needed e.g. "Tulsa" from "12331 East 11th St, Tulsa, OK"',
-  '- state: REQUIRED. 2-letter code. Parse from address if needed e.g. "OK" from "Tulsa, OK"',
-  '- capRate: decimal e.g. 0.065 for 6.5%',
-  '- t3NOI: trailing 3-month NOI annualized (multiply 3-month figure by 4). Must differ from t12NOI. null if not found.',
-  '- currentAvgRentPerUnit: average monthly rent per unit in dollars',
-  '- marketAvgRentPerUnit: market rate average monthly rent per unit in dollars',
-  '',
-  'OPERATING EXPENSE EXTRACTION RULES:',
-  '1. Extract EVERY individual named expense row. Preserve original label exactly as it appears.',
-  '2. If individual rows exist, EXCLUDE all summary and total rows.',
-  '   Never include rows labeled: "Total Operating Expenses", "Total Expenses", "Operating Expenses",',
-  '   "Other Expenses", "Total", "Expenses Total". These are summaries - skip them.',
-  '3. Only include a summary row if NO individual rows exist anywhere in the documents.',
-  '4. Multi-column T12 with 12 monthly columns plus annual total: use the annual total column as amount.',
-  '5. Do not include revenue lines. Do not double-count rows.',
-  '6. If no expense detail exists at all, set operatingExpenses to null and operatingExpensesDetailAvailable to false.',
-  '7. If you find individual rows, set operatingExpensesDetailAvailable to true.',
-  '',
-  'EXAMPLE - correct operatingExpenses when individual rows exist:',
-  '[',
-  '  { "label": "Property Taxes", "amount": 37200, "source": "T12", "confidence": 0.97 },',
-  '  { "label": "Insurance", "amount": 16800, "source": "T12", "confidence": 0.95 },',
-  '  { "label": "Snow Removal", "amount": 1720, "source": "T12", "confidence": 0.88 },',
-  '  { "label": "Merchant Processing Fees", "amount": 1410, "source": "T12", "confidence": 0.85 }',
-  ']',
-  'Each operatingExpenses element: label (string), amount (number, annual dollars), source (string or null), confidence (number 0.0-1.0)',
-].join('\n')
+// ── Extraction tool schema ────────────────────────────────────────────────────
+// Claude is forced to call this tool — it cannot emit free-form text.
+// The SDK validates the response is a ToolUseBlock with structured input.
+// This eliminates all JSON hand-writing and parse errors permanently.
+
+const EXTRACTION_TOOL: Anthropic.Tool = {
+  name: 'extract_deal',
+  description:
+    'Extract all available self-storage deal information from the provided documents ' +
+    '(OM, T12, P&L, rent roll, Excel, broker package) and return it as structured data. ' +
+    'Use null for any field that cannot be found.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      facilityName:            { type: ['string', 'null'], description: 'Facility or property name' },
+      address:                 { type: ['string', 'null'], description: 'Full street address' },
+      city:                    { type: ['string', 'null'], description: 'City — REQUIRED, parse from address if needed' },
+      state:                   { type: ['string', 'null'], description: '2-letter state code — REQUIRED, parse from address if needed' },
+      zipCode:                 { type: ['string', 'null'], description: 'ZIP code' },
+      msaName:                 { type: ['string', 'null'], description: 'Metropolitan Statistical Area name if mentioned' },
+      askingPrice:             { type: ['number', 'null'], description: 'Asking price in dollars' },
+      unitCount:               { type: ['number', 'null'], description: 'Total number of storage units' },
+      totalUnits:              { type: ['number', 'null'], description: 'Same as unitCount' },
+      capRate:                 { type: ['number', 'null'], description: 'Cap rate as decimal e.g. 0.065 for 6.5%' },
+      noi:                     { type: ['number', 'null'], description: 'Annual NOI in dollars' },
+      t12NOI:                  { type: ['number', 'null'], description: 'Trailing 12-month NOI in dollars' },
+      t3NOI:                   { type: ['number', 'null'], description: 'Trailing 3-month NOI annualized (multiply 3-month by 4). Must differ from t12NOI.' },
+      t12Revenue:              { type: ['number', 'null'], description: 'Trailing 12-month total revenue in dollars' },
+      t12TotalExpenses:        { type: ['number', 'null'], description: 'Trailing 12-month total expenses in dollars' },
+      t12Payroll:              { type: ['number', 'null'], description: 'T12 payroll expense' },
+      t12ManagementFees:       { type: ['number', 'null'], description: 'T12 management fees' },
+      t12Marketing:            { type: ['number', 'null'], description: 'T12 marketing expense' },
+      t12Utilities:            { type: ['number', 'null'], description: 'T12 utilities expense' },
+      t12OfficeEmployee:       { type: ['number', 'null'], description: 'T12 office/employee expense' },
+      t12Administrative:       { type: ['number', 'null'], description: 'T12 administrative expense' },
+      t12RepairsMaintenance:   { type: ['number', 'null'], description: 'T12 repairs and maintenance' },
+      t12Tax:                  { type: ['number', 'null'], description: 'T12 property tax' },
+      t12Insurance:            { type: ['number', 'null'], description: 'T12 insurance expense' },
+      t12OtherExpenses:        { type: ['number', 'null'], description: 'T12 other expenses not elsewhere categorized' },
+      occupancy:               { type: ['number', 'null'], description: 'Occupancy percentage 0-100' },
+      currentOccupancy:        { type: ['number', 'null'], description: 'Current occupancy percentage 0-100' },
+      targetOccupancy:         { type: ['number', 'null'], description: 'Target/stabilized occupancy percentage' },
+      currentAvgRentPerUnit:   { type: ['number', 'null'], description: 'Average monthly rent per unit in dollars' },
+      marketAvgRentPerUnit:    { type: ['number', 'null'], description: 'Market rate average monthly rent per unit in dollars' },
+      monthsToStabilization:   { type: ['number', 'null'], description: 'Estimated months to reach stabilized occupancy' },
+      yearBuilt:               { type: ['number', 'null'], description: 'Year the facility was built' },
+      sqft:                    { type: ['number', 'null'], description: 'Total rentable square footage' },
+      totalSF:                 { type: ['number', 'null'], description: 'Same as sqft — total net rentable area' },
+      broker1Name:             { type: ['string', 'null'], description: 'Primary listing broker or agent name' },
+      broker2Name:             { type: ['string', 'null'], description: 'Secondary broker name if present' },
+      brokerPhone1:            { type: ['string', 'null'], description: 'Primary broker phone' },
+      brokerPhone2:            { type: ['string', 'null'], description: 'Secondary broker phone' },
+      brokerEmail1:            { type: ['string', 'null'], description: 'Primary broker email' },
+      brokerEmail2:            { type: ['string', 'null'], description: 'Secondary broker email' },
+      brokerageName:           { type: ['string', 'null'], description: 'Brokerage firm name' },
+      sellerY1: {
+        type: ['object', 'null'],
+        description: 'Seller projected Year 1',
+        properties: {
+          revenue:  { type: ['number', 'null'] },
+          expenses: { type: ['number', 'null'] },
+          noi:      { type: ['number', 'null'] },
+        },
+      },
+      sellerY2: {
+        type: ['object', 'null'],
+        description: 'Seller projected Year 2',
+        properties: {
+          revenue:  { type: ['number', 'null'] },
+          expenses: { type: ['number', 'null'] },
+          noi:      { type: ['number', 'null'] },
+        },
+      },
+      sellerY3: {
+        type: ['object', 'null'],
+        description: 'Seller projected Year 3',
+        properties: {
+          revenue:  { type: ['number', 'null'] },
+          expenses: { type: ['number', 'null'] },
+          noi:      { type: ['number', 'null'] },
+        },
+      },
+      sellerY4: {
+        type: ['object', 'null'],
+        description: 'Seller projected Year 4',
+        properties: {
+          revenue:  { type: ['number', 'null'] },
+          expenses: { type: ['number', 'null'] },
+          noi:      { type: ['number', 'null'] },
+        },
+      },
+      sellerY5: {
+        type: ['object', 'null'],
+        description: 'Seller projected Year 5',
+        properties: {
+          revenue:  { type: ['number', 'null'] },
+          expenses: { type: ['number', 'null'] },
+          noi:      { type: ['number', 'null'] },
+        },
+      },
+      highlights: {
+        type: 'array',
+        description: 'Up to 5 key deal highlight strings',
+        items: { type: 'string' },
+      },
+      operatingExpensesDetailAvailable: {
+        type: 'boolean',
+        description:
+          'true if individual named expense rows were found (Property Taxes, Insurance, etc.), ' +
+          'false if only a single total or no detail was found',
+      },
+      operatingExpenses: {
+        type: ['array', 'null'],
+        description:
+          'Every individual named operating expense row found in any document. ' +
+          'EXCLUDE summary/total rows: never include rows labeled ' +
+          '"Total Operating Expenses", "Total Expenses", "Operating Expenses", "Other Expenses", "Total". ' +
+          'Only include a summary row if NO individual rows exist. ' +
+          'For multi-column T12 (12 monthly + annual total): use the annual total column as amount. ' +
+          'Multiply monthly amounts by 12, quarterly by 4.',
+        items: {
+          type: 'object',
+          properties: {
+            label:      { type: 'string',           description: 'Exact label from document — never rename or generalize' },
+            amount:     { type: 'number',           description: 'Annual dollars' },
+            source:     { type: ['string', 'null'], description: 'T12, P&L, OM, Excel, or Rent Roll' },
+            confidence: { type: ['number', 'null'], description: 'Confidence 0.0 to 1.0' },
+          },
+          required: ['label', 'amount'],
+        },
+      },
+    },
+    required: ['city', 'state'],
+  },
+}
+
+const EXTRACTION_INSTRUCTIONS =
+  'You are reading one or more documents about a self-storage facility for sale. ' +
+  'Documents may include an offering memorandum, rent roll, T12, P&L, Excel workbook, photos, or broker package. ' +
+  'Call the extract_deal tool with every piece of deal information you can find. ' +
+  'Use null for fields you cannot find. Do not guess.'
 
 type FileInput = { fileName?: string; mimeType: string; data: string }
 
@@ -173,33 +219,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const blocks = await fileToBlocks(f)
       contentBlocks.push(...blocks)
     }
-    contentBlocks.push({ type: 'text', text: EXTRACTION_PROMPT })
+    contentBlocks.push({ type: 'text', text: EXTRACTION_INSTRUCTIONS })
 
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
+      max_tokens: 4096,
+      tools: [EXTRACTION_TOOL],
+      tool_choice: { type: 'tool', name: 'extract_deal' },
       messages: [{ role: 'user', content: contentBlocks }],
     })
-    const raw = ((msg.content[0] as { type: string; text: string }).text ?? '').trim()
 
-    // Strip markdown fences then isolate the JSON object between first { and last }
-    let jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
-    const jsonStart = jsonStr.indexOf('{')
-    const jsonEnd   = jsonStr.lastIndexOf('}')
-    if (jsonStart !== -1 && jsonEnd > jsonStart) {
-      jsonStr = jsonStr.slice(jsonStart, jsonEnd + 1)
+    // With tool_choice forced, the response MUST be a tool_use block.
+    // No JSON parsing required — the SDK delivers structured input directly.
+    const toolBlock = msg.content.find(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === 'extract_deal'
+    )
+
+    if (!toolBlock) {
+      console.error('[upload-deal] No tool_use block in response. stop_reason:', msg.stop_reason)
+      console.error('[upload-deal] Content types:', msg.content.map(b => b.type).join(', '))
+      return res.status(500).json({ error: 'Extraction failed', detail: 'Model did not call extract_deal tool' })
     }
 
-    let extracted: unknown
-    try {
-      extracted = JSON.parse(jsonStr)
-    } catch (parseErr) {
-      console.error('[upload-deal] JSON.parse failed:', String(parseErr))
-      console.error('[upload-deal] raw output (first 2000):', raw.slice(0, 2000))
-      throw parseErr
-    }
-
-    return res.status(200).json(extracted)
+    // toolBlock.input is already a parsed JS object — no JSON.parse needed
+    return res.status(200).json(toolBlock.input)
   } catch (err: unknown) {
     let detail = String(err)
     if (err instanceof Error) {
