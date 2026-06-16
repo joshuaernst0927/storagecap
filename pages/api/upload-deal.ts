@@ -55,7 +55,15 @@ Return ONLY a valid JSON object — no markdown fences, no commentary, no extra 
   "sellerY3": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
   "sellerY4": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
   "sellerY5": { "revenue": number or null, "expenses": number or null, "noi": number or null } or null,
-  "highlights": array of up to 5 key deal highlight strings
+  "highlights": array of up to 5 key deal highlight strings,
+  "operatingExpenses": array or null — extract EVERY operating expense line item visible in any document (T12, P&L, OM, Excel, rent roll). Do NOT collapse into preset buckets. Preserve the original label exactly as it appears in the document. Include subtotals only if no line-item detail exists. Do not include revenue lines. Do not double-count total rows.
+  Each element:
+  {
+    "label": string (exact label from document, e.g. "Snow Removal", "Call Center - StoragePRO", "Merchant Processing Fees", "Ground Lease"),
+    "amount": number (annual dollars — if document shows monthly figures multiply by 12; if quarterly multiply by 4),
+    "source": string or null ("T12", "P&L", "OM", "Excel", "Rent Roll" — whichever document this line came from),
+    "confidence": number (0.0 to 1.0 — certainty this is a real operating expense at this amount; use lower values for estimated or unclear items)
+  }
 }`
 
 type FileInput = { fileName?: string; mimeType: string; data: string }
@@ -135,7 +143,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 3000,
       messages: [{ role: 'user', content: contentBlocks }],
     })
     const raw = ((msg.content[0] as { type: string; text: string }).text ?? '').trim()

@@ -79,6 +79,22 @@ interface ExtractionResult {
   sellerY4?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
   sellerY5?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
   highlights?: string[] | null
+  operatingExpenses?: Array<{
+    label: string
+    amount: number
+    source?: string | null
+    confidence?: number | null
+  }> | null
+}
+
+// ── Dynamic expense line item ─────────────────────────────────────────────────
+
+interface ExpenseLineItem {
+  id:          string
+  label:       string
+  amount:      number
+  source?:     string
+  confidence?: number
 }
 
 const INITIAL: Form = {
@@ -155,6 +171,9 @@ export default function Analyze() {
   const [loading, setLoading]     = useState(false)
   const [analysis, setAnalysis]   = useState('')
   const [error, setError]         = useState('')
+
+  // Operating expense state
+  const [operatingExpenses, setOperatingExpenses] = useState<ExpenseLineItem[]>([])
 
   // Save state
   const [saving, setSaving]       = useState(false)
@@ -279,6 +298,21 @@ export default function Analyze() {
       })
       setExtracted(true)
 
+      // Populate dynamic expense line items from extraction
+      if (Array.isArray(data.operatingExpenses) && data.operatingExpenses.length > 0) {
+        setOperatingExpenses(
+          data.operatingExpenses.map((e, i) => ({
+            id:         `extracted-${i}-${Date.now()}`,
+            label:      e.label ?? '',
+            amount:     Number(e.amount) || 0,
+            source:     e.source ?? undefined,
+            confidence: e.confidence ?? undefined,
+          }))
+        )
+      } else {
+        setOperatingExpenses([])
+      }
+
       // Fire auto-score in background
       setAutoScoring(true)
       fetch('/api/auto-score-deal', {
@@ -334,7 +368,8 @@ export default function Analyze() {
           brokerName:   form.brokerName,
           ownerName:    form.ownerName,
           sourceType:   form.sourceType,
-          notes:        form.notes,
+          notes:             form.notes,
+          operatingExpenses: operatingExpenses.length > 0 ? operatingExpenses : undefined,
         }),
       })
       if (!res.ok) {
@@ -496,6 +531,40 @@ export default function Analyze() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  // Expense reconciliation (derived, not state)
+  const totalOpEx   = operatingExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0)
+  const grossRev    = form.grossRevenue ? parseFloat(form.grossRevenue.replace(/[^0-9.]/g, '')) : null
+  const statedNOI   = form.noi         ? parseFloat(form.noi.replace(/[^0-9.]/g, ''))         : null
+  const calcNOI     = (grossRev != null && operatingExpenses.length > 0) ? (grossRev - totalOpEx) : null
+  const noiVariance = (calcNOI != null && statedNOI && statedNOI > 0)
+    ? Math.abs(calcNOI - statedNOI) / statedNOI : null
+  const noiMismatch = noiVariance != null && noiVariance > 0.02
+  const expRatio    = (grossRev && grossRev > 0 && operatingExpenses.length > 0)
+    ? (totalOpEx / grossRev * 100) : null
+
+  function fmtDollar(n: number) {
+    return '$' + Math.round(n).toLocaleString()
+  }
+
+  function addExpenseRow() {
+    setOperatingExpenses(prev => [
+      ...prev,
+      { id: `manual-${Date.now()}`, label: '', amount: 0 }
+    ])
+  }
+
+  function updateExpenseRow(id: string, field: 'label' | 'amount', value: string) {
+    setOperatingExpenses(prev => prev.map(e =>
+      e.id === id
+        ? { ...e, [field]: field === 'amount' ? (parseFloat(value.replace(/[^0-9.]/g, '')) || 0) : value }
+        : e
+    ))
+  }
+
+  function deleteExpenseRow(id: string) {
+    setOperatingExpenses(prev => prev.filter(e => e.id !== id))
+  }
+
   const sections = analysis
     ? analysis.split(/\n(?=\*\*[^*]+\*\*)/).filter(Boolean)
     : []
@@ -559,6 +628,7 @@ export default function Analyze() {
                       onClick={() => {
                         setFiles([]); setExtracted(false); setFullExtraction(null)
                         setForm(INITIAL); setAutoScore(null); setExtractError('')
+                        setOperatingExpenses([])
                       }}
                       className="text-dark-muted text-xs hover:text-[#1a1a18] transition-colors"
                     >
@@ -591,6 +661,100 @@ export default function Analyze() {
                   )}
                 </div>
               )}
+
+              {/* ── Operating Expense Table ── */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="section-label mb-0">Operating Expenses</div>
+                  <button
+                    type="button"
+                    onClick={addExpenseRow}
+                    className="text-xs text-gold border border-gold/40 px-3 py-1 hover:bg-gold/10 transition-colors"
+                  >
+                    + Add Row
+                  </button>
+                </div>
+
+                {operatingExpenses.length === 0 ? (
+                  <p className="text-dark-muted text-xs py-3 border border-dashed border-dark-border text-center">
+                    No expense line items — extract documents above or add rows manually
+                  </p>
+                ) : (
+                  <div className="border border-dark-border overflow-hidden">
+                    {/* Header */}
+                    <div className="grid grid-cols-[1fr_auto_auto] gap-0 bg-dark-surface border-b border-dark-border px-3 py-1.5 text-xs text-dark-muted uppercase tracking-widest">
+                      <span>Expense Label</span>
+                      <span className="text-right pr-8">Annual $</span>
+                      <span className="w-6" />
+                    </div>
+                    {/* Rows */}
+                    {operatingExpenses.map((e, i) => (
+                      <div
+                        key={e.id}
+                        className={`grid grid-cols-[1fr_auto_auto] gap-0 items-center ${i > 0 ? 'border-t border-dark-border' : ''}`}
+                      >
+                        <input
+                          className="bg-transparent px-3 py-2 text-xs text-dark-primary border-r border-dark-border focus:outline-none focus:bg-dark-surface w-full"
+                          value={e.label}
+                          onChange={ev => updateExpenseRow(e.id, 'label', ev.target.value)}
+                          placeholder="Expense label"
+                        />
+                        <input
+                          className="bg-transparent px-3 py-2 text-xs text-dark-primary text-right border-r border-dark-border focus:outline-none focus:bg-dark-surface w-32"
+                          value={e.amount === 0 && e.label === '' ? '' : String(e.amount)}
+                          onChange={ev => updateExpenseRow(e.id, 'amount', ev.target.value)}
+                          placeholder="0"
+                          type="number"
+                          min="0"
+                          step="1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => deleteExpenseRow(e.id)}
+                          className="px-3 py-2 text-dark-muted hover:text-red-500 transition-colors text-xs"
+                          title="Remove row"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    {/* Totals */}
+                    <div className="border-t-2 border-dark-border bg-dark-surface px-3 py-2 grid grid-cols-[1fr_auto_auto] gap-0">
+                      <span className="text-xs font-medium text-dark-primary uppercase tracking-wide">Total Operating Expenses</span>
+                      <span className="text-xs font-medium text-dark-primary text-right pr-8 w-32">{fmtDollar(totalOpEx)}</span>
+                      <span className="w-6" />
+                    </div>
+                    {expRatio != null && (
+                      <div className="border-t border-dark-border px-3 py-1.5 grid grid-cols-[1fr_auto_auto] gap-0">
+                        <span className="text-xs text-dark-muted">Expense Ratio{grossRev ? ` (of ${fmtDollar(grossRev)} revenue)` : ''}</span>
+                        <span className="text-xs text-dark-muted text-right pr-8 w-32">{expRatio.toFixed(1)}%</span>
+                        <span className="w-6" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* NOI Reconciliation */}
+                {calcNOI != null && statedNOI != null && (
+                  <div className={`mt-2 px-3 py-2 border text-xs ${noiMismatch ? 'border-yellow-600/50 bg-yellow-900/10 text-yellow-600' : 'border-green-700/40 bg-green-900/5 text-green-700'}`}>
+                    <div className="flex justify-between mb-0.5">
+                      <span>Gross Revenue − Operating Expenses</span>
+                      <span className="font-medium">{fmtDollar(calcNOI)}</span>
+                    </div>
+                    <div className="flex justify-between mb-0.5">
+                      <span>Stated NOI</span>
+                      <span className="font-medium">{fmtDollar(statedNOI)}</span>
+                    </div>
+                    {noiMismatch ? (
+                      <div className="mt-1 font-medium">
+                        ⚠ {(noiVariance! * 100).toFixed(1)}% variance — verify expense completeness before underwriting
+                      </div>
+                    ) : (
+                      <div className="mt-1">✓ NOI reconciles within 2%</div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Property form */}
               <form onSubmit={handleSubmit} className="space-y-4">
