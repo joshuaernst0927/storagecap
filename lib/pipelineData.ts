@@ -92,6 +92,10 @@ export interface PipelineProperty {
   noi?: number
   grossRevenue?: number
   occupancy: number
+  // Rent and T3 NOI — populated when a deal is saved from upload-deal or analyze
+  currentAvgRentPerUnit?: number
+  marketAvgRentPerUnit?: number
+  t3NOI?: number
   ownerName: string
   ownerEntity: string
   ownerEntityState: string

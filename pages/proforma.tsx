@@ -1217,11 +1217,16 @@ export default function Proforma() {
       totalUnits:     deal.unitCount  > 0 ? String(deal.unitCount)  : EMPTY.totalUnits,
       // Pipeline stores occupancy as 0-100; Proforma field is also 0-100 string
       currentOccupancy: deal.occupancy > 0 ? String(deal.occupancy) : EMPTY.currentOccupancy,
-      t12NOI:         deal.noi        ? String(Math.round(deal.noi))          : EMPTY.t12NOI,
-      t12Revenue:     deal.grossRevenue ? String(Math.round(deal.grossRevenue)) : EMPTY.t12Revenue,
+      t12NOI:         deal.noi            ? String(Math.round(deal.noi))               : EMPTY.t12NOI,
+      t3NOI:          deal.t3NOI          ? String(Math.round(deal.t3NOI))             : EMPTY.t3NOI,
+      t12Revenue:     deal.grossRevenue   ? String(Math.round(deal.grossRevenue))      : EMPTY.t12Revenue,
+      currentAvgRent: deal.currentAvgRentPerUnit
+                        ? String(deal.currentAvgRentPerUnit)  : EMPTY.currentAvgRent,
+      marketAvgRent:  deal.marketAvgRentPerUnit
+                        ? String(deal.marketAvgRentPerUnit)   : EMPTY.marketAvgRent,
       // askingPrice pre-fills offer price as a starting-point only
-      offerPrice:     deal.askingPrice ? String(Math.round(deal.askingPrice))  : EMPTY.offerPrice,
-      yearBuilt:      deal.yearBuilt   > 0 ? String(deal.yearBuilt)  : EMPTY.yearBuilt,
+      offerPrice:     deal.askingPrice    ? String(Math.round(deal.askingPrice))       : EMPTY.offerPrice,
+      yearBuilt:      deal.yearBuilt      > 0 ? String(deal.yearBuilt)                : EMPTY.yearBuilt,
       // Broker info from extraction
       brokerageName:  EMPTY.brokerageName,
     }

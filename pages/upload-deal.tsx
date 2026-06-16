@@ -403,6 +403,15 @@ export default function UploadDeal() {
         estimatedValue: form.askingPrice ? parseFloat(form.askingPrice) : 0,
         askingPrice: form.askingPrice ? parseFloat(form.askingPrice) : undefined,
         noi: form.noi ? parseFloat(form.noi) : undefined,
+        // Financials from extraction — not in FormState, sourced from fullExtraction
+        grossRevenue:          fullExtraction?.t12Revenue != null
+                                 ? fullExtraction.t12Revenue : undefined,
+        currentAvgRentPerUnit: fullExtraction?.currentAvgRentPerUnit != null
+                                 ? fullExtraction.currentAvgRentPerUnit : undefined,
+        marketAvgRentPerUnit:  fullExtraction?.marketAvgRentPerUnit != null
+                                 ? fullExtraction.marketAvgRentPerUnit : undefined,
+        t3NOI:                 fullExtraction?.t3NOI != null
+                                 ? fullExtraction.t3NOI : undefined,
         occupancy: form.occupancy ? parseFloat(form.occupancy) : 0,
         ownerName: form.ownerName || '',
         ownerEntity: '', ownerEntityState: form.state, ownerMailingAddress: '',
