@@ -79,6 +79,7 @@ interface ExtractionResult {
   sellerY4?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
   sellerY5?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
   highlights?: string[] | null
+  operatingExpensesDetailAvailable?: boolean | null
   operatingExpenses?: Array<{
     label: string
     amount: number
