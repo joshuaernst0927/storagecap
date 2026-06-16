@@ -939,6 +939,12 @@ export default function Proforma() {
   const [waterfallResult, setWaterfallResult] = useState<WaterfallResult | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [calcError, setCalcError] = useState('')
+
+  // Institutional model (Excel engine) state
+  const [excelRunning, setExcelRunning]     = useState(false)
+  const [excelOutputs, setExcelOutputs]     = useState<Record<string, number | string | boolean | null> | null>(null)
+  const [excelError, setExcelError]         = useState('')
+  const [excelElapsed, setExcelElapsed]     = useState<number | null>(null)
   const [hasCalculated, setHasCalculated] = useState(false)
   const [maxOfferAnchor, setMaxOfferAnchor] = useState<'t12' | 'y1' | 'stabilized' | 'manual'>('y1')
   const [capRates, setCapRates] = useState(['6.50', '7.00', '7.25', '7.50'])
@@ -1141,6 +1147,85 @@ export default function Proforma() {
       } catch { /* ignore */ }
     }
   }, [router.query.data])
+
+  // ── Institutional Model (Excel Engine) ──────────────────────────────────
+  async function handleRunInstitutionalModel() {
+    setExcelRunning(true)
+    setExcelError('')
+    setExcelOutputs(null)
+    setExcelElapsed(null)
+    try {
+      // ── Field mapping: ProformaInputs → /api/run-excel ─────────────────
+      // Proforma stores percentages as strings like '7.25' (meaning 7.25%).
+      // /api/run-excel expects decimals like 0.0725.
+      // Occupancy stored as '82' meaning 82% → send 0.82.
+      // LTV stored as '65' meaning 65% → send 0.65.
+      const pct = (s: string, fallback = 0) => { const v = parseFloat(s); return isNaN(v) ? fallback : v / 100 }
+      const num = (s: string, fallback = 0) => { const v = parseFloat(s); return isNaN(v) ? fallback : v }
+
+      const body: Record<string, unknown> = {
+        // Acquisition
+        purchasePrice:         num(inputs.offerPrice),
+        closingCostsPct:       pct(inputs.closingCostsPct),     // '3' → 0.03
+        initialRepairs:        num(inputs.initialRepairs),
+        acquisitionFeePct:     pct(inputs.acquisitionFeePct),   // '2' → 0.02
+        // Operations
+        startOccupancy:        pct(inputs.currentOccupancy),    // '82' → 0.82
+        stabilizedOccupancy:   pct(inputs.targetOccupancy),     // '92' → 0.92
+        monthsToStabilization: num(inputs.monthsToStabilization),
+        annualRentGrowth:      pct(inputs.revenueGrowthPostStab), // '3' → 0.03
+        opexGrowth:            pct(inputs.expenseGrowth),         // '3' → 0.03
+        // Debt / refi / exit
+        initialLTV:            pct(inputs.bridgeLTV),           // '65' → 0.65
+        initialRate:           pct(inputs.bridgeRate),          // '8' → 0.08
+        ioPeriodMonths:        num(inputs.bridgeGuaranteedIOMonths),
+        refiMonth:             num(inputs.refiMonth),
+        refiLTV:               pct(inputs.refiLTV),             // '70' → 0.70
+        refiRate:              pct(inputs.refiRate),            // '6.5' → 0.065
+        refiAmortYears:        num(inputs.refiAmortYears),
+        exitCapRate:           pct(inputs.exitCapRate),         // '7.25' → 0.0725
+        exitMonth:             num(inputs.exitMonth),
+        sellingCostsPct:       pct(inputs.brokerFeePct),        // '3' → 0.03
+        // Waterfall
+        preferredReturn:       pct(inputs.lpPreferredReturn),   // '8' → 0.08
+        residualSplitLP:       pct(inputs.lpSplit),             // '85' → 0.85
+        residualSplitGP:       pct(inputs.gpSplit),             // '15' → 0.15
+        // Levered / unlevered toggle
+        unlevered:             leverageType === 'all-cash',
+        // T12 operating expenses (stored as dollar strings)
+        t12Tax:                num(inputs.t12Tax),
+        t12Insurance:          num(inputs.t12Insurance),
+        t12Utilities:          num(inputs.t12Utilities),
+        t12RepairsMaintenance: num(inputs.t12RepairsMaintenance),
+        t12Payroll:            num(inputs.t12Payroll),
+        t12OfficeEmployee:     num(inputs.t12OfficeEmployee),
+        t12Marketing:          num(inputs.t12Marketing),
+        t12Administrative:     num(inputs.t12Administrative),
+        t12OtherExpenses:      num(inputs.t12OtherExpenses),
+      }
+
+      const res = await fetch('/api/run-excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      })
+      const data = await res.json() as {
+        ok?: boolean; elapsed_ms?: number;
+        outputs?: Record<string, number | string | boolean | null>
+        error?: string; detail?: string
+      }
+      if (!res.ok || !data.ok) {
+        throw new Error(data.detail ?? data.error ?? `HTTP ${res.status}`)
+      }
+      setExcelOutputs(data.outputs ?? {})
+      setExcelElapsed(data.elapsed_ms ?? null)
+    } catch (err) {
+      setExcelError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setExcelRunning(false)
+    }
+  }
 
   async function handleCalculate(anchorOverride?: string, inputOverrides?: Partial<ProformaInputs>) {
     setCalculating(true)
@@ -1727,6 +1812,18 @@ export default function Proforma() {
                 className="btn-gold disabled:opacity-60 text-base px-10 py-4 w-full md:w-auto">
                 {calculating ? 'Calculating...' : 'Build Proforma & Calculate'}
               </button>
+              <button
+                onClick={handleRunInstitutionalModel}
+                disabled={excelRunning || !inputs.offerPrice}
+                className="px-8 py-4 border border-gold text-gold text-sm uppercase tracking-widest hover:bg-gold/10 transition-colors disabled:opacity-40 w-full md:w-auto"
+              >
+                {excelRunning ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-3 h-3 border border-gold border-t-transparent rounded-full animate-spin" />
+                    Running Model...
+                  </span>
+                ) : 'Run Institutional Model'}
+              </button>
             </div>
 
             {hasCalculated && ourYears.length > 0 && (
@@ -1875,6 +1972,127 @@ export default function Proforma() {
 
                 {waterfallResult && (
                   <WaterfallBox waterfall={waterfallResult} inputs={inputs} leverageType={leverageType} loanType={loanType} />
+                )}
+
+                {/* ── Institutional Model Outputs panel ──────────────────── */}
+                {(excelOutputs || excelError || excelRunning) && (
+                  <div className="border border-gold/40 p-7">
+                    <div className="flex items-center justify-between mb-5">
+                      <div>
+                        <SectionHead title="Institutional Model Outputs" subtitle="HyperFormula · Institutional_Self_Storage_Acquisition_Model_v3" />
+                        {excelElapsed != null && (
+                          <span className="text-xs text-dark-muted">Calculated in {excelElapsed}ms</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleRunInstitutionalModel}
+                        disabled={excelRunning}
+                        className="text-xs text-gold border border-gold/40 px-3 py-1 hover:bg-gold/10 transition-colors disabled:opacity-40"
+                      >
+                        {excelRunning ? 'Recalculating...' : 'Recalculate'}
+                      </button>
+                    </div>
+
+                    {excelError && (
+                      <div className="border border-red-400/40 bg-red-50 text-red-700 text-sm px-4 py-3 mb-4">
+                        {excelError}
+                      </div>
+                    )}
+
+                    {excelOutputs && (() => {
+                      const o = excelOutputs
+                      const fmtIRR  = (v: unknown) => typeof v === 'number' ? (v * 100).toFixed(2) + '%' : '—'
+                      const fmtMult = (v: unknown) => typeof v === 'number' ? v.toFixed(2) + 'x' : '—'
+                      const fmtUSD  = (v: unknown) => typeof v === 'number' ? '$' + Math.round(v).toLocaleString() : '—'
+                      const fmtRaw  = (v: unknown) => typeof v === 'number' ? v.toFixed(4) : String(v ?? '—')
+                      return (
+                        <div className="space-y-6">
+
+                          {/* Returns */}
+                          <div>
+                            <div className="text-xs uppercase tracking-widest text-dark-muted mb-3">Returns</div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {([
+                                { label: 'Levered IRR',        val: fmtIRR(o.leveredIRR) },
+                                { label: 'Equity Multiple',    val: fmtMult(o.equityMultiple) },
+                                { label: 'Unlevered IRR',      val: fmtIRR(o.unleveredIRR) },
+                                { label: 'Avg Cash-on-Cash',   val: fmtIRR(o.avgCashOnCash) },
+                              ] as {label:string;val:string}[]).map(({ label, val }) => (
+                                <div key={label} className="border border-dark-border bg-dark-surface p-4">
+                                  <div className="text-xs text-dark-muted mb-1">{label}</div>
+                                  <div className="text-xl font-light text-gold">{val}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Deal economics */}
+                          <div>
+                            <div className="text-xs uppercase tracking-widest text-dark-muted mb-3">Deal Economics</div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              {([
+                                { label: 'Total Project Cost', val: fmtUSD(o.totalProjectCost) },
+                                { label: 'Equity Required',    val: fmtUSD(o.equityRequired) },
+                                { label: 'Exit Value',         val: fmtUSD(o.exitValue) },
+                                { label: 'Year 1 NOI',         val: fmtUSD(o.year1NOI) },
+                                { label: 'Year 5 NOI',         val: fmtUSD(o.year5NOI) },
+                                { label: 'Year 1 DSCR',        val: typeof o.year1DSCR === 'number' ? o.year1DSCR.toFixed(2) : String(o.year1DSCR ?? '—') },
+                              ] as {label:string;val:string}[]).map(({ label, val }) => (
+                                <div key={label} className="border border-dark-border bg-dark-surface p-4">
+                                  <div className="text-xs text-dark-muted mb-1">{label}</div>
+                                  <div className="text-lg font-light text-dark-primary">{val}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Waterfall */}
+                          <div>
+                            <div className="text-xs uppercase tracking-widest text-dark-muted mb-3">GP / LP Waterfall</div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {([
+                                { label: 'LP Equity Multiple',      val: fmtMult(o.lpEquityMultiple) },
+                                { label: 'GP Equity Multiple',      val: fmtMult(o.gpEquityMultiple) },
+                                { label: 'LP Total Distributions',  val: fmtUSD(o.lpTotalDistributions) },
+                                { label: 'GP Total Distributions',  val: fmtUSD(o.gpTotalDistributions) },
+                              ] as {label:string;val:string}[]).map(({ label, val }) => (
+                                <div key={label} className="border border-dark-border bg-dark-surface p-4">
+                                  <div className="text-xs text-dark-muted mb-1">{label}</div>
+                                  <div className="text-lg font-light text-dark-primary">{val}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Diagnostics */}
+                          <div>
+                            <div className="text-xs uppercase tracking-widest text-dark-muted mb-3">Diagnostics</div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {([
+                                { label: 'Going-In Cap',  val: fmtIRR(o.goingInCap) },
+                                { label: 'Stabilized Cap', val: fmtIRR(o.stabilizedCap) },
+                                { label: 'Price / Unit',  val: fmtUSD(o.pricePerUnit) },
+                                { label: 'Yield on Cost', val: fmtIRR(o.yieldOnCost) },
+                              ] as {label:string;val:string}[]).map(({ label, val }) => (
+                                <div key={label} className="border border-dark-border bg-dark-surface p-4">
+                                  <div className="text-xs text-dark-muted mb-1">{label}</div>
+                                  <div className="text-lg font-light text-dark-primary">{val}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Comparison note */}
+                          <p className="text-xs text-dark-muted border-t border-dark-border pt-3">
+                            Institutional model outputs are calculated by HyperFormula running the full Excel workbook server-side.
+                            Differences from the TypeScript model above reflect formula methodology differences between the two engines.
+                            The Excel model is the investment committee reference.
+                          </p>
+
+                        </div>
+                      )
+                    })()}
+                  </div>
                 )}
 
                 <div className="border border-dark-border p-7">
