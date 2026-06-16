@@ -118,12 +118,17 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
       operatingExpenses: {
         type: ['array', 'null'],
         description:
-          'Every individual named operating expense row found in any document. ' +
-          'EXCLUDE summary/total rows: never include rows labeled ' +
-          '"Total Operating Expenses", "Total Expenses", "Operating Expenses", "Other Expenses", "Total". ' +
-          'Only include a summary row if NO individual rows exist. ' +
-          'For multi-column T12 (12 monthly + annual total): use the annual total column as amount. ' +
-          'Multiply monthly amounts by 12, quarterly by 4.',
+          'Individual operating expense line items. SOURCE PRIORITY RULES — follow strictly: ' +
+          '(1) If a T12, P&L, or Excel expense schedule exists with individual named rows, use ONLY those rows. ' +
+          'Do NOT also include OM summary rows — the OM is a marketing document and its expense buckets are less precise. ' +
+          '(2) If only an OM is provided (no T12/P&L/Excel), use the OM expense rows. ' +
+          '(3) Never mix rows from different source types — pick the most detailed source and use only that. ' +
+          '(4) EXCLUDE all summary and total rows regardless of source: never include rows labeled ' +
+          '"Total Operating Expenses", "Total Expenses", "Operating Expenses", "Other Expenses", "Total", "Expenses Total". ' +
+          '(5) For multi-column T12 (12 monthly columns + annual total): use the annual total column as amount. ' +
+          '(6) Multiply monthly amounts by 12, quarterly amounts by 4. ' +
+          '(7) Do not double-count — if a row appears in both T12 and OM, include it once from T12 only. ' +
+          '(8) Do not invent or synthesize rows that do not appear in the documents.',
         items: {
           type: 'object',
           properties: {

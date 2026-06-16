@@ -704,7 +704,7 @@ setFullExtraction(data)
                     {/* Header */}
                     <div className="grid grid-cols-[1fr_auto_auto] gap-0 bg-dark-surface border-b border-dark-border px-3 py-1.5 text-xs text-dark-muted uppercase tracking-widest">
                       <span>Expense Label</span>
-                      <span className="text-right pr-8">Annual $</span>
+                      <span className="text-right pr-8">Annual Amount</span>
                       <span className="w-6" />
                     </div>
                     {/* Rows */}
@@ -720,13 +720,14 @@ setFullExtraction(data)
                           placeholder="Expense label"
                         />
                         <input
-                          className="bg-transparent px-3 py-2 text-xs text-dark-primary text-right border-r border-dark-border focus:outline-none focus:bg-dark-surface w-32"
-                          value={e.amount === 0 && e.label === '' ? '' : String(e.amount)}
-                          onChange={ev => updateExpenseRow(e.id, 'amount', ev.target.value)}
-                          placeholder="0"
-                          type="number"
-                          min="0"
-                          step="1"
+                          className="bg-transparent px-3 py-2 text-xs text-dark-primary text-right border-r border-dark-border focus:outline-none focus:bg-dark-surface w-36"
+                          value={e.amount === 0 && e.label === '' ? '' : fmtDollar(e.amount)}
+                          onChange={ev => updateExpenseRow(e.id, 'amount', ev.target.value.replace(/[^0-9.-]/g, ''))}
+                          onFocus={ev => { ev.target.value = e.amount === 0 ? '' : String(e.amount) }}
+                          onBlur={ev => { ev.target.value = e.amount === 0 && e.label === '' ? '' : fmtDollar(e.amount) }}
+                          placeholder="$0"
+                          type="text"
+                          inputMode="numeric"
                         />
                         <button
                           type="button"
