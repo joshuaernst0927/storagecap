@@ -1106,8 +1106,23 @@ export default function Proforma() {
   }
 
   function handleSaveToPipeline() {
-    const deal = {
-      id: `proforma-${Date.now()}`,
+    // BUG-03 fix: if a deal was loaded via the Active Deal dropdown, reuse its id
+    // so this save updates that record instead of creating a duplicate, and merge
+    // against the full existing record (already in activeDeals) so fields this
+    // function doesn't know about — T12 expenses, broker contact, deal score,
+    // distress signals, note/activity logs, etc. — are preserved rather than
+    // dropped. Fields below are explicitly set on every save (facilityName,
+    // address, stage, priority, source, addedDate, notes, etc.) and intentionally
+    // overwrite the existing record's values for those fields only, matching
+    // current behavior for what this function has always controlled.
+    const isExistingDeal = selectedDealId !== '' && selectedDealId !== '__new__'
+    const existingRecord = isExistingDeal
+      ? activeDeals.find(d => d.id === selectedDealId)
+      : undefined
+    const dealId = existingRecord ? existingRecord.id : `proforma-${Date.now()}`
+
+    const partialUpdate = {
+      id: dealId,
       facilityName: inputs.propertyName || 'Unnamed Facility',
       address: inputs.address,
       city: inputs.city,
@@ -1128,6 +1143,13 @@ export default function Proforma() {
         inputs.brokerageName ? `Broker: ${inputs.brokerageName}` : '',
       ].filter(Boolean).join('\n') || undefined,
     }
+
+    // Existing record spread first, partial update second — preserves every
+    // field the existing record has that this function doesn't explicitly set.
+    const deal = existingRecord
+      ? { ...existingRecord, ...partialUpdate }
+      : partialUpdate
+
     try {
       const existing = JSON.parse(localStorage.getItem('yem_pipeline_saved') || '[]')
       const updated = [deal, ...existing.filter((d: {id: string}) => d.id !== deal.id)]

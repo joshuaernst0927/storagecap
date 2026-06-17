@@ -56,13 +56,21 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const existing = readStored()
-    const existingIds = new Set(existing.map((p) => p.id))
+    const idToIndex = new Map(existing.map((p, i) => [p.id, i]))
 
+    // Upsert by id: merge into the existing record (existing first, incoming
+    // second, so fields the incoming partial object doesn't mention survive)
+    // when the id is already present; otherwise append as a new record.
     const merged = [...existing]
     let added = 0
+    let updated = 0
     for (const prop of incoming) {
       if (!prop.id || !prop.facilityName) continue
-      if (!existingIds.has(prop.id)) {
+      const idx = idToIndex.get(prop.id)
+      if (idx !== undefined) {
+        merged[idx] = { ...merged[idx], ...prop }
+        updated++
+      } else {
         merged.push(prop)
         added++
       }
