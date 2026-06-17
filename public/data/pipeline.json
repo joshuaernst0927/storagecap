@@ -1,5 +1,93 @@
 [
   {
+    "id": "upload-1779991295671",
+    "facilityName": "Extra Space Storage - 12331 East 11th St",
+    "address": "12331 East 11th St",
+    "city": "Tulsa",
+    "state": "OK",
+    "zipCode": "",
+    "unitCount": 534,
+    "unitMix": "",
+    "yearBuilt": 0,
+    "landAcres": 14.6,
+    "climatePercent": 0,
+    "estimatedValue": 6000000,
+    "askingPrice": 6000000,
+    "offerPrice": 5000000,
+    "noi": 218253,
+    "occupancy": 70.7,
+    "ownerName": "",
+    "ownerEntity": "",
+    "ownerEntityState": "OK",
+    "ownerMailingAddress": "",
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "codeViolations": [],
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "deferredMaintenance": false,
+      "outOfStateOwner": false
+    },
+    "rentIncreasePotentialPct": 15,
+    "occupancyUpsidePct": 20,
+    "noiUpsidePct": 30,
+    "climateConversionPossible": true,
+    "motivationScore": 60,
+    "stage": "identified",
+    "currentStatus": "outreach-sent",
+    "priority": "medium",
+    "source": "broker",
+    "addedDate": "2026-05-28",
+    "notes": "Highlights:\n• 534 units with 63,220 SF of self-storage NRSF plus 76,964 SF of uncovered parking on 14.6 acres along Historic Route 66 (E 11th St) with 29,400 VPD traffic count\n• Stabilizing asset with strong occupancy momentum — sq ft occupancy grew from ~61% (Feb 2025) to 70.7% (Feb 2026), with continued lease-up upside toward stabilization\n• Significant recent capital improvements (~$124K in 2025 CapEx including signage, security cameras, roll-up doors, office remodel) reducing near-term capex requirements for next owner\n• Strong Tulsa market fundamentals: 138,021 population within 5-mile radius, 2,478 future residential units in pipeline, and Tulsa ranked #2 MSA in Oklahoma by GMP with 4.1% projected annual job growth\n• Subject property rents below market comparables (e.g. 10x10 at $80 vs. $94.83 comp average; 10x15 at $108 vs. $119.75 average), offering meaningful rent growth and NOI upside potential",
+    "scoreBreakdown": {
+      "motivation": 0,
+      "ownerProfile": 0,
+      "dealQuality": 11,
+      "valueAdd": 10,
+      "offerDeal": 15,
+      "businessPlan": 24,
+      "negatives": 0,
+      "override": 0
+    },
+    "scoreExplanation": "Strong deal structure with offer 17% below ask. Business plan upside through 30% NOI upside, 15% rent increase potential, 20% occupancy upside.",
+    "lastScored": "2026-05-28T22:42:51.596Z",
+    "scoreHistory": [
+      {
+        "score": 60,
+        "date": "2026-05-28T22:42:02.943Z"
+      },
+      {
+        "score": 60,
+        "date": "2026-05-28T22:42:02.946Z"
+      },
+      {
+        "score": 60,
+        "date": "2026-05-28T22:42:02.949Z"
+      },
+      {
+        "score": 60,
+        "date": "2026-05-28T22:42:02.971Z"
+      },
+      {
+        "score": 60,
+        "date": "2026-05-28T22:42:51.550Z"
+      },
+      {
+        "score": 60,
+        "date": "2026-05-28T22:42:51.562Z"
+      },
+      {
+        "score": 60,
+        "date": "2026-05-28T22:42:51.588Z"
+      },
+      {
+        "score": 60,
+        "date": "2026-05-28T22:42:51.596Z"
+      }
+    ]
+  },
+  {
     "id": "upload-1780516997570",
     "facilityName": "Extra Space Storage",
     "address": "12331 East 11th Street",
