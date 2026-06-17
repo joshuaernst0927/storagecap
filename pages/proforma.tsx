@@ -1227,6 +1227,24 @@ export default function Proforma() {
       // askingPrice pre-fills offer price as a starting-point only
       offerPrice:     deal.askingPrice    ? String(Math.round(deal.askingPrice))       : EMPTY.offerPrice,
       yearBuilt:      deal.yearBuilt      > 0 ? String(deal.yearBuilt)                : EMPTY.yearBuilt,
+      // T12 expense detail — required so Run Institutional Model sends real
+      // expense values instead of zeros when a deal is loaded via this dropdown
+      // (BUG-01). Mirrors the field set already handled in the router.query.data
+      // effect above.
+      t12Tax:                deal.t12Tax                != null ? String(deal.t12Tax)                : EMPTY.t12Tax,
+      t12Insurance:           deal.t12Insurance          != null ? String(deal.t12Insurance)          : EMPTY.t12Insurance,
+      t12Utilities:           deal.t12Utilities          != null ? String(deal.t12Utilities)          : EMPTY.t12Utilities,
+      t12RepairsMaintenance:  deal.t12RepairsMaintenance != null ? String(deal.t12RepairsMaintenance) : EMPTY.t12RepairsMaintenance,
+      t12Payroll:             deal.t12Payroll            != null ? String(deal.t12Payroll)            : EMPTY.t12Payroll,
+      t12OfficeEmployee:      deal.t12OfficeEmployee     != null ? String(deal.t12OfficeEmployee)     : EMPTY.t12OfficeEmployee,
+      t12ManagementFees:      deal.t12ManagementFees     != null ? String(deal.t12ManagementFees)     : EMPTY.t12ManagementFees,
+      t12Marketing:           deal.t12Marketing          != null ? String(deal.t12Marketing)          : EMPTY.t12Marketing,
+      t12Administrative:      deal.t12Administrative     != null ? String(deal.t12Administrative)     : EMPTY.t12Administrative,
+      t12OtherExpenses:       deal.t12OtherExpenses      != null ? String(deal.t12OtherExpenses)      : EMPTY.t12OtherExpenses,
+      t12TotalExpenses:       deal.t12TotalExpenses      != null ? String(deal.t12TotalExpenses)      : EMPTY.t12TotalExpenses,
+      // Broker contact — PipelineProperty only carries the first broker slot
+      brokerPhone1:   deal.brokerPhone ?? EMPTY.brokerPhone1,
+      brokerEmail1:   deal.brokerEmail ?? EMPTY.brokerEmail1,
       // Broker info from extraction
       brokerageName:  EMPTY.brokerageName,
     }

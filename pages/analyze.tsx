@@ -471,6 +471,24 @@ setFullExtraction(data)
       noi:                noiNum || undefined,
       grossRevenue:       revenueNum,
       occupancy:          occ,
+      // T12 expense detail — sourced from fullExtraction. Required so the Active
+      // Deal dropdown in Proforma can pass real expense values into the
+      // Institutional Model instead of zeros (BUG-01).
+      t12Tax:                fullExtraction?.t12Tax != null ? fullExtraction.t12Tax : undefined,
+      t12Insurance:          fullExtraction?.t12Insurance != null ? fullExtraction.t12Insurance : undefined,
+      t12Utilities:          fullExtraction?.t12Utilities != null ? fullExtraction.t12Utilities : undefined,
+      t12RepairsMaintenance: fullExtraction?.t12RepairsMaintenance != null ? fullExtraction.t12RepairsMaintenance : undefined,
+      t12Payroll:            fullExtraction?.t12Payroll != null ? fullExtraction.t12Payroll : undefined,
+      t12OfficeEmployee:     fullExtraction?.t12OfficeEmployee != null ? fullExtraction.t12OfficeEmployee : undefined,
+      t12ManagementFees:     fullExtraction?.t12ManagementFees != null ? fullExtraction.t12ManagementFees : undefined,
+      t12Marketing:          fullExtraction?.t12Marketing != null ? fullExtraction.t12Marketing : undefined,
+      t12Administrative:     fullExtraction?.t12Administrative != null ? fullExtraction.t12Administrative : undefined,
+      t12OtherExpenses:      fullExtraction?.t12OtherExpenses != null ? fullExtraction.t12OtherExpenses : undefined,
+      t12TotalExpenses:      fullExtraction?.t12TotalExpenses != null ? fullExtraction.t12TotalExpenses : undefined,
+      // Broker contact — first broker slot only (PipelineProperty has no
+      // second-broker fields)
+      brokerPhone:           fullExtraction?.brokerPhone1 ?? undefined,
+      brokerEmail:           fullExtraction?.brokerEmail1 ?? undefined,
       ownerName:          form.ownerName || '',
       ownerEntity:        '',
       ownerEntityState:   form.state,

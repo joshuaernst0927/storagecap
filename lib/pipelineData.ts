@@ -96,6 +96,28 @@ export interface PipelineProperty {
   currentAvgRentPerUnit?: number
   marketAvgRentPerUnit?: number
   t3NOI?: number
+  // T12 operating expense detail — populated when a deal is saved from upload-deal
+  // or analyze. Required so Proforma's Active Deal dropdown can pass real expense
+  // values into /api/run-excel instead of defaulting to zero (BUG-01).
+  t12Tax?: number
+  t12Insurance?: number
+  t12Utilities?: number
+  t12RepairsMaintenance?: number
+  t12Payroll?: number
+  t12OfficeEmployee?: number
+  t12ManagementFees?: number
+  t12Marketing?: number
+  t12Administrative?: number
+  t12OtherExpenses?: number
+  t12TotalExpenses?: number
+  // Broker contact (first listed broker only — PipelineProperty does not model
+  // a second broker slot)
+  brokerPhone?: string
+  brokerEmail?: string
+  // Years the current owner has held the property. Not currently populated by
+  // any extraction path — no source field exists yet in upload-deal or analyze
+  // extraction. Present here so it can be wired once that data is available.
+  sellerYearsOwned?: number
   ownerName: string
   ownerEntity: string
   ownerEntityState: string
