@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
     label: 'Underwriting',
     dropdown: [
       { href: '/analyze',     label: 'Analyze Deal' },
-      { href: '/upload-deal', label: 'Import Deal (OM)' },
+      { href: '/upload-deal', label: 'Upload Deal' },
       { href: '/proforma',    label: 'Build Proforma' },
       { href: '/score-deal',  label: 'Score Deal' },
     ],
