@@ -89,7 +89,7 @@ const INPUT_MAP: Record<string, CellAddr> = {
   exitMonth:             { sheet: 'Inputs', row: 35, col: 1 }, // B36
   sellingCostsPct:       { sheet: 'Inputs', row: 36, col: 1 }, // B37
   // GP-LP Waterfall parameters
-  preferredReturn:       { sheet: 'Inputs', row: 39, col: 1 }, // B40
+  preferredReturn:       { sheet: 'Inputs', row: 43, col: 1 }, // B44
   returnOfCapitalLP:     { sheet: 'Inputs', row: 40, col: 1 }, // B41
   catchUpSplitLP:        { sheet: 'Inputs', row: 41, col: 1 }, // B42
   catchUpSplitGP:        { sheet: 'Inputs', row: 42, col: 1 }, // B43
