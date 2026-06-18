@@ -85,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Upsert: replace existing entry with same id, or prepend new
     const idx = properties.findIndex(p => p.id === property.id)
     if (idx >= 0) {
-      properties[idx] = property
+      properties[idx] = { ...properties[idx], ...property }
     } else {
       properties.unshift(property)
     }

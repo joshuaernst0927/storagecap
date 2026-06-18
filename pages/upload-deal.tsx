@@ -467,7 +467,7 @@ export default function UploadDeal() {
         property.dealScoredAt = new Date().toISOString()
       }
       saveProperty(property)
-      fetch('/api/pipeline-ingest', {
+      fetch('/api/pipeline-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([property]),

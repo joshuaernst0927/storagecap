@@ -1155,7 +1155,7 @@ export default function Proforma() {
       const updated = [deal, ...existing.filter((d: {id: string}) => d.id !== deal.id)]
       localStorage.setItem('yem_pipeline_saved', JSON.stringify(updated))
     } catch { /* ignore */ }
-    fetch('/api/pipeline-ingest', {
+    fetch('/api/pipeline-save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify([deal]),
