@@ -314,7 +314,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // ── 2. Write scalar inputs from INPUT_MAP ────────────────────────────────
-    for (const [field, addr] of Object.entries(INPUT_MAP)) {
+    const PCT_FIELDS = new Set<string>([
+  'startOccupancy',
+  'stabilizedOccupancy',
+  'preferredReturn',
+])
+
+const normalizePct = (value: number): number => {
+  return value > 1 ? value / 100 : value
+}
+for (const [field, addr] of Object.entries(INPUT_MAP)) {
       const raw = (inputs as Record<string, unknown>)[field]
       if (raw == null) continue
 
@@ -330,7 +339,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const n = typeof raw === 'number' ? raw : parseFloat(String(raw))
       if (!isNaN(n)) {
-        hf.setCellContents({ sheet: sheetId, row: addr.row, col: addr.col }, [[n]])
+        const value = PCT_FIELDS.has(field) ? normalizePct(n) : n
+hf.setCellContents({ sheet: sheetId, row: addr.row, col: addr.col }, [[value]])
       }
     }
 
@@ -343,14 +353,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // formula reads the correct value from B25 while the labeled input cell B26 is also populated.
     // TODO: correct the workbook formula from B25 → B26 in the next model revision.
     if (inputs.initialLTV != null) {
-      const ltv = typeof inputs.initialLTV === 'number'
-        ? inputs.initialLTV
-        : parseFloat(String(inputs.initialLTV))
-      if (!isNaN(ltv)) {
-        hf.setCellContents({ sheet: inpId, row: 24, col: 1 }, [[ltv]]) // B25 — what formula reads
-        hf.setCellContents({ sheet: inpId, row: 25, col: 1 }, [[ltv]]) // B26 — labeled input cell
-      }
-    }
+  const ltvRaw = typeof inputs.initialLTV === 'number'
+    ? inputs.initialLTV
+    : parseFloat(String(inputs.initialLTV))
+
+  if (!isNaN(ltvRaw)) {
+    const ltv = normalizePct(ltvRaw)
+
+    hf.setCellContents({ sheet: inpId, row: 24, col: 1 }, [[ltv]])
+    hf.setCellContents({ sheet: inpId, row: 25, col: 1 }, [[ltv]])
+  }
+}
 
     // ── 4. Write Unlevered toggle ────────────────────────────────────────────
     // Inputs!B49 = "Yes" → unlevered mode (zeros all debt service)
