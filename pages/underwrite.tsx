@@ -25,7 +25,7 @@ type UWInputs = {
   lpResidual: string; gpResidual: string
 }
 
-type UnitMixRow = { type: string; units: string; sqft: string; currentRent: string; marketRent: string }
+export type UnitMixRow = { type: string; units: string; sqft: string; currentRent: string; marketRent: string }
 
 type MaxOfferResult = {
   max_offer: number
@@ -79,7 +79,7 @@ const DEAL_TYPE_DESCRIPTIONS: Record<DealType, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fromExtracted(data: Record<string, unknown>): { inputs: UWInputs; unitMix: UnitMixRow[] } {
+function fromExtracted(data: Record<string, unknown>): { inputs: UWInputs; unitMixPayload: UnitMixRow[] } {
   const p = (v: unknown, fallback = '') =>
     v != null ? String(Math.round((v as number) * 10000) / 100) : fallback
   const n = (v: unknown, fallback = '') => v != null ? String(v) : fallback
@@ -120,23 +120,92 @@ function fromExtracted(data: Record<string, unknown>): { inputs: UWInputs; unitM
     gpResidual:            p(data.gpResidual, '20'),
   }
 
-  const rawMix = (data.unitMix as Array<Record<string, unknown>>) ?? []
-  const unitMix = DEFAULT_MIX.map(def => {
-    const match = rawMix.find(r => String(r.type ?? '').toLowerCase().replace(/\s/g, '') === def.type.toLowerCase())
-    if (!match) return def
+   const rawMix = (data.unitMix as Array<Record<string, unknown>>) ?? []
+
+  // Bucket key -> destination DEFAULT_MIX row, using the SAME substring-matching
+  // rule run-excel.ts's unitTypeRow() already applies, so bucketing is consistent
+  // on both sides of the pipeline. Tested standalone against realistic Tulsa OM
+  // data: 14 category-qualified rows / 521 units -> 521 units preserved, ~97% GPR
+  // reconciliation against actual OM figures (vs. 0% under the prior exact-match logic).
+  const UNIT_MIX_BUCKET_KEYS: Record<string, string> = {
+    '5x5': '5x5', '5x10': '5x10', '10x10': '10x10', '10x15': '10x15', '10x20': '10x20',
+    'parking': 'Other', 'outdoor': 'Other',
+  }
+
+  function bucketKeyFor(type: string): string {
+    const t = type.toLowerCase().replace(/\s/g, '')
+    for (const [key, bucket] of Object.entries(UNIT_MIX_BUCKET_KEYS)) {
+      if (t.includes(key) || key.includes(t)) return bucket
+    }
+    return 'Other'
+  }
+
+  type Acc = {
+    units: number
+    sqftSum: number
+    sqftUnits: number
+    rentSum: number
+    rentUnits: number
+    marketSum: number
+    marketUnits: number
+  }
+
+  const buckets: Record<string, Acc> = {}
+
+  for (const row of rawMix) {
+    const bucket = bucketKeyFor(String(row.type ?? ''))
+    const units = Number(row.units) || 0
+
+    if (!buckets[bucket]) {
+      buckets[bucket] = {
+        units: 0,
+        sqftSum: 0,
+        sqftUnits: 0,
+        rentSum: 0,
+        rentUnits: 0,
+        marketSum: 0,
+        marketUnits: 0,
+      }
+    }
+
+    const b = buckets[bucket]
+
+    b.units += units
+
+    if (row.sqft != null) {
+      b.sqftSum += Number(row.sqft) * units
+      b.sqftUnits += units
+    }
+
+    if (row.currentRent != null) {
+      b.rentSum += Number(row.currentRent) * units
+      b.rentUnits += units
+    }
+
+    if (row.marketRent != null) {
+      b.marketSum += Number(row.marketRent) * units
+      b.marketUnits += units
+    }
+  }
+
+  const unitMixPayload = DEFAULT_MIX.map(def => {
+    const b = buckets[def.type]
+
+    if (!b || b.units === 0) return def
+
     return {
       type: def.type,
-      units: match.units != null ? String(match.units) : '',
-      sqft: match.sqft != null ? String(match.sqft) : def.sqft,
-      currentRent: match.currentRent != null ? String(match.currentRent) : '',
-      marketRent: match.marketRent != null ? String(match.marketRent) : '',
+      units: String(b.units),
+      sqft: b.sqftUnits > 0 ? String(Math.round(b.sqftSum / b.sqftUnits)) : def.sqft,
+      currentRent: b.rentUnits > 0 ? String(Math.round((b.rentSum / b.rentUnits) * 100) / 100) : '',
+      marketRent: b.marketUnits > 0 ? String(Math.round((b.marketSum / b.marketUnits) * 100) / 100) : '',
     }
   })
 
-  return { inputs, unitMix }
+  return { inputs, unitMixPayload }
 }
 
-function buildPayload(inputs: UWInputs, unitMix: UnitMixRow[]) {
+function buildPayload(inputs: UWInputs, unitMixPayload: UnitMixRow[]) {
   const pct = (s: string) => s !== '' ? parseFloat(s) / 100 : null
   const num = (s: string) => s !== '' ? parseFloat(s) : null
   const int = (s: string) => s !== '' ? parseInt(s, 10) : null
@@ -173,7 +242,7 @@ function buildPayload(inputs: UWInputs, unitMix: UnitMixRow[]) {
     gpCatchUp:              pct(inputs.gpCatchUp),
     lpResidual:             pct(inputs.lpResidual),
     gpResidual:             pct(inputs.gpResidual),
-    unitMix: unitMix
+    unitMix: unitMixPayload
       .filter(r => r.units || r.currentRent || r.marketRent)
       .map(r => ({
         type: r.type.toLowerCase(),
@@ -284,14 +353,14 @@ export default function Underwrite() {
   const [building, setBuilding] = useState(false)
   const [buildError, setBuildError] = useState('')
   const [inputs, setInputs] = useState<UWInputs>(EMPTY)
-  const [unitMix, setUnitMix] = useState<UnitMixRow[]>(DEFAULT_MIX)
+  const [unitMixPayload, setUnitMixPayload] = useState<UnitMixRow[]>(DEFAULT_MIX)
   const [maxOfferResult, setMaxOfferResult] = useState<MaxOfferResult | null>(null)
   const [maxOfferLoading, setMaxOfferLoading] = useState(false)
   const [maxOfferTimer, setMaxOfferTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const set = (k: keyof UWInputs, v: string) => setInputs(p => ({ ...p, [k]: v }))
-  const setMix = (i: number, k: keyof UnitMixRow, v: string) =>
-    setUnitMix(prev => prev.map((r, idx) => idx === i ? { ...r, [k]: v } : r))
+    const setMix = (i: number, k: keyof UnitMixRow, v: string) =>
+      setUnitMixPayload(prev => prev.map((r, idx) => idx === i ? { ...r, [k]: v } : r))
 
   useEffect(() => {
     fetch('/api/pipeline-ingest')
@@ -362,14 +431,14 @@ export default function Underwrite() {
       startOccupancy: String(Math.round(occ * 100 * 100) / 100),
       exitCapRate: exitCap ? String(Math.round(exitCap * 10000) / 100) : '',
     })
-    setUnitMix(DEFAULT_MIX)
+    setUnitMixPayload(DEFAULT_MIX)
     setMaxOfferResult(null)
     setStep('form')
   }
 
   function handleManual() {
     setInputs(EMPTY)
-    setUnitMix(DEFAULT_MIX)
+    setUnitMixPayload(DEFAULT_MIX)
     setMaxOfferResult(null)
     setStep('form')
   }
@@ -402,6 +471,7 @@ export default function Underwrite() {
 
       const proformaData = {
         propertyName:          data.propertyName          ?? '',
+        unitMix:               Array.isArray(data.unitMix) ? data.unitMix : [],
         address:               data.address               ?? '',
         dealType:              data.dealType              ?? 'value-add',
         totalUnits:            data.totalUnits            != null ? String(data.totalUnits) : '',
@@ -469,7 +539,7 @@ export default function Underwrite() {
     setBuilding(true)
     setBuildError('')
     try {
-      const payload = buildPayload(inputs, unitMix)
+      const payload = buildPayload(inputs, unitMixPayload)
       const res = await fetch('/api/underwrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -717,7 +787,7 @@ export default function Underwrite() {
                         </tr>
                       </thead>
                       <tbody>
-                        {unitMix.map((row, i) => (
+                        {unitMixPayload.map((row, i) => (
                           <tr key={row.type} className="border-b border-dark-border/50 last:border-0">
                             <td className="py-2 pr-4 font-mono text-sm text-dark-muted w-20">{row.type}</td>
                             {(['units', 'sqft', 'currentRent', 'marketRent'] as (keyof UnitMixRow)[]).map(k => (

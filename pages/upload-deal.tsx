@@ -167,6 +167,7 @@ type ExtractionResult = {
   sellerY4?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
   sellerY5?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
   highlights?: string[] | null
+  unitMix?: { type: string; units: number | null; sqft: number | null; currentRent: number | null; marketRent: number | null }[] | null
 }
 
 export default function UploadDeal() {
@@ -223,6 +224,10 @@ export default function UploadDeal() {
     }
     const allHighlights = results.flatMap(r => Array.isArray(r.highlights) ? r.highlights as string[] : [])
     merged.highlights = Array.from(new Set(allHighlights)).slice(0, 5)
+
+    const allUnitMix = results.flatMap(r => Array.isArray(r.unitMix) ? r.unitMix : [])
+    merged.unitMix = allUnitMix.length > 0 ? allUnitMix : null
+
     return merged
   }
 
@@ -346,6 +351,7 @@ export default function UploadDeal() {
 
     const proformaData = {
       propertyName: data.facilityName ?? form.facilityName,
+      unitMix: Array.isArray(data.unitMix) ? data.unitMix : [],
       address: data.address ?? form.address,
       city,
       state,
@@ -397,7 +403,7 @@ export default function UploadDeal() {
         facilityName: form.facilityName || 'Unnamed Facility',
         address: form.address, city: form.city, state: form.state, zipCode: form.zipCode,
         unitCount: form.unitCount ? parseInt(form.unitCount) : 0,
-        unitMix: '',
+        unitMixSummary: '',
         yearBuilt: form.yearBuilt ? parseInt(form.yearBuilt) : 0,
         landAcres: 0, climatePercent: 0,
         estimatedValue: form.askingPrice ? parseFloat(form.askingPrice) : 0,

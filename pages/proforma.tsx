@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import AuthGate from '@/components/AuthGate'
 import { loadSavedProperties } from '@/lib/pipelineStore'
 import type { PipelineProperty } from '@/lib/pipelineData'
+import type { UnitMixRow } from './underwrite'
 
 type DealType = 'value-add' | 'stabilized' | 'distressed'
 type LeverageType = 'all-cash' | 'levered'
@@ -741,6 +742,50 @@ function IRRBox({ result, offerPrice, exitSalePrice, equityBreakdown }: {
   )
 }
 
+function BrokerOmTable({ proformaResult }: { proformaResult: any }) {
+  const { t12, broker_years } = proformaResult
+  const cols = ['T-12', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5']
+  const years = broker_years || []
+
+  function Row({ label, values, bold, gold, indent, pct }: {
+    label: string; values: (number | null)[]; bold?: boolean; gold?: boolean; indent?: boolean; pct?: boolean
+  }) {
+    return (
+      <tr className={bold ? 'bg-navy/5' : ''}>
+        <td className={`py-2.5 pr-4 text-sm uppercase tracking-widest ${bold ? "font-semibold text-[#1B2B5E]" : "text-dark-muted"} ${indent ? "pl-4" : ""} ${gold ? "text-gold font-semibold" : ""}`}>
+          {label}
+        </td>
+        {values.map((v, i) => (
+          <td key={i} className={`py-2.5 px-2 text-right text-base ${bold ? "font-bold text-[#1B2B5E]" : "text-[#1B2B5E]"} ${gold ? "text-gold font-semibold" : ""}`}>
+            {v === null ? '—' : pct ? fmtPct(v) : fmt$(v)}
+          </td>
+        ))}
+      </tr>
+    )
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-base">
+        <thead>
+          <tr className="border-b border-dark-border">
+            <th className="text-left text-sm uppercase tracking-widest text-dark-muted font-normal pb-3 pr-4 w-44">Line Item</th>
+            {cols.map(c => (
+              <th key={c} className="text-right text-base uppercase tracking-widest text-dark-muted font-normal pb-3 px-2">{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <Row label="Total Revenue" bold values={[t12.revenue, ...years.map((y: any) => y.revenue)]} />
+          <Row label="Total Expenses" bold values={[t12.expenses, ...years.map((y: any) => y.expenses)]} />
+          <Row label="NOI" bold gold values={[t12.noi, ...years.map((y: any) => y.noi)]} />
+          <Row label="NOI Margin" pct values={[t12.revenue > 0 ? t12.noi / t12.revenue : null, ...years.map((y: any) => y.revenue > 0 ? y.noi / y.revenue : null)]} />
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function ProformaTable({ proformaResult }: { proformaResult: ProformaResult }) {
   const { t12, years } = proformaResult
   const cols = ['T-12', 'Y1', 'Y2', 'Y3', 'Y4', 'Y5']
@@ -946,6 +991,7 @@ export default function Proforma() {
   const [excelRunning, setExcelRunning]     = useState(false)
   const [excelOutputs, setExcelOutputs]     = useState<Record<string, number | string | boolean | null> | null>(null)
   const [excelError, setExcelError]         = useState('')
+  const [unitMixPayload, setUnitMixPayload] = useState<UnitMixRow[]>([])
   const [excelElapsed, setExcelElapsed]     = useState<number | null>(null)
   const [hasCalculated, setHasCalculated] = useState(false)
   const [maxOfferAnchor, setMaxOfferAnchor] = useState<'t12' | 'y1' | 'stabilized' | 'manual'>('y1')
@@ -1168,6 +1214,9 @@ export default function Proforma() {
     if (router.query.data) {
       try {
         const data = JSON.parse(decodeURIComponent(router.query.data as string))
+                if (Array.isArray(data.unitMix)) {
+  setUnitMixPayload(data.unitMix)
+        }
         // Start from EMPTY, not from prev. This prevents stale localStorage values
         // from contaminating the incoming deal. Only fields present in the query
         // param will be non-empty; everything else resets to defaults.
@@ -1346,6 +1395,7 @@ export default function Proforma() {
         // Levered / unlevered toggle
         unlevered:             leverageType === 'all-cash',
         // T12 operating expenses (stored as dollar strings)
+        unitMix: unitMixPayload,
         t12Tax:                num(inputs.t12Tax),
         t12Insurance:          num(inputs.t12Insurance),
         t12Utilities:          num(inputs.t12Utilities),
@@ -1356,7 +1406,10 @@ export default function Proforma() {
         t12Administrative:     num(inputs.t12Administrative),
         t12OtherExpenses:      num(inputs.t12OtherExpenses),
       }
-
+      if (!Array.isArray(unitMixPayload) || unitMixPayload.length === 0) {
+        setExcelError('Unit mix data is missing. The institutional model cannot run on placeholder workbook assumptions.')
+        return
+      }
       const res = await fetch('/api/run-excel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1449,6 +1502,7 @@ export default function Proforma() {
       const t12DataWithSeller = {
         ...t12Data,
         seller_years: sellerYearsData,
+    broker_years: sellerYearsData,
       }
 
       const proformaRes = await fetch('/api/underwrite', {
@@ -1980,7 +2034,7 @@ export default function Proforma() {
                 </div>
                 <div>
                   <label className="label-text">Current Occupancy <span className="text-dark-muted text-xs">(from OM)</span></label>
-                  <div className="input-field bg-dark-surface/50 text-[#1B2B5E] font-semibold">{inputs.t12Occupancy ? inputs.t12Occupancy + '%' : '—'}</div>
+                  <div className="input-field bg-dark-surface/50 text-[#1B2B5E] font-semibold">{inputs.t12Occupancy ? inputs.t12Occupancy + '%' : inputs.currentOccupancy ? inputs.currentOccupancy + '%' : '—'}</div>
                 </div>
               </div>
             </div>
@@ -2092,7 +2146,7 @@ export default function Proforma() {
                 {proformaResult?.broker_years && proformaResult.broker_years.length > 0 && (
                   <div className="border border-dark-border p-7">
                     <SectionHead title="Chart 1 — Broker OM (CBRE)" subtitle="Seller's projected numbers exactly as presented — no adjustments" />
-                    <ProformaTable proformaResult={{ ...proformaResult, years: proformaResult.broker_years }} />
+                    <BrokerOmTable proformaResult={proformaResult} />
                   </div>
                 )}
 

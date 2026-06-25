@@ -34,6 +34,7 @@ import { HyperFormula } from 'hyperformula'
 import { requireAuth } from '@/lib/serverAuth'
 import path from 'path'
 import fs from 'fs'
+import crypto from 'crypto'
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } }
 
@@ -183,6 +184,7 @@ const OUTPUT_MAP: Record<string, CellAddr & { label: string }> = {
 
 function loadWorkbookIntoHF(): HyperFormula {
   const fileBuffer = fs.readFileSync(MODEL_PATH)
+  const workbookHash = crypto.createHash('sha256').update(fileBuffer).digest('hex')
   const wb = XLSX.read(fileBuffer, { cellFormula: true, cellStyles: true, sheetStubs: true })
 
   const sheetsData: Record<string, (string | number | boolean | null)[][]> = {}
@@ -299,9 +301,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const t0 = Date.now()
+  const runtimeWorkbookBuffer = fs.readFileSync(MODEL_PATH)
+  const workbookHash = crypto.createHash('sha256').update(runtimeWorkbookBuffer).digest('hex')
 
   try {
-    const inputs = req.body as RunExcelInputs
+   const inputs = req.body as RunExcelInputs
+
+    // ENGINE SAFETY GUARD: refuse to run on missing/empty unitMix.
+    // Prevents silent fallback to stale workbook placeholder Unit Mix rows.
+    if (!Array.isArray(inputs.unitMix) || inputs.unitMix.length === 0) {
+      return res.status(400).json({
+        error: 'unitMix is required and must be a non-empty array. Refusing to run the model on workbook placeholder Unit Mix data.',
+      })
+    }
 
     // ── 1. Load workbook into HyperFormula ──────────────────────────────────
     const hf = loadWorkbookIntoHF()
@@ -416,6 +428,11 @@ hf.setCellContents({ sheet: sheetId, row: addr.row, col: addr.col }, [[value]])
 
     return res.status(200).json({
       ok: true,
+      diagnostic: {
+        cwd: process.cwd(),
+        modelPath: MODEL_PATH,
+        workbookHash,
+      },
       elapsed_ms: elapsed,
       inputs_received: {
         purchasePrice:         inputs.purchasePrice,

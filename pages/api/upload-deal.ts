@@ -30,7 +30,7 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
       capRate:                 { type: ['number', 'null'], description: 'Cap rate as decimal e.g. 0.065 for 6.5%' },
       noi:                     { type: ['number', 'null'], description: 'Annual NOI in dollars' },
       t12NOI:                  { type: ['number', 'null'], description: 'Trailing 12-month NOI in dollars' },
-      t3NOI:                   { type: ['number', 'null'], description: 'Trailing 3-month NOI annualized (multiply 3-month by 4). Must differ from t12NOI.' },
+      t3NOI:                   { type: ['number', 'null'], description: 'Trailing 3-month NOI, annualized. Many OMs present this figure already annualized (e.g. a column labeled "Actuals T-3" or "T-3 Annualized" showing a full-year dollar amount) — if so, use that value exactly as stated, do NOT multiply it further. Only multiply by 4 if the source clearly gives a raw, un-annualized 3-month total (e.g. a quarterly dollar figure explicitly described as 3 months of actuals, not yet annualized). Must differ from t12NOI.' },
       t12Revenue:              { type: ['number', 'null'], description: 'Trailing 12-month total revenue in dollars' },
       t12TotalExpenses:        { type: ['number', 'null'], description: 'Trailing 12-month total expenses in dollars' },
       t12Payroll:              { type: ['number', 'null'], description: 'T12 payroll expense' },
@@ -48,6 +48,27 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
       targetOccupancy:         { type: ['number', 'null'], description: 'Target/stabilized occupancy percentage' },
       currentAvgRentPerUnit:   { type: ['number', 'null'], description: 'Average monthly rent per unit in dollars' },
       marketAvgRentPerUnit:    { type: ['number', 'null'], description: 'Market rate average monthly rent per unit in dollars' },
+        unitMix: {
+        type: ['array', 'null'],
+        description:
+          'Unit mix breakdown by unit type/size, extracted from a rent roll, unit mix table, or OM unit-mix exhibit. ' +
+          'SOURCE PRIORITY RULES — follow strictly: ' +
+          '(1) If a rent roll or Excel unit-mix schedule exists with individual unit-type rows, use ONLY those rows. ' +
+          '(2) If only an OM is provided (no rent roll/Excel), use the OM unit-mix table rows. ' +
+          '(3) If the source document separates the same unit size into multiple categories (e.g. drive-up vs. interior vs. parking, standard vs. premium), keep them as separate rows rather than merging — do not average or combine categories. ' +
+          'Each row represents one distinct unit type as it appears in the source document. Use null for any field not stated in the source — do not estimate or infer missing values.',
+        items: {
+          type: 'object',
+          properties: {
+            type:        { type: 'string',           description: 'Exact unit type/size label from document (e.g. "10x10", "10x20 Drive-Up", "Parking") — never rename or generalize' },
+            units:       { type: ['number', 'null'], description: 'Number of units of this type' },
+            sqft:        { type: ['number', 'null'], description: 'Square footage per unit of this type' },
+            currentRent: { type: ['number', 'null'], description: 'Current/in-place monthly rent per unit in dollars' },
+            marketRent:  { type: ['number', 'null'], description: 'Market/asking monthly rent per unit in dollars, if stated separately from current rent' },
+          },
+          required: ['type'],
+        },
+      },
       monthsToStabilization:   { type: ['number', 'null'], description: 'Estimated months to reach stabilized occupancy' },
       yearBuilt:               { type: ['number', 'null'], description: 'Year the facility was built' },
       sqft:                    { type: ['number', 'null'], description: 'Total rentable square footage' },
