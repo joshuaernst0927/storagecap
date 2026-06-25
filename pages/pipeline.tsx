@@ -897,7 +897,7 @@ function formToPartialProperty(f: NewPropForm): PipelineProperty {
     state: f.state,
     zipCode: f.zipCode,
     unitCount: parseInt(f.unitCount) || 0,
-    unitMix: '',
+    unitMixSummary: '',
     yearBuilt: parseInt(f.yearBuilt) || 2000,
     landAcres: 0,
     climatePercent: 0,

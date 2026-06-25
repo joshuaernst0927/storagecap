@@ -17,7 +17,7 @@ interface Form {
   city: string
   state: string
   unitCount: string
-  unitMix: string
+  unitMixSummary: string
   occupancy: string
   askingPrice: string
   noi: string
@@ -100,7 +100,7 @@ interface ExpenseLineItem {
 
 const INITIAL: Form = {
   propertyName: '', address: '', city: '', state: '',
-  unitCount: '', unitMix: '', occupancy: '', askingPrice: '',
+  unitCount: '', unitMixSummary: '', occupancy: '', askingPrice: '',
   noi: '', grossRevenue: '', sqft: '', capRate: '',
   yearBuilt: '', brokerName: '', ownerName: '',
   sourceType: 'broker', notes: '',
@@ -303,7 +303,7 @@ setFullExtraction(data)
         city:         data.city ?? '',
         state:        data.state ?? '',
         unitCount:    String(data.unitCount ?? data.totalUnits ?? ''),
-        unitMix:      '',
+        unitMixSummary: '',
         occupancy:    occ != null ? String(occ) : '',
         askingPrice:  data.askingPrice != null ? String(data.askingPrice) : '',
         noi:          (data.t12NOI ?? data.noi) != null ? String(data.t12NOI ?? data.noi) : '',
@@ -377,7 +377,7 @@ setFullExtraction(data)
           city:         form.city,
           state:        form.state,
           unitCount:    form.unitCount,
-          unitMix:      form.unitMix,
+          unitMixSummary: form.unitMixSummary,
           occupancy:    form.occupancy,
           askingPrice:  form.askingPrice,
           noi:          form.noi,
@@ -462,7 +462,7 @@ setFullExtraction(data)
       state:              form.state,
       zipCode:            fullExtraction?.zipCode ?? '',
       unitCount:          parseInt(form.unitCount) || 0,
-      unitMix:            form.unitMix,
+      unitMixSummary:     form.unitMixSummary,
       yearBuilt:          year || 0,
       landAcres:          0,
       climatePercent:     0,
@@ -878,7 +878,7 @@ setFullExtraction(data)
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label-text">Unit Mix</label>
-                    <input className="input-field" value={form.unitMix} onChange={e => set('unitMix', e.target.value)} placeholder="80× 5×10, 120× 10×10, 100× 10×20" />
+                    <input className="input-field" value={form.unitMixSummary} onChange={e => set('unitMixSummary', e.target.value)} placeholder="80× 5×10, 120× 10×10, 100× 10×20" />
                   </div>
                   <div>
                     <label className="label-text">Source</label>

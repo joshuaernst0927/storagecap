@@ -284,7 +284,7 @@ function ScoreDealContent() {
         state: dealInfo.state,
         zipCode: '',
         unitCount: dealInfo.unitCount ? parseInt(dealInfo.unitCount) : 0,
-        unitMix: '',
+        unitMixSummary: '',
         yearBuilt: 0,
         landAcres: 0,
         climatePercent: 0,

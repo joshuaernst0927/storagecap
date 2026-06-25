@@ -74,7 +74,27 @@ export interface DistressSignals {
 }
 
 export type DealStatus = 'outreach-sent' | 'call-scheduled' | 'loi-stage' | 'under-contract'
+export type UnitMixBucket =
+  | 'Small' | 'Medium' | 'Large' | 'XLarge' | 'Jumbo' | 'Other'
+  | 'CCSmall' | 'CCMedium' | 'CCLarge' | 'CCXLarge' | 'CCJumbo' | 'CCOther'
+  | 'VehicleParking'
+  | 'UNCLASSIFIED'
 
+export interface RawUnitMixRow {
+  id: string
+  sourceLabel: string
+  sourceType: 'rentRoll' | 'OM' | 'T12' | 'manual'
+  dimensions: { width: number; length: number } | null
+  sqft: number | null
+  units: number | null
+  currentRent: number | null
+  marketRent: number | null
+  isClimateControlled: boolean
+  isVehicleParking: boolean
+  bucket: UnitMixBucket
+  bucketConfidence: 'certain' | 'flagged'
+  rawExtractionConfidence: number | null
+}
 export interface PipelineProperty {
   id: string
   facilityName: string
@@ -83,8 +103,21 @@ export interface PipelineProperty {
   state: string
   zipCode: string
   unitCount: number
-  unitMix: string
+  // unitMix naming architecture (locked):
+  //   unitMixSummary — display-only string, shown on pipeline/analyze/score-deal. Never used for calculations.
+  //   unitMix — canonical persisted source of truth for structured unit-mix data.
+  //     unitMix.rows holds RawUnitMixRow[] exactly as extracted, with derived classification
+  //     metadata attached per row. bucket/bucketConfidence are derived, not source of truth —
+  //     raw row fields are. Reclassification must be explicit and version-tracked via
+  //     lastClassifiedRulesVersion, never silently recomputed on read.
+  unitMixSummary?: string
+  unitMix?: {
+    rows: RawUnitMixRow[]
+    lastClassifiedAt: string
+    lastClassifiedRulesVersion: string
+  }
   yearBuilt: number
+
   landAcres: number
   climatePercent: number
   estimatedValue: number
