@@ -95,6 +95,60 @@ export interface RawUnitMixRow {
   bucketConfidence: 'certain' | 'flagged'
   rawExtractionConfidence: number | null
 }
+
+export type ExtractionSourceType =
+  | 'OM'
+  | 'Excel'
+  | 'T12'
+  | 'PnL'
+  | 'rentRoll'
+  | 'brokerWorkbook'
+  | 'manual'
+  | 'calculated'
+
+export type ExtractedFieldValue = string | number | boolean | null
+
+export interface ExtractionSourceRef {
+  fileName?: string
+  sourceType: ExtractionSourceType
+  sheetName?: string
+  pageNumber?: number
+  rowNumber?: number
+  columnName?: string
+  cellAddress?: string
+  label?: string
+  // Short context snippet only, capped around 200 chars. Do not store full sheet/page/workbook text here.
+  rawText?: string
+}
+
+export interface ExtractedFieldCandidate<T = ExtractedFieldValue> {
+  value: T
+  source: ExtractionSourceRef
+  confidence: number | null
+  needsReview: boolean
+  reason?: string
+}
+
+export interface CanonicalExtractedField<T = ExtractedFieldValue> {
+  selectedValue: T
+  selectedCandidateIndex?: number
+  source: ExtractionSourceRef | null
+  confidence: number | null
+  needsReview: boolean
+  conflicts?: ExtractedFieldCandidate<T>[]
+}
+
+export interface PipelineExtraction {
+  version: string
+  extractedAt: string
+  sourceFiles: ExtractionSourceRef[]
+  // Keys should match legacy field names where possible, e.g. t12NOI, t12Revenue, t12TotalExpenses, historicalCapexTotal, unitMix.
+  canonical: Record<string, CanonicalExtractedField>
+  candidates: Record<string, ExtractedFieldCandidate[]>
+  warnings: string[]
+  needsReview: boolean
+}
+
 export interface PipelineProperty {
   id: string
   facilityName: string
@@ -118,6 +172,8 @@ export interface PipelineProperty {
     lastClassifiedAt: string
     lastClassifiedRulesVersion: string
   }
+  // Optional extraction/provenance package. Legacy flat fields remain for compatibility.
+  extraction?: PipelineExtraction
   yearBuilt: number
 
   landAcres: number
