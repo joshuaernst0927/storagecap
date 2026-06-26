@@ -157,6 +157,7 @@ type ExtractionResult = {
   t12OtherExpenses?: number | null; occupancy?: number | null; currentOccupancy?: number | null
   targetOccupancy?: number | null; currentAvgRentPerUnit?: number | null
   marketAvgRentPerUnit?: number | null; monthsToStabilization?: number | null
+  historicalCapexTotal?: number | null; capexYear?: number | null
   yearBuilt?: number | null; sqft?: number | null; totalSF?: number | null
   broker1Name?: string | null; broker2Name?: string | null; brokerPhone1?: string | null
   brokerPhone2?: string | null; brokerEmail1?: string | null; brokerEmail2?: string | null
@@ -212,7 +213,7 @@ export default function UploadDeal() {
       't12TotalExpenses','t12Payroll','t12ManagementFees','t12Marketing','t12Utilities',
       't12OfficeEmployee','t12Administrative','t12RepairsMaintenance','t12Tax','t12Insurance',
       't12OtherExpenses','occupancy','currentOccupancy','targetOccupancy',
-      'currentAvgRentPerUnit','marketAvgRentPerUnit','monthsToStabilization',
+      'currentAvgRentPerUnit','marketAvgRentPerUnit','monthsToStabilization','historicalCapexTotal','capexYear',
       'yearBuilt','sqft','totalSF','broker1Name','broker2Name','brokerPhone1',
       'brokerPhone2','brokerEmail1','brokerEmail2','brokerageName',
       'sellerY1','sellerY2','sellerY3','sellerY4','sellerY5',
@@ -362,6 +363,8 @@ export default function UploadDeal() {
       currentOccupancy: String(data.currentOccupancy ?? data.occupancy ?? form.occupancy ?? ''),
       currentAvgRent: data.currentAvgRentPerUnit != null ? String(data.currentAvgRentPerUnit) : '',
       marketAvgRent: data.marketAvgRentPerUnit != null ? String(data.marketAvgRentPerUnit) : '',
+      historicalCapexTotal: data.historicalCapexTotal != null ? String(data.historicalCapexTotal) : '',
+      capexYear: data.capexYear != null ? String(data.capexYear) : '',
       monthsToStabilization: data.monthsToStabilization != null ? String(data.monthsToStabilization) : '24',
       t12NOI: String(data.t12NOI ?? data.noi ?? form.noi ?? ''),
       t3NOI: data.t3NOI != null ? String(data.t3NOI) : '',
@@ -416,6 +419,10 @@ export default function UploadDeal() {
                                  ? fullExtraction.currentAvgRentPerUnit : undefined,
         marketAvgRentPerUnit:  fullExtraction?.marketAvgRentPerUnit != null
                                  ? fullExtraction.marketAvgRentPerUnit : undefined,
+        historicalCapexTotal: fullExtraction?.historicalCapexTotal != null
+                                 ? fullExtraction.historicalCapexTotal : undefined,
+        capexYear:             fullExtraction?.capexYear != null
+                                 ? fullExtraction.capexYear : undefined,
         t3NOI:                 fullExtraction?.t3NOI != null
                                  ? fullExtraction.t3NOI : undefined,
         // T12 expense detail — sourced from fullExtraction, same pattern as above.

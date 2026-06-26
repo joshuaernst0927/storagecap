@@ -48,6 +48,8 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
       targetOccupancy:         { type: ['number', 'null'], description: 'Target/stabilized occupancy percentage' },
       currentAvgRentPerUnit:   { type: ['number', 'null'], description: 'Average monthly rent per unit in dollars' },
       marketAvgRentPerUnit:    { type: ['number', 'null'], description: 'Market rate average monthly rent per unit in dollars' },
+      historicalCapexTotal:    { type: ['number', 'null'], description: 'Total historical/actual capital expenditures from a CapEx summary sheet. NOT a forward-looking annual reserve estimate.' },
+      capexYear:               { type: ['number', 'null'], description: 'The year the historicalCapexTotal figure covers, if stated in the source.' },
         unitMix: {
         type: ['array', 'null'],
         description:
@@ -169,6 +171,7 @@ const EXTRACTION_TOOL: Anthropic.Tool = {
 const EXTRACTION_INSTRUCTIONS =
   'You are reading one or more documents about a self-storage facility for sale. ' +
   'Documents may include an offering memorandum, rent roll, T12, P&L, Excel workbook, photos, or broker package. ' +
+  'If a CapEx Summarized or capital expenditures sheet shows historical/actual past costs, extract that total as historicalCapexTotal and the year as capexYear. Do NOT treat a historical CapEx total as a forward-looking annual reserve unless the source explicitly labels it as a reserve. ' +
   'Call the extract_deal tool with every piece of deal information you can find. ' +
   'Use null for fields you cannot find. Do not guess.'
 
@@ -229,6 +232,43 @@ async function fileToBlocks(f: FileInput): Promise<any[]> {
   return [{ type: 'text', text: `--- File: ${label} ---\n\n${text.slice(0, 60000)}` }]
 }
 
+function extractDeterministicCapexTotal(buf: Buffer): number | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const xlsx = require('xlsx')
+    const wb = xlsx.read(buf, { type: 'buffer' })
+    const capexSheetName = wb.SheetNames.find((n: string) => /capex/i.test(n))
+    if (!capexSheetName) return null
+    const sheet = wb.Sheets[capexSheetName]
+    const rows: unknown[][] = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: null })
+    let totalValue: number | null = null
+    let subtotalValue: number | null = null
+    for (const row of rows) {
+      const labelCell = row.find((c) => typeof c === 'string')
+      if (typeof labelCell !== 'string') continue
+      const isTotal = /^total$/i.test(labelCell.trim())
+      const isSubtotal = /^subtotal$/i.test(labelCell.trim())
+      if (!isTotal && !isSubtotal) continue
+      const numericCell = row.find((c) => {
+        if (typeof c === 'number') return true
+        if (typeof c === 'string') return /^\s*\$?\s*[\d,]+(\.\d+)?\s*$/.test(c) && /\d/.test(c)
+        return false
+      })
+      if (numericCell == null) continue
+      const parsed = typeof numericCell === 'number'
+        ? numericCell
+        : parseFloat(String(numericCell).replace(/[^0-9.]/g, ''))
+      if (isNaN(parsed)) continue
+      if (isTotal) totalValue = parsed
+      if (isSubtotal) subtotalValue = parsed
+    }
+    return totalValue ?? subtotalValue
+  } catch (e) {
+    console.error('[upload-deal] deterministic capex parse failed:', e)
+    return null
+  }
+}
+
 export const config = { api: { bodyParser: { sizeLimit: '20mb' } } }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -241,9 +281,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const contentBlocks: any[] = []
+    let deterministicCapexTotal: number | null = null
     for (const f of files) {
       const blocks = await fileToBlocks(f)
       contentBlocks.push(...blocks)
+    }
+    for (const f of files) {
+      if (f.mimeType.includes('spreadsheetml') || f.fileName?.toLowerCase().endsWith('.xlsx')) {
+        const buf = Buffer.from(f.data, 'base64')
+        const found = extractDeterministicCapexTotal(buf)
+        if (found != null) deterministicCapexTotal = found
+      }
     }
     contentBlocks.push({ type: 'text', text: EXTRACTION_INSTRUCTIONS })
 
@@ -268,7 +316,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // toolBlock.input is already a parsed JS object — no JSON.parse needed
-    return res.status(200).json(toolBlock.input)
+    const finalResult = toolBlock.input as Record<string, unknown>
+    if (deterministicCapexTotal != null) {
+      finalResult.historicalCapexTotal = deterministicCapexTotal
+    }
+    return res.status(200).json(finalResult)
   } catch (err: unknown) {
     let detail = String(err)
     if (err instanceof Error) {

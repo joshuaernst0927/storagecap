@@ -63,6 +63,8 @@ type ProformaInputs = {
   leaseUpReserve: string
   workingCapital: string
   capexReserve: string
+  historicalCapexTotal: string
+  capexYear: string
   // Bridge loan
   bridgeLTV: string
   bridgeRate: string
@@ -240,6 +242,8 @@ const EMPTY: ProformaInputs = {
   leaseUpReserve: '100000',
   workingCapital: '50000',
   capexReserve: '0',
+      historicalCapexTotal: '',
+      capexYear: '',
   // Bridge loan
   bridgeLTV: '65',
   bridgeRate: '8',
@@ -1237,6 +1241,11 @@ export default function Proforma() {
           monthsToStabilization: data.monthsToStabilization ? String(data.monthsToStabilization) : EMPTY.monthsToStabilization,
           currentAvgRent: data.currentAvgRentPerUnit ? String(data.currentAvgRentPerUnit) : data.currentAvgRent ? String(data.currentAvgRent) : data.avgRent ? String(data.avgRent) : data.avg_rent ? String(data.avg_rent) : EMPTY.currentAvgRent,
           marketAvgRent: data.marketAvgRentPerUnit ? String(data.marketAvgRentPerUnit) : data.marketAvgRent ? String(data.marketAvgRent) : data.marketRent ? String(data.marketRent) : data.market_rent ? String(data.market_rent) : EMPTY.marketAvgRent,
+          historicalCapexTotal: data.historicalCapexTotal ? String(data.historicalCapexTotal) : EMPTY.historicalCapexTotal,
+          capexYear: data.capexYear ? String(data.capexYear) : EMPTY.capexYear,
+          // CapEx Reserve default: $0.15/rentable SF/year, industry-typical range $0.10-$0.25.
+          // Intentionally NOT seeded from historicalCapexTotal (that's past actual capex, not a forward reserve estimate).
+          capexReserve: data.totalSF ? String(Math.round(parseFloat(String(data.totalSF)) * 0.15)) : EMPTY.capexReserve,
           // Historical data
           t12NOI: data.t12NOI ? String(data.t12NOI) : data.t12Noi ? String(data.t12Noi) : data.noi ? String(data.noi) : EMPTY.t12NOI,
           t3NOI: data.t3NOI ? String(data.t3NOI) : data.t3Noi ? String(data.t3Noi) : data.trailing3NOI ? String(data.trailing3NOI) : data.t3_noi ? String(data.t3_noi) : EMPTY.t3NOI,

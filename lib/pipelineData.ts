@@ -111,6 +111,8 @@ export interface PipelineProperty {
   //     raw row fields are. Reclassification must be explicit and version-tracked via
   //     lastClassifiedRulesVersion, never silently recomputed on read.
   unitMixSummary?: string
+  historicalCapexTotal?: number
+  capexYear?: number
   unitMix?: {
     rows: RawUnitMixRow[]
     lastClassifiedAt: string
