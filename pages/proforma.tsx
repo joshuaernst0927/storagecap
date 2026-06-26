@@ -1208,7 +1208,7 @@ export default function Proforma() {
     fetch('/api/pipeline-save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([deal]),
+      body: JSON.stringify({ property: deal }),
     }).catch(() => {})
     setSavedToPipeline(true)
     setTimeout(() => setSavedToPipeline(false), 3000)

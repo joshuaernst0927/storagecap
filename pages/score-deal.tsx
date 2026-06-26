@@ -265,11 +265,6 @@ function ScoreDealContent() {
         if (existing) {
           const updated: PipelineProperty = { ...existing, ...scoreFields }
           saveProperty(updated)
-          fetch('/api/pipeline-save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify([updated]),
-          }).catch(() => {})
           setSaved(true)
           return
         }
@@ -312,11 +307,6 @@ function ScoreDealContent() {
       }
 
       saveProperty(property)
-      fetch('/api/pipeline-save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([property]),
-      }).catch(() => {})
 
       setSaved(true)
     } catch (err) {

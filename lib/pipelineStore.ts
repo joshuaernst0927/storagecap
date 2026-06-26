@@ -34,8 +34,10 @@ function saveToLocalStorage(p: PipelineProperty): void {
   if (typeof window === 'undefined') return
   try {
     const existing = loadSavedProperties()
+    const match = existing.find(e => e.id === p.id)
+    const merged = match ? { ...match, ...Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined)) } : p
     const deduped = existing.filter(e => e.id !== p.id)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([p, ...deduped]))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([merged, ...deduped]))
   } catch {}
 }
 

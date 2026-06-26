@@ -480,11 +480,6 @@ export default function UploadDeal() {
         property.dealScoredAt = new Date().toISOString()
       }
       saveProperty(property)
-      fetch('/api/pipeline-save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([property]),
-      }).catch(() => {})
       router.push('/pipeline')
     } catch (err) {
       setSaveError(String(err))
