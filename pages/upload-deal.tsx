@@ -169,6 +169,7 @@ type ExtractionResult = {
   sellerY5?: { revenue?: number | null; expenses?: number | null; noi?: number | null } | null
   highlights?: string[] | null
   unitMix?: { type: string; units: number | null; sqft: number | null; currentRent: number | null; marketRent: number | null }[] | null
+  extraction?: PipelineProperty['extraction']
 }
 
 export default function UploadDeal() {
@@ -228,6 +229,9 @@ export default function UploadDeal() {
 
     const allUnitMix = results.flatMap(r => Array.isArray(r.unitMix) ? r.unitMix : [])
     merged.unitMix = allUnitMix.length > 0 ? allUnitMix : null
+
+    const firstExtraction = results.find(r => r.extraction != null)?.extraction
+    merged.extraction = firstExtraction ?? undefined
 
     return merged
   }
@@ -393,6 +397,10 @@ export default function UploadDeal() {
       sellerY4: data.sellerY4 ? { revenue: String(data.sellerY4.revenue ?? ''), expenses: String(data.sellerY4.expenses ?? ''), noi: String(data.sellerY4.noi ?? '') } : undefined,
       sellerY5: data.sellerY5 ? { revenue: String(data.sellerY5.revenue ?? ''), expenses: String(data.sellerY5.expenses ?? ''), noi: String(data.sellerY5.noi ?? '') } : undefined,
     }
+    if (fullExtraction?.extraction) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(proformaData as any).extraction = fullExtraction.extraction
+    }
     router.push(`/proforma?data=${encodeURIComponent(JSON.stringify(proformaData))}`)
   }
 
@@ -478,6 +486,9 @@ export default function UploadDeal() {
         property.dealScoreBreakdown = scoreResult.breakdown
         property.dealScoreInputs = autoScore.inputs as Record<string, string | number>
         property.dealScoredAt = new Date().toISOString()
+      }
+      if (fullExtraction?.extraction) {
+        property.extraction = fullExtraction.extraction
       }
       saveProperty(property)
       router.push('/pipeline')
