@@ -41,7 +41,7 @@ IMPORTANT: Extract the SELLER'S projected numbers exactly as presented.
   "currentAvgRent": number,
   "marketAvgRent": number,
   "t12Revenue": number,
-  "t12NOI": number,
+  "t12NOI": number | null,
   "t12Expenses": number,
   "goingInCapRate": number,
   "t12Tax": number,
@@ -377,8 +377,17 @@ function buildProforma(t12: T12Data, assumptions: Assumptions) {
   } = assumptions
 
   const t12Revenue = t12.total_revenue || 0
-  const t12NOI = t12.noi || (t12Revenue - (t12.total_expenses || t12Revenue * 0.38))
-  const t12Expenses = t12.total_expenses || (t12Revenue - t12NOI)
+  // Phase 5: removed fabricated 38% expense fallback. Use real NOI if
+  // present; else derive from real revenue + real expenses only; else
+  // honestly return null rather than fabricate a figure.
+  const t12NOI: number | null = t12.noi != null
+    ? t12.noi
+    : (t12.total_expenses != null && t12Revenue > 0
+        ? t12Revenue - t12.total_expenses
+        : null)
+  const t12Expenses = t12.total_expenses != null
+    ? t12.total_expenses
+    : (t12NOI != null ? t12Revenue - t12NOI : 0)
   const t12Occupancy = current_occupancy || 0.80
   const avgRentMo = total_units > 0 && t12Occupancy > 0
     ? t12Revenue / (total_units * t12Occupancy * 12)
@@ -445,7 +454,7 @@ function buildProforma(t12: T12Data, assumptions: Assumptions) {
     t12: {
       revenue: Math.round(t12Revenue),
       expenses: Math.round(t12Expenses),
-      noi: Math.round(t12NOI),
+      noi: t12NOI != null ? Math.round(t12NOI) : null,
       occupancy: t12Occupancy,
       avg_rent_mo: Math.round(avgRentMo * 100) / 100,
       expense_breakdown: scaledBreak,
