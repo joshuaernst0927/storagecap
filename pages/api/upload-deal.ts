@@ -282,6 +282,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const contentBlocks: any[] = []
     let deterministicCapexTotal: number | null = null
+    // Phase 3: Phase 1/2 extraction pipeline collectors (additive, non-breaking)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pipelineLocalCandidates: any[] = []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pipelineSourceFiles: any[] = []
     for (const f of files) {
       const blocks = await fileToBlocks(f)
       contentBlocks.push(...blocks)
@@ -291,6 +296,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const buf = Buffer.from(f.data, 'base64')
         const found = extractDeterministicCapexTotal(buf)
         if (found != null) deterministicCapexTotal = found
+
+        // Phase 3: run Phase 1/2 universal extraction pipeline.
+        // Isolated try/catch so any failure here can never break the
+        // existing upload response.
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { ingestWorkbook } = await import('../../lib/extraction/workbookIngest') as any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { classifyWorkbook } = await import('../../lib/extraction/sheetClassifier') as any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { extractAll } = await import('../../lib/extraction/deterministicExtractor') as any
+
+          const workbook = await ingestWorkbook(buf, f.fileName)
+          const classifications = classifyWorkbook(workbook.sheets)
+          const localCandidates = extractAll(workbook.sheets, classifications, f.fileName)
+
+          pipelineLocalCandidates.push(...localCandidates)
+          pipelineSourceFiles.push({
+            fileName: f.fileName,
+            sourceType: 'Excel',
+          })
+        } catch (extractionErr) {
+          // eslint-disable-next-line no-console
+          console.warn('[upload-deal] Phase 1/2 extraction pipeline failed (non-fatal):', extractionErr)
+        }
       }
     }
     contentBlocks.push({ type: 'text', text: EXTRACTION_INSTRUCTIONS })
@@ -320,6 +350,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (deterministicCapexTotal != null) {
       finalResult.historicalCapexTotal = deterministicCapexTotal
     }
+
+    // Phase 3: attach additive PipelineExtraction if any Excel workbook
+    // produced extraction candidates. Failure-isolated above.
+    if (pipelineSourceFiles.length > 0) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { buildPipelineExtraction } = await import('../../lib/extraction/buildPipelineExtraction') as any
+        const pipelineExtraction = buildPipelineExtraction(pipelineLocalCandidates, pipelineSourceFiles, 'Excel')
+        finalResult.extraction = pipelineExtraction
+      } catch (extractionErr) {
+        // eslint-disable-next-line no-console
+        console.warn('[upload-deal] Failed to build PipelineExtraction (non-fatal):', extractionErr)
+      }
+    }
+
     return res.status(200).json(finalResult)
   } catch (err: unknown) {
     let detail = String(err)
