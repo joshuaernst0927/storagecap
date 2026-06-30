@@ -1192,6 +1192,33 @@ export default function Proforma() {
         waterfallResult ? `LP MOIC: ${waterfallResult.lpMOIC.toFixed(2)}x` : '',
         inputs.brokerageName ? `Broker: ${inputs.brokerageName}` : '',
       ].filter(Boolean).join('\n') || undefined,
+  modelOutputs: {
+    institutional: excelOutputs ?? undefined,
+    proforma: irrResult ? {
+      leveredIRR: irrResult.levered_irr ?? undefined,
+      unleveredIRR: irrResult.unlevered_irr ?? undefined,
+      equityMultiple: irrResult.equity_multiple ?? undefined,
+      loanAmount: irrResult.loan_amount ?? undefined,
+      annualDebtService: irrResult.annual_debt_service ?? undefined,
+      inPlaceNOI: irrResult.in_place_noi ?? undefined,
+      stabilizedNOI: irrResult.stabilized_noi ?? undefined,
+      year1DSCR: (irrResult.in_place_noi && irrResult.annual_debt_service && irrResult.annual_debt_service > 0)
+        ? irrResult.in_place_noi / irrResult.annual_debt_service
+        : undefined,
+    } : undefined,
+    waterfall: waterfallResult ? {
+      lpMOIC: waterfallResult.lpMOIC ?? undefined,
+      gpMOIC: waterfallResult.gpMOIC ?? undefined,
+      lpTotal: waterfallResult.lpTotal ?? undefined,
+      gpTotal: waterfallResult.gpTotal ?? undefined,
+      refiLoanAmount: waterfallResult.refiLoanAmount ?? undefined,
+      refiCashOut: waterfallResult.refiCashOut ?? undefined,
+    } : undefined,
+    equity: equityBreakdown ? {
+      totalRequired: equityBreakdown.total ?? undefined,
+    } : undefined,
+    savedAt: new Date().toISOString(),
+  },
     }
 
     // Existing record spread first, partial update second — preserves every
