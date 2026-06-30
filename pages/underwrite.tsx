@@ -363,7 +363,7 @@ export default function Underwrite() {
       setUnitMixPayload(prev => prev.map((r, idx) => idx === i ? { ...r, [k]: v } : r))
 
   useEffect(() => {
-    fetch('/api/pipeline-ingest')
+    fetch('/data/pipeline.json')
       .then(r => r.ok ? r.json() : [])
       .then((d: PipelineProperty[]) => setPipelineDeals(d))
       .catch(() => {})

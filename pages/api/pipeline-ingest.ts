@@ -1,4 +1,9 @@
 /**
+ * @deprecated pipeline-ingest is no longer the canonical pipeline source.
+ * The durable store is now GitHub-backed via /api/pipeline-save and /data/pipeline.json.
+ * Consumers in underwrite.tsx and pipeline.tsx have been migrated off this endpoint.
+ * Do not add new consumers. Safe to delete once confirmed no remaining callers.
+ *
  * Pipeline ingest API — receives and stores PipelineProperty objects.
  *
  * POST /api/pipeline-ingest  — accepts array of PipelineProperty objects

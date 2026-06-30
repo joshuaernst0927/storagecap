@@ -1313,24 +1313,6 @@ export default function Pipeline() {
     setSourcesLoaded(n => n + 1)
   }, [])
 
-  // Load from public/data/deals.json (written directly by Python pipeline)
-  useEffect(() => {
-    fetch('/data/deals.json')
-      .then(r => r.ok ? r.json() : [])
-      .then((data: PipelineProperty[]) => mergeProperties(data))
-      .catch(() => {})
-      .finally(() => setSourcesLoaded(n => n + 1))
-  }, [])
-
-  // Load from pipeline-ingest API (deals added via Upload Deal or manual push)
-  useEffect(() => {
-    fetch('/api/pipeline-ingest')
-      .then(r => r.ok ? r.json() : [])
-      .then((data: PipelineProperty[]) => mergeProperties(data))
-      .catch(() => {})
-      .finally(() => setSourcesLoaded(n => n + 1))
-  }, [])
-
   // Load from GitHub-backed pipeline.json (durable store) and run migration
   useEffect(() => {
     fetch('/data/pipeline.json')
