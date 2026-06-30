@@ -847,6 +847,31 @@ setFullExtraction(data)
                     <label className="label-text">Gross Revenue ($)</label>
                     <input className="input-field" value={form.grossRevenue} onChange={e => set('grossRevenue', e.target.value)} placeholder="375,000" />
                   </div>
+                  {fullExtraction && (fullExtraction.currentAvgRentPerUnit != null || fullExtraction.marketAvgRentPerUnit != null || fullExtraction.t3NOI != null) && (
+                  <div className="grid grid-cols-1 gap-3 p-4 border border-dark-border/40 bg-dark-surface/30">
+                    <div className="section-label text-xs mb-1">Extracted Rent &amp; NOI Data</div>
+                    {fullExtraction.currentAvgRentPerUnit != null && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-dark-muted">Current Avg Rent / Unit</span>
+                        <span className="font-medium">${Math.round(fullExtraction.currentAvgRentPerUnit).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {fullExtraction.marketAvgRentPerUnit != null && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-dark-muted">Market Avg Rent / Unit</span>
+                        <span className="font-medium">${Math.round(fullExtraction.marketAvgRentPerUnit).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {fullExtraction.t3NOI != null && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-dark-muted">T3 NOI (annualized)</span>
+                        <span className="font-medium">${Math.round(fullExtraction.t3NOI).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                  )}
+                  <div>
+                  </div>
                   <div>
                     <label className="label-text">Rentable SF</label>
                     <input className="input-field" value={form.sqft} onChange={e => set('sqft', e.target.value)} placeholder="42,500" />
