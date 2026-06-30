@@ -97,6 +97,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (err) {
     console.error('pipeline-save error:', err)
     // Return 200 so the client doesn't treat a GitHub failure as a hard error
-    return res.status(200).json({ ok: false, error: String(err) })
+    return res.status(500).json({ ok: false, error: String(err) })
   }
 }
