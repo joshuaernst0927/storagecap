@@ -44,6 +44,7 @@ const navItems: NavItem[] = [
       { href: '/analyze',     label: 'Analyze Deal' },
       { href: '/upload-deal', label: 'Upload Deal' },
       { href: '/proforma',    label: 'Build Proforma' },
+      { href: '/underwrite',  label: 'Institutional Underwrite' },
       { href: '/score-deal',  label: 'Score Deal' },
     ],
   },
@@ -254,6 +255,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <div className="flex flex-col gap-3">
                   <Link href="/" className="footer-link">Home</Link>
                   <Link href="/pipeline" className="footer-link">Acquisition Pipeline</Link>
+                  <Link href="/underwrite" className="footer-link">Institutional Underwrite</Link>
 
                   <Link href="/acquisitions" className="footer-link">Acquisitions</Link>
                 </div>
