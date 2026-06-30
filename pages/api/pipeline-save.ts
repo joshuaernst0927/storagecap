@@ -38,6 +38,24 @@ async function readGitHub(token: string): Promise<{ properties: PipelineProperty
   return { properties: JSON.parse(decoded) as PipelineProperty[], sha: file.sha as string }
 }
 
+class GitHubWriteError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
+function upsertProperty(properties: PipelineProperty[], property: PipelineProperty): PipelineProperty[] {
+  const idx = properties.findIndex(p => p.id === property.id)
+  if (idx >= 0) {
+    properties[idx] = { ...properties[idx], ...property }
+  } else {
+    properties.unshift(property)
+  }
+  return properties
+}
+
 async function writeGitHub(
   token: string,
   properties: PipelineProperty[],
@@ -59,7 +77,7 @@ async function writeGitHub(
   })
   if (!res.ok) {
     const err = await res.text()
-    throw new Error(`GitHub PUT failed: ${res.status} — ${err}`)
+    throw new GitHubWriteError(res.status, `GitHub PUT failed: ${res.status} — ${err}`)
   }
 }
 
@@ -79,24 +97,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing property or property.id' })
   }
 
-  try {
-    const { properties, sha } = await readGitHub(token)
+  const facilityName = property.facilityName ?? property.id
+  const message = `Pipeline: update ${facilityName}`
+  const maxAttempts = 2
 
-    // Upsert: replace existing entry with same id, or prepend new
-    const idx = properties.findIndex(p => p.id === property.id)
-    if (idx >= 0) {
-      properties[idx] = { ...properties[idx], ...property }
-    } else {
-      properties.unshift(property)
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const { properties, sha } = await readGitHub(token)
+      const nextProperties = upsertProperty(properties, property)
+      await writeGitHub(token, nextProperties, sha, message)
+      return res.status(200).json({ ok: true })
+    } catch (err) {
+      const isConflict = err instanceof GitHubWriteError && err.status === 409
+      const attemptsRemaining = attempt < maxAttempts - 1
+      if (isConflict && attemptsRemaining) {
+        console.warn(`pipeline-save: conflict on attempt ${attempt + 1}, retrying`)
+        continue
+      }
+      console.error('pipeline-save error:', err)
+      return res.status(500).json({ ok: false, error: String(err) })
     }
-
-    const facilityName = property.facilityName ?? property.id
-    await writeGitHub(token, properties, sha, `Pipeline: update ${facilityName}`)
-
-    return res.status(200).json({ ok: true })
-  } catch (err) {
-    console.error('pipeline-save error:', err)
-    // Return 200 so the client doesn't treat a GitHub failure as a hard error
-    return res.status(500).json({ ok: false, error: String(err) })
   }
 }
