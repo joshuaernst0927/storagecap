@@ -664,7 +664,9 @@ function WaterfallBox({ waterfall, inputs, leverageType, loanType }: {
         <div className="border border-gold bg-gold/5 p-4">
           <div className="text-sm uppercase tracking-widest text-gold mb-1">GP Total Earnings</div>
           <div className="text-2xl font-bold text-[#1B2B5E]">{fmt$(waterfall.gpTotal)}</div>
-          <div className="text-sm text-dark-muted mt-1">On $0 invested capital</div>
+          <div className="text-sm text-dark-muted mt-1">
+            {waterfall.gpMOIC > 0 ? `MOIC: ${waterfall.gpMOIC.toFixed(2)}x (on acquisition fee)` : 'On $0 invested capital'}
+          </div>
         </div>
       </div>
     </div>
@@ -691,6 +693,9 @@ function IRRBox({ result, offerPrice, exitSalePrice, equityBreakdown }: {
             {hasDebt ? fmtPct(result.levered_irr!, 1) : fmtPct(result.irr_at_max, 1)}
           </div>
           <div className="text-sm text-dark-muted mt-1">After debt service</div>
+          <div className="text-xs text-dark-muted mt-1">
+            LP IRR: {fmtPct(result.levered_irr ?? result.unlevered_irr ?? result.irr_at_max, 1)}
+          </div>
         </div>
         <div className="border border-dark-border p-4">
           <div className="text-sm uppercase tracking-widest text-dark-muted mb-1">Unlevered IRR</div>
