@@ -1388,6 +1388,10 @@ export default function Proforma() {
 
   // ── Institutional Model (Excel Engine) ──────────────────────────────────
   async function handleRunInstitutionalModel() {
+    if (!inputs.offerPrice) {
+      setExcelError('Offer Price is required before running the institutional model.')
+      return
+    }
     setExcelRunning(true)
     setExcelError('')
     setExcelOutputs(null)
@@ -2164,7 +2168,7 @@ export default function Proforma() {
               </button>
               <button
                 onClick={handleRunInstitutionalModel}
-                disabled={excelRunning || !inputs.offerPrice}
+                disabled={excelRunning}
                 className="px-8 py-4 border border-gold text-gold text-sm uppercase tracking-widest hover:bg-gold/10 transition-colors disabled:opacity-40 w-full md:w-auto"
               >
                 {excelRunning ? (
