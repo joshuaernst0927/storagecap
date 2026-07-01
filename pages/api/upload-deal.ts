@@ -359,6 +359,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { buildPipelineExtraction } = await import('../../lib/extraction/buildPipelineExtraction') as any
         const pipelineExtraction = buildPipelineExtraction(pipelineLocalCandidates, pipelineSourceFiles, 'Excel')
         finalResult.extraction = pipelineExtraction
+
+        // ── Canonical merge: override Claude-extracted financial fields
+        // with deterministic pipeline selected values where available.
+        // Claude handles descriptive/broker/OM fields; pipeline owns financials.
+        const canon = (pipelineExtraction as any).canonical ?? {}
+        const sel = (field: string): number | null => {
+          const entry = canon[field]
+          if (!entry) return null
+          const v = entry.selectedValue ?? entry.value ?? null
+          return typeof v === 'number' ? v : null
+        }
+        if (sel('t12Revenue')       != null) finalResult.t12Revenue       = sel('t12Revenue')
+        if (sel('t12TotalExpenses') != null) finalResult.t12TotalExpenses = sel('t12TotalExpenses')
+        if (sel('t12NOI')           != null) finalResult.t12NOI           = sel('t12NOI')
+        if (sel('t3NOI')            != null) finalResult.t3NOI            = sel('t3NOI')
+        if (sel('unitCount')        != null) finalResult.unitCount        = sel('unitCount')
+        if (sel('totalSF')          != null) finalResult.totalSF          = sel('totalSF')
+        if (sel('occupancy')        != null) {
+          finalResult.occupancy        = sel('occupancy')
+          finalResult.currentOccupancy = sel('occupancy')
+        }
+        if (sel('currentAvgRentPerUnit') != null) finalResult.currentAvgRentPerUnit = sel('currentAvgRentPerUnit')
+        if (sel('marketAvgRentPerUnit')  != null) finalResult.marketAvgRentPerUnit  = sel('marketAvgRentPerUnit')
+        // historicalCapexTotal: prefer deterministic capex sheet parse, then canonical
+        if (deterministicCapexTotal == null && sel('historicalCapexTotal') != null) {
+          finalResult.historicalCapexTotal = sel('historicalCapexTotal')
+        }
+
+        // ── Fix needsReview: set true if ANY canonical field has conflicts
+        const hasConflicts = Object.values(canon).some(
+          (entry: any) => entry?.needsReview === true || (entry?.conflicts?.length ?? 0) > 0
+        )
+        if (hasConflicts) {
+          (pipelineExtraction as any).needsReview = true
+        }
+
+        // ── Fix sourceFiles: include PDF files too, not just Excel
+        const allSourceFiles = files.map((f: any) => ({
+          fileName: f.fileName,
+          sourceType: f.mimeType?.includes('spreadsheetml') || f.fileName?.toLowerCase().endsWith('.xlsx')
+            ? 'Excel'
+            : f.mimeType?.includes('pdf') || f.fileName?.toLowerCase().endsWith('.pdf')
+            ? 'PDF'
+            : 'Other',
+        }))
+        ;(pipelineExtraction as any).sourceFiles = allSourceFiles
+
       } catch (extractionErr) {
         // eslint-disable-next-line no-console
         console.warn('[upload-deal] Failed to build PipelineExtraction (non-fatal):', extractionErr)
