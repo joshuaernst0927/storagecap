@@ -216,61 +216,61 @@ async function scanLandsOfAmerica() {
 }
 
 // ─── 2b. BizBuySell — self storage listings by state ──────────────────────────
-async function scanBizBuySell() {
-  log('BizBuySell', 'Starting...')
+async function scanBizBuySell(browser) {
+  log('BizBuySell', 'Starting (Puppeteer stealth)...')
   const leads = []
+  if (!browser) { log('BizBuySell', 'No browser — skipping'); return leads }
   const states = ['texas','georgia','south-carolina','tennessee','arizona','florida','alabama','mississippi','north-carolina','ohio']
   for (const state of states) {
     try {
+      const page = await browser.newPage()
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
       const urls = [
         `https://www.bizbuysell.com/${state}/storage-facilities-and-warehouses-for-sale/`,
         `https://www.bizbuysell.com/${state}/storage-facility-and-warehouse-business-real-estate/`,
       ]
       for (const url of urls) {
-        const res = await safeFetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
+        try {
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 })
+          await new Promise(r => setTimeout(r, 1500))
+          const html = await page.content()
+          const stateName = state.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          const titles = [...html.matchAll(/<h4[^>]*>([\s\S]*?)<\/h4>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(t => t.length > 5)
+          const links = [...html.matchAll(/href="(\/(?:businesses|real-estate)\/[^"?#]+)"/gi)].map(m => m[1]).filter((v, i, a) => a.indexOf(v) === i)
+          const prices = [...html.matchAll(/\$([\d,]+(?:\.\d+)?(?:\s*(?:Million|M|K))?)/gi)].map(m => m[0])
+          const phones = [...html.matchAll(/\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/g)].map(m => m[0])
+          for (let i = 0; i < Math.min(titles.length, links.length, 25); i++) {
+            const title = titles[i]
+            if (!title || title.length < 5) continue
+            if (!/storage|warehouse|self.stor/i.test(title + (links[i] || ''))) continue
+            leads.push({
+              id: generateLeadId(),
+              facilityName: title.substring(0, 120),
+              businessName: title.substring(0, 120),
+              address: stateName,
+              city: stateName,
+              state: state.substring(0, 2).toUpperCase(),
+              askingPrice: prices[i] || null,
+              ownerName: 'BizBuySell Listing',
+              contactInfo: phones[i] ? { phone: phones[i] } : {},
+              source: 'bizbuysell',
+              sourceUrl: `https://www.bizbuysell.com${links[i] || ''}`,
+              distressSignals: { bankruptcy: false },
+              score: scoreLead({ bankruptcy: false }),
+              signals: {},
+              status: 'new',
+              foundAt: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              notes: `BizBuySell listing — ${stateName}`,
+            })
           }
-        })
-        if (!res.ok) { log('BizBuySell', `${state}: HTTP ${res.status}`); continue }
-        const html = await res.text()
-        // Extract listing cards from BizBuySell HTML
-        const listingRegex = /<a[^>]+href="(\/(?:businesses|real-estate)\/[^"]+)"[^>]*class="[^"]*listing[^"]*"[^>]*>|data-id="(\d+)"[^>]*>[\s\S]*?<h4[^>]*>([\s\S]*?)<\/h4>[\s\S]*?<address[^>]*>([\s\S]*?)<\/address>/gi
-        const titleRegex = /<h4[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/h4>/gi
-        const linkRegex = /<a[^>]+href="(\/(?:businesses|real-estate)\/[^"?#"]+)"[^>]*>/gi
-        const priceRegex = /\$[\d,]+(?:\s*(?:Million|M|K))?\s*(?:Asking Price)?/gi
-
-        const titles = [...html.matchAll(/<h4[^>]*>([\s\S]*?)<\/h4>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(t => t.length > 5)
-        const links = [...html.matchAll(/href="(\/(?:businesses|real-estate)\/[^"?#]+)"/gi)].map(m => m[1]).filter((v,i,a) => a.indexOf(v) === i)
-        const prices = [...html.matchAll(/\$([\d,]+(?:\.\d+)?(?:\s*(?:Million|M|K))?)/gi)].map(m => m[0])
-
-        for (let i = 0; i < Math.min(titles.length, links.length, 20); i++) {
-          const title = titles[i]
-          if (!title || title.length < 5) continue
-          if (!/storage|warehouse|self.stor/i.test(title + (links[i] || ''))) continue
-          const sourceUrl = `https://www.bizbuysell.com${links[i] || ''}`
-          leads.push({
-            id: generateLeadId(),
-            businessName: title.substring(0, 100),
-            address: state.replace(/-/g,' ').replace(/\w/g,c=>c.toUpperCase()),
-            city: state.replace(/-/g,' ').replace(/\w/g,c=>c.toUpperCase()),
-            state: state.substring(0,2).toUpperCase(),
-            askingPrice: prices[i] || null,
-            ownerName: 'BizBuySell Listing',
-            source: 'bizbuysell',
-            sourceUrl,
-            score: scoreLead({ bankruptcy: false }),
-            signals: {},
-            foundAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-            notes: `BizBuySell listing — ${state}`,
-          })
-        }
-        await new Promise(r => setTimeout(r, 800))
+        } catch (pe) { log('BizBuySell', `${state} page error: ${pe.message}`) }
+        await new Promise(r => setTimeout(r, 1000))
       }
+      await page.close()
     } catch (err) { log('BizBuySell', `${state} error: ${err.message}`) }
+    await new Promise(r => setTimeout(r, 800))
   }
   log('BizBuySell', `Found ${leads.length} leads`)
   return leads
@@ -458,7 +458,7 @@ async function scanFSBO() {
 
 // ─── 6. Crexi — Puppeteer stealth (403 on plain fetch) ────────────────────────
 async function scanCrexi(browser) {
-  log('Crexi', 'Starting (Puppeteer stealth)...')
+  log('Crexi', 'Starting (Puppeteer + API intercept)...')
   const leads = []
   if (!browser) { log('Crexi', 'No browser — skipping'); return leads }
   const TARGET_STATES_CREXI = ['TX','GA','SC','TN','AZ','FL','AL','MS','NC','OH']
@@ -467,39 +467,56 @@ async function scanCrexi(browser) {
       const page = await browser.newPage()
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
       await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-      const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale&states=${state}`
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
-      await new Promise(r => setTimeout(r, 2000))
-      const html = await page.content()
-      await page.close()
-      const jsonMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
-      if (jsonMatch) {
+      const apiResults = []
+      await page.setRequestInterception(true)
+      page.on('request', req => req.continue())
+      page.on('response', async res => {
         try {
-          const data = JSON.parse(jsonMatch[1])
-          const props = data?.props?.pageProps
-          const listings = props?.properties || props?.listings || props?.results || []
-          for (const p of listings.slice(0, 20)) {
-            const addr = p.address || p.location || p.street || ''
-            leads.push({
-              id: generateLeadId(),
-              businessName: p.name || p.title || (typeof addr === 'string' ? addr : '') || 'Crexi Listing',
-              address: typeof addr === 'string' ? addr : 'See Crexi listing',
-              city: p.city || '', state: p.state || state,
-              askingPrice: p.price ? `$${Number(p.price).toLocaleString()}` : null,
-              ownerName: p.brokerName || 'Crexi Listing',
-              source: 'crexi',
-              sourceUrl: p.url ? `https://www.crexi.com${p.url}` : `https://www.crexi.com/properties/${p.id || p.slug || ''}`,
-              score: scoreLead({ bankruptcy: false }),
-              signals: {},
-              foundAt: new Date().toISOString(),
-              lastUpdated: new Date().toISOString(),
-              notes: `Crexi self-storage listing — ${state}`,
-            })
+          const u = res.url()
+          if (u.includes('crexi.com') && (u.includes('/search') || u.includes('/properties') || u.includes('/api/')) && (res.headers()['content-type'] || '').includes('json')) {
+            const json = await res.json().catch(() => null)
+            if (json) {
+              const items = json.data || json.results || json.properties || json.listings || []
+              if (Array.isArray(items) && items.length > 0) apiResults.push(...items)
+            }
           }
-        } catch(e) {}
+        } catch (e) {}
+      })
+      const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale&states=${state}`
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 35000 })
+      await new Promise(r => setTimeout(r, 3000))
+      await page.setRequestInterception(false)
+      if (apiResults.length > 0) {
+        for (const p of apiResults.slice(0, 25)) {
+          const addr = p.address || p.location || p.street || p.fullAddress || ''
+          leads.push({
+            id: generateLeadId(),
+            facilityName: p.name || p.title || (typeof addr === 'string' ? addr : '') || 'Crexi Listing',
+            businessName: p.name || p.title || 'Crexi Listing',
+            address: typeof addr === 'string' ? addr : 'See Crexi listing',
+            city: p.city || p.municipality || '',
+            state: p.state || p.stateCode || state,
+            askingPrice: (p.price || p.askingPrice) ? `$${Number(p.price || p.askingPrice).toLocaleString()}` : null,
+            ownerName: p.brokerName || p.contactName || p.agentName || 'Crexi Listing',
+            contactInfo: {
+              phone: p.brokerPhone || p.contactPhone || p.phone || null,
+              email: p.brokerEmail || p.contactEmail || p.email || null,
+            },
+            source: 'crexi',
+            sourceUrl: p.url ? `https://www.crexi.com${p.url}` : `https://www.crexi.com/properties/${p.id || p.slug || ''}`,
+            distressSignals: { bankruptcy: false },
+            score: scoreLead({ bankruptcy: false }),
+            signals: {},
+            status: 'new',
+            foundAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+            notes: `Crexi self-storage listing — ${state}`,
+          })
+        }
       }
-      await new Promise(r => setTimeout(r, 1500))
+      await page.close()
     } catch (err) { log('Crexi', `${state} error: ${err.message}`) }
+    await new Promise(r => setTimeout(r, 1200))
   }
   log('Crexi', `Found ${leads.length} leads`)
   return leads
@@ -787,7 +804,7 @@ async function main() {
     log('Runner', 'Running API + fetch-based scrapers in parallel...')
     const fetchResults = await Promise.allSettled([
       scanCourtListener(),
-      scanBizBuySell(),
+      // scanBizBuySell moved to browser block
       scanBizQuest(),
       scanShowcase(),
       scanBrevitas(),
@@ -806,6 +823,7 @@ async function main() {
     if (browser) {
       log('Runner', 'Running Puppeteer-based scrapers...')
       try { browserLeads.push(...await scanLoopNet(browser)) } catch (e) { log('LoopNet', `Fatal: ${e.message}`) }
+      try { browserLeads.push(...await scanBizBuySell(browser)) } catch (e) { log('BizBuySell', `Fatal: ${e.message}`) }
       try { browserLeads.push(...await scanCrexi(browser)) } catch (e) { log('Crexi', `Fatal: ${e.message}`) }
       try { browserLeads.push(...await scanFacebook(browser)) } catch (e) { log('Facebook', `Fatal: ${e.message}`) }
     }
@@ -825,6 +843,35 @@ async function main() {
     console.log(`  ${'TOTAL'.padEnd(16)}: ${allLeads.length}`)
 
     persistLeads(allLeads)
+
+    // ── Daily email digest ──
+    try {
+      const allSaved = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'data', 'leads.json'), 'utf-8'))
+      const newLeads = allSaved.filter(l => {
+        const age = Date.now() - new Date(l.foundAt).getTime()
+        return age < 25 * 60 * 60 * 1000
+      })
+      if (newLeads.length > 0 && process.env.EMAIL_PASSWORD) {
+        const nodemailer = require('nodemailer')
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com', port: 587, secure: false,
+          auth: { user: 'joshuaernst@gmail.com', pass: process.env.EMAIL_PASSWORD },
+        })
+        const rows = newLeads.map(l => `<tr><td style="padding:6px 10px;border-bottom:1px solid #eee"><b>${l.facilityName || l.businessName || l.address}</b><br><span style="font-size:12px;color:#888">${l.city || ''}, ${l.state || ''}</span></td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12px">${l.source}</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12px">${l.askingPrice || '—'}</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:12px">${(l.contactInfo && l.contactInfo.phone) || (l.notes || '').match(/\d{3}[.\-\s]\d{3}[.\-\s]\d{4}/) || '—'}</td></tr>`).join('')
+        const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f6f9;padding:32px"><table width="600" style="background:#fff;border:1px solid #e2e6ea;border-radius:4px;overflow:hidden;margin:0 auto"><tr><td style="background:#1B2B5E;padding:24px 32px"><div style="font-family:Georgia,serif;font-size:20px;color:#fff">YEM Acquisitions</div><div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px;text-transform:uppercase;letter-spacing:0.1em">Morning Lead Digest — ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</div></td></tr><tr><td style="padding:24px 32px"><p style="margin:0 0 16px;color:#333"><b>${newLeads.length} new lead${newLeads.length===1?'':'s'}</b> found today across ${[...new Set(newLeads.map(l=>l.source))].join(', ')}.</p><table width="100%" cellpadding="0" cellspacing="0"><tr style="background:#f8f9fa"><th style="padding:8px 10px;text-align:left;font-size:12px;color:#555">Property</th><th style="padding:8px 10px;text-align:left;font-size:12px;color:#555">Source</th><th style="padding:8px 10px;text-align:left;font-size:12px;color:#555">Price</th><th style="padding:8px 10px;text-align:left;font-size:12px;color:#555">Phone</th></tr>${rows}</table></td></tr><tr><td style="padding:16px 32px;background:#f8f9fa;font-size:11px;color:#aaa;text-align:center">YEM Acquisitions LLC · Woodmere, NY · Automated lead digest</td></tr></table></body></html>`
+        await transporter.sendMail({
+          from: 'YEM Acquisitions <joshuaernst@gmail.com>',
+          to: 'joshuaernst@gmail.com',
+          subject: `YEM Lead Digest — ${newLeads.length} new lead${newLeads.length===1?'':'s'} — ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}`,
+          html,
+        })
+        log('Email', `Digest sent — ${newLeads.length} new leads`)
+      } else if (!process.env.EMAIL_PASSWORD) {
+        log('Email', 'EMAIL_PASSWORD not set — digest skipped')
+      } else {
+        log('Email', 'No new leads today — digest skipped')
+      }
+    } catch(emailErr) { log('Email', `Digest error: ${emailErr.message}`) }
 
   } finally {
     if (browser) await browser.close()
