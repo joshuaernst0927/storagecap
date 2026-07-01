@@ -185,6 +185,7 @@ export default function UploadDeal() {
   const [extracted, setExtracted] = useState(false)
   const [autoScoring, setAutoScoring] = useState(false)
   const [autoScore, setAutoScore] = useState<{ inputs: DealScoreInputs; reasoning: string } | null>(null)
+  const [debugResult, setDebugResult] = useState<any>(null)
 
   const set = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }))
 
@@ -282,7 +283,10 @@ export default function UploadDeal() {
       if (batch.length > 0) batches.push(batch)
 
       const results: ExtractionResult[] = []
-      for (const b of batches) results.push(await extractPayload(b) as ExtractionResult)
+      const debugRawBatches: any[] = []
+      for (const b of batches) const batchRaw = await extractPayload(b) as ExtractionResult
+      results.push(batchRaw)
+      debugRawBatches.push(batchRaw)
 
       // Parse Excel files directly client-side for fields the API misses
       const xlsxFiles = files.filter(({ mime }) => mime.includes('spreadsheetml') || mime === 'application/vnd.ms-excel')
@@ -294,6 +298,27 @@ export default function UploadDeal() {
       const data = mergeExtractionResults(results)
 
       setFullExtraction(data)
+      setDebugResult({
+        timestamp: new Date().toISOString(),
+        filesUploaded: files.map(f => ({ name: f.file.name, type: f.mime, size: f.file.size })),
+        batchResponses: debugRawBatches,
+        mergedExtraction: data,
+        formFields: {
+          propertyName: data?.propertyName ?? data?.facilityName ?? null,
+          unitCount: data?.unitCount ?? data?.totalUnits ?? null,
+          totalSF: data?.totalSF ?? data?.sqft ?? null,
+          occupancy: data?.currentOccupancy ?? data?.occupancy ?? null,
+          t12NOI: data?.t12NOI ?? data?.noi ?? null,
+          currentAvgRent: data?.currentAvgRentPerUnit ?? null,
+          marketAvgRent: data?.marketAvgRentPerUnit ?? null,
+          askingPrice: data?.askingPrice ?? null,
+          sheetsDetected: data?.sheetsClassified ?? data?.extraction?.sheetsClassified ?? null,
+          confidence: data?.confidence ?? data?.extraction?.confidence ?? null,
+          provenance: data?.provenance ?? data?.extraction?.provenance ?? null,
+          extractionErrors: data?.errors ?? data?.extractionErrors ?? null,
+        },
+        ok: true,
+      })
       setForm({
         facilityName: data.facilityName ?? '',
         address: data.address ?? '',
@@ -500,7 +525,8 @@ export default function UploadDeal() {
   }
 
   function handleStartOver() {
-    setExtracted(false); setFiles([]); setForm(EMPTY_FORM)
+    setExtracted(false)
+    setDebugResult(null); setFiles([]); setForm(EMPTY_FORM)
     setHighlights([]); setExtractError(''); setAutoScore(null)
     setAutoScoring(false); setFullExtraction(null)
   }
@@ -544,7 +570,41 @@ export default function UploadDeal() {
             </>
           )}
 
-          {extracted && (
+          {debugResult && (
+        <div style={{marginTop:'24px',background:'#0f1117',borderRadius:'8px',padding:'24px',border:'1px solid #2d3748'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
+            <h3 style={{color:'#68d391',fontFamily:'monospace',fontSize:'14px',margin:0}}>⚡ EXTRACTION DEBUG RESULT</h3>
+            <button onClick={()=>navigator.clipboard.writeText(JSON.stringify(debugResult,null,2))} style={{fontSize:'11px',padding:'4px 10px',background:'#2d3748',color:'#a0aec0',border:'none',borderRadius:'4px',cursor:'pointer'}}>Copy JSON</button>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'16px'}}>
+            {([
+              ['API Success', debugResult.ok ? '✅ YES' : '❌ ' + (debugResult.error || 'NO')],
+              ['Property Name', debugResult.formFields?.propertyName || '—'],
+              ['Unit Count', String(debugResult.formFields?.unitCount ?? '—')],
+              ['Square Footage', String(debugResult.formFields?.totalSF ?? '—')],
+              ['Occupancy', String(debugResult.formFields?.occupancy ?? '—')],
+              ['T-12 NOI', String(debugResult.formFields?.t12NOI ?? '—')],
+              ['Avg Rent/Unit', String(debugResult.formFields?.currentAvgRent ?? '—')],
+              ['Asking Price', String(debugResult.formFields?.askingPrice ?? '—')],
+              ['Sheets Detected', JSON.stringify(debugResult.formFields?.sheetsDetected ?? '—')],
+              ['Confidence', String(debugResult.formFields?.confidence ?? '—')],
+              ['Extraction Errors', JSON.stringify(debugResult.formFields?.extractionErrors ?? '—')],
+              ['Files', debugResult.filesUploaded?.map((f: any) => f.name).join(', ') || '—'],
+            ] as [string,string][]).map(([label, value]) => (
+              <div key={label} style={{background:'#1a202c',borderRadius:'4px',padding:'8px 12px'}}>
+                <div style={{fontSize:'10px',color:'#718096',textTransform:'uppercase' as const,letterSpacing:'0.05em',marginBottom:'2px'}}>{label}</div>
+                <div style={{fontSize:'13px',color:'#e2e8f0',fontFamily:'monospace',wordBreak:'break-all' as const}}>{String(value).substring(0,200)}</div>
+              </div>
+            ))}
+          </div>
+          <details>
+            <summary style={{color:'#a0aec0',fontSize:'12px',cursor:'pointer',marginBottom:'8px'}}>Full JSON Response</summary>
+            <pre style={{color:'#68d391',fontSize:'11px',overflow:'auto',maxHeight:'400px',margin:0,whiteSpace:'pre-wrap' as const}}>{JSON.stringify(debugResult,null,2)}</pre>
+          </details>
+        </div>
+      )}
+
+      {extracted && (
             <div className="border border-dark-border bg-dark-surface">
               <div className="border-b border-dark-border px-7 py-5">
                 <div className="section-label-sm mb-0.5">Extracted Data</div>
