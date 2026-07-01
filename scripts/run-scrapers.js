@@ -44,7 +44,7 @@ const path = require('path')
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const LEADS_FILE    = path.join(__dirname, '..', 'public', 'data', 'leads.json')
-const CL_TOKEN      = process.env.COURTLISTENER_TOKEN || '25e0d81f7c377dbdd866ba6165afe7af4fa9c99e'
+const CL_TOKEN      = process.env.COURTLISTENER_TOKEN
 const TARGET_STATES = ['TX', 'GA', 'SC', 'TN', 'AZ', 'FL', 'AL', 'MS', 'NC', 'OH']
 
 // Browser paths — Linux server first, then Windows local
@@ -671,6 +671,10 @@ function persistLeads(newLeads) {
   // Deduplicate: existing + new, keyed by sourceUrl (or id as fallback)
   const existingKeys = new Set(existing.map(l => l.sourceUrl || l.id))
   const deduped      = newLeads.filter(l => !existingKeys.has(l.sourceUrl || l.id))
+  if (deduped.length === 0) {
+    console.log(`\n  No new leads found; leads.json unchanged.`)
+    return { total: existing.length, added: 0 }
+  }
 
   const merged = [...existing, ...deduped]
   merged.sort((a, b) => new Date(b.foundAt).getTime() - new Date(a.foundAt).getTime())
