@@ -284,9 +284,11 @@ export default function UploadDeal() {
 
       const results: ExtractionResult[] = []
       const debugRawBatches: any[] = []
-      for (const b of batches) const batchRaw = await extractPayload(b) as ExtractionResult
-      results.push(batchRaw)
-      debugRawBatches.push(batchRaw)
+      for (const b of batches) {
+        const batchRaw = await extractPayload(b) as ExtractionResult
+        results.push(batchRaw)
+        debugRawBatches.push(batchRaw)
+      }
 
       // Parse Excel files directly client-side for fields the API misses
       const xlsxFiles = files.filter(({ mime }) => mime.includes('spreadsheetml') || mime === 'application/vnd.ms-excel')
@@ -300,22 +302,22 @@ export default function UploadDeal() {
       setFullExtraction(data)
       setDebugResult({
         timestamp: new Date().toISOString(),
-        filesUploaded: files.map(f => ({ name: f.file.name, type: f.mime, size: f.file.size })),
+        filesUploaded: files.map(f => ({ name: (f as any).file?.name ?? '', type: (f as any).mime ?? '', size: (f as any).file?.size ?? 0 })),
         batchResponses: debugRawBatches,
         mergedExtraction: data,
         formFields: {
-          propertyName: data?.propertyName ?? data?.facilityName ?? null,
-          unitCount: data?.unitCount ?? data?.totalUnits ?? null,
-          totalSF: data?.totalSF ?? data?.sqft ?? null,
-          occupancy: data?.currentOccupancy ?? data?.occupancy ?? null,
-          t12NOI: data?.t12NOI ?? data?.noi ?? null,
-          currentAvgRent: data?.currentAvgRentPerUnit ?? null,
-          marketAvgRent: data?.marketAvgRentPerUnit ?? null,
-          askingPrice: data?.askingPrice ?? null,
-          sheetsDetected: data?.sheetsClassified ?? data?.extraction?.sheetsClassified ?? null,
-          confidence: data?.confidence ?? data?.extraction?.confidence ?? null,
-          provenance: data?.provenance ?? data?.extraction?.provenance ?? null,
-          extractionErrors: data?.errors ?? data?.extractionErrors ?? null,
+          propertyName: (data as any)?.propertyName ?? (data as any)?.facilityName ?? null,
+          unitCount: (data as any)?.unitCount ?? (data as any)?.totalUnits ?? null,
+          totalSF: (data as any)?.totalSF ?? (data as any)?.sqft ?? null,
+          occupancy: (data as any)?.currentOccupancy ?? (data as any)?.occupancy ?? null,
+          t12NOI: (data as any)?.t12NOI ?? (data as any)?.noi ?? null,
+          currentAvgRent: (data as any)?.currentAvgRentPerUnit ?? null,
+          marketAvgRent: (data as any)?.marketAvgRentPerUnit ?? null,
+          askingPrice: (data as any)?.askingPrice ?? null,
+          sheetsDetected: (data as any)?.sheetsClassified ?? (data as any)?.extraction?.sheetsClassified ?? null,
+          confidence: (data as any)?.confidence ?? (data as any)?.extraction?.confidence ?? null,
+          provenance: (data as any)?.provenance ?? (data as any)?.extraction?.provenance ?? null,
+          extractionErrors: (data as any)?.errors ?? (data as any)?.extractionErrors ?? null,
         },
         ok: true,
       })
