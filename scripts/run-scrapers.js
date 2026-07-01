@@ -211,72 +211,159 @@ async function scanCourtListener() {
 
 // ─── 2. Lands of America / Land.com — RSS feed for rural/commercial storage ────
 async function scanLandsOfAmerica() {
-  log('LandsOfAmerica', 'Starting...')
+  // DEPRECATED — returns HTTP 400, replaced by BizBuySell/BizQuest
+  return []
+}
+
+// ─── 2b. BizBuySell — self storage listings by state ──────────────────────────
+async function scanBizBuySell() {
+  log('BizBuySell', 'Starting...')
   const leads = []
-  const urls = [
-    'https://www.landsofamerica.com/search/farm-and-ranch-real-estate/self-storage/?sort=newest&type=sale',
-    'https://www.land.com/search/?q=self+storage&propertyTypes=Commercial&statuses=ForSale',
-  ]
-  for (const url of urls) {
+  const states = ['texas','georgia','south-carolina','tennessee','arizona','florida','alabama','mississippi','north-carolina','ohio']
+  for (const state of states) {
     try {
-      const res = await safeFetch(url, { timeout: 10000 })
-      if (!res.ok) { log('LandsOfAmerica', `HTTP ${res.status}`); continue }
-      const html = await res.text()
-      const ndM  = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
-      if (!ndM) continue
-      const data     = JSON.parse(ndM[1])
-      const listings = data?.props?.pageProps?.listings
-        || data?.props?.pageProps?.properties || []
-      for (const l of listings) {
-        const name = l.title || l.name || ''
-        if (!name || !/storage/i.test(name)) continue
-        leads.push({
-          id: generateLeadId(),
-          facilityName: name.slice(0, 80),
-          address: l.address || 'See listing',
-          city: l.city || 'Unknown', state: l.state || 'US',
-          askingPrice: l.price || l.askingPrice || undefined,
-          ownerName: 'Unknown', source: 'fsbo',
-          sourceUrl: l.url || url,
-          distressSignals: {}, score: scoreLead({}), status: 'new',
-          foundAt: new Date().toISOString(), lastUpdated: new Date().toISOString(),
+      const urls = [
+        `https://www.bizbuysell.com/${state}/storage-facilities-and-warehouses-for-sale/`,
+        `https://www.bizbuysell.com/${state}/storage-facility-and-warehouse-business-real-estate/`,
+      ]
+      for (const url of urls) {
+        const res = await safeFetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+          }
         })
+        if (!res.ok) { log('BizBuySell', `${state}: HTTP ${res.status}`); continue }
+        const html = await res.text()
+        // Extract listing cards from BizBuySell HTML
+        const listingRegex = /<a[^>]+href="(\/(?:businesses|real-estate)\/[^"]+)"[^>]*class="[^"]*listing[^"]*"[^>]*>|data-id="(\d+)"[^>]*>[\s\S]*?<h4[^>]*>([\s\S]*?)<\/h4>[\s\S]*?<address[^>]*>([\s\S]*?)<\/address>/gi
+        const titleRegex = /<h4[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/h4>/gi
+        const linkRegex = /<a[^>]+href="(\/(?:businesses|real-estate)\/[^"?#"]+)"[^>]*>/gi
+        const priceRegex = /\$[\d,]+(?:\s*(?:Million|M|K))?\s*(?:Asking Price)?/gi
+
+        const titles = [...html.matchAll(/<h4[^>]*>([\s\S]*?)<\/h4>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(t => t.length > 5)
+        const links = [...html.matchAll(/href="(\/(?:businesses|real-estate)\/[^"?#]+)"/gi)].map(m => m[1]).filter((v,i,a) => a.indexOf(v) === i)
+        const prices = [...html.matchAll(/\$([\d,]+(?:\.\d+)?(?:\s*(?:Million|M|K))?)/gi)].map(m => m[0])
+
+        for (let i = 0; i < Math.min(titles.length, links.length, 20); i++) {
+          const title = titles[i]
+          if (!title || title.length < 5) continue
+          if (!/storage|warehouse|self.stor/i.test(title + (links[i] || ''))) continue
+          const sourceUrl = `https://www.bizbuysell.com${links[i] || ''}`
+          leads.push({
+            id: generateLeadId(),
+            businessName: title.substring(0, 100),
+            address: state.replace(/-/g,' ').replace(/\w/g,c=>c.toUpperCase()),
+            city: state.replace(/-/g,' ').replace(/\w/g,c=>c.toUpperCase()),
+            state: state.substring(0,2).toUpperCase(),
+            askingPrice: prices[i] || null,
+            ownerName: 'BizBuySell Listing',
+            source: 'bizbuysell',
+            sourceUrl,
+            score: scoreLead({ bankruptcy: false }),
+            signals: {},
+            foundAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+            notes: `BizBuySell listing — ${state}`,
+          })
+        }
+        await new Promise(r => setTimeout(r, 800))
       }
-    } catch (err) { log('LandsOfAmerica', `Error: ${err.message}`) }
+    } catch (err) { log('BizBuySell', `${state} error: ${err.message}`) }
   }
-  log('LandsOfAmerica', `Found ${leads.length} leads`)
+  log('BizBuySell', `Found ${leads.length} leads`)
   return leads
 }
 
-// ─── 3. Showcase.com — commercial real estate RSS / search ────────────────────
+// ─── 2c. BizQuest — self storage listings ─────────────────────────────────────
+async function scanBizQuest() {
+  log('BizQuest', 'Starting...')
+  const leads = []
+  try {
+    const urls = [
+      'https://www.bizquest.com/self-storage-businesses-for-sale/',
+      'https://www.bizquest.com/industry/storage-and-warehousing-businesses-for-sale/IBB205/',
+    ]
+    for (const url of urls) {
+      const res = await safeFetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+      })
+      if (!res.ok) { log('BizQuest', `HTTP ${res.status}`); continue }
+      const html = await res.text()
+      const titles = [...html.matchAll(/<h\d[^>]*class="[^"]*(?:title|name|listing)[^"]*"[^>]*>([\s\S]*?)<\/h\d>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim()).filter(t => t.length > 5)
+      const links = [...html.matchAll(/href="(\/(?:buy\/)?[^"?#]+(?:storage|warehouse)[^"?#]*)"/gi)].map(m => m[1]).filter((v,i,a) => a.indexOf(v) === i)
+      const prices = [...html.matchAll(/\$([\d,]+(?:\s*(?:Million|M|K))?)/gi)].map(m => m[0])
+      for (let i = 0; i < Math.min(titles.length, 20); i++) {
+        if (!titles[i] || titles[i].length < 5) continue
+        leads.push({
+          id: generateLeadId(),
+          businessName: titles[i].substring(0, 100),
+          address: 'See BizQuest listing',
+          city: '', state: '',
+          askingPrice: prices[i] || null,
+          ownerName: 'BizQuest Listing',
+          source: 'bizquest',
+          sourceUrl: links[i] ? `https://www.bizquest.com${links[i]}` : url,
+          score: scoreLead({ bankruptcy: false }),
+          signals: {},
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: 'BizQuest self-storage listing',
+        })
+      }
+      await new Promise(r => setTimeout(r, 800))
+    }
+  } catch (err) { log('BizQuest', `Error: ${err.message}`) }
+  log('BizQuest', `Found ${leads.length} leads`)
+  return leads
+}
+
+// ─── 3. Showcase.com ──────────────────────────────────────────────────────────
 async function scanShowcase() {
   log('Showcase', 'Starting...')
   const leads = []
   try {
-    const res = await safeFetch(
+    const urls = [
       'https://www.showcase.com/search/?q=self+storage&property_type=industrial&transaction_type=sale',
-      { timeout: 12000 }
-    )
-    if (!res.ok) { log('Showcase', `HTTP ${res.status}`); return leads }
-    const html = await res.text()
-    const ndM  = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
-    if (ndM) {
-      const data = JSON.parse(ndM[1])
-      const listings = data?.props?.pageProps?.listings || data?.props?.pageProps?.results || []
-      for (const l of listings) {
-        const name = l.name || l.title || l.address || ''
-        if (!/storage/i.test(name)) continue
-        leads.push({
-          id: generateLeadId(),
-          facilityName: name.slice(0, 80),
-          address: l.address || 'See listing',
-          city: l.city || 'Unknown', state: l.state || 'US',
-          askingPrice: l.price || undefined,
-          ownerName: 'Unknown', source: 'fsbo',
-          sourceUrl: l.url || 'https://www.showcase.com',
-          distressSignals: {}, score: scoreLead({}), status: 'new',
-          foundAt: new Date().toISOString(), lastUpdated: new Date().toISOString(),
-        })
+      'https://www.showcase.com/search/?q=storage+facility&transaction_type=sale',
+    ]
+    for (const url of urls) {
+      const res = await safeFetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+      })
+      if (!res.ok) { log('Showcase', `HTTP ${res.status}`); continue }
+      const html = await res.text()
+      const jsonMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
+      if (jsonMatch) {
+        try {
+          const data = JSON.parse(jsonMatch[1])
+          const props = data?.props?.pageProps
+          const listings = props?.listings || props?.results || props?.properties || []
+          for (const l of listings.slice(0, 20)) {
+            leads.push({
+              id: generateLeadId(),
+              businessName: l.name || l.title || l.address || 'Showcase Listing',
+              address: l.address || l.street || 'See Showcase listing',
+              city: l.city || '', state: l.state || '',
+              askingPrice: l.price ? `$${l.price.toLocaleString()}` : null,
+              ownerName: l.broker || 'Showcase Listing',
+              source: 'showcase',
+              sourceUrl: l.url ? `https://www.showcase.com${l.url}` : url,
+              score: scoreLead({ bankruptcy: false }),
+              signals: {},
+              foundAt: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              notes: 'Showcase.com listing',
+            })
+          }
+        } catch(e) {}
       }
     }
   } catch (err) { log('Showcase', `Error: ${err.message}`) }
@@ -284,194 +371,173 @@ async function scanShowcase() {
   return leads
 }
 
-// ─── 4. Brevitas — fetch + __NEXT_DATA__ parse ────────────────────────────────
+// ─── 4. Brevitas ──────────────────────────────────────────────────────────────
 async function scanBrevitas() {
   log('Brevitas', 'Starting...')
-  const queries = [
-    'https://www.brevitas.com/search/?q=self+storage&type=sale',
-    'https://www.brevitas.com/search/?q=storage+facility&type=sale',
-  ]
-
-  const seen = new Set()
   const leads = []
-
-  for (const url of queries) {
-    try {
-      const res = await safeFetch(url)
+  try {
+    const urls = [
+      'https://www.brevitas.com/search/?q=self+storage&type=sale',
+      'https://www.brevitas.com/search/?q=storage+facility&type=sale',
+    ]
+    for (const url of urls) {
+      const res = await safeFetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Referer': 'https://www.brevitas.com/',
+        }
+      })
       if (!res.ok) { log('Brevitas', `HTTP ${res.status}`); continue }
       const html = await res.text()
-
-      // Try __NEXT_DATA__ (Brevitas is Next.js)
-      const ndMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
-      if (ndMatch) {
-        const pageData = JSON.parse(ndMatch[1])
-        const listings = pageData?.props?.pageProps?.listings
-          || pageData?.props?.pageProps?.properties
-          || pageData?.props?.pageProps?.results
-          || []
-        for (const l of listings) {
-          const name = l.title || l.name || ''
-          const key  = l.id || l.slug || l.url || name
-          if (!name || !/storage/i.test(name) || seen.has(key)) continue
-          seen.add(key)
-
-          const addr  = typeof l.address === 'string' ? l.address : (l.address?.full || l.location || '')
-          const stateM = addr.match(/,\s*([A-Z]{2})/)
-          const state  = stateM?.[1] || l.state || 'US'
-          const cityM  = addr.match(/^([^,]+)/)
-          const city   = cityM?.[1]?.trim() || l.city || state
-
-          leads.push({
-            id: generateLeadId(),
-            facilityName: name.slice(0, 80),
-            address: addr || 'See listing', city, state,
-            askingPrice: typeof l.price === 'number' ? l.price : undefined,
-            ownerName: 'Unknown',
-            source: 'brevitas',
-            sourceUrl: l.url ? `https://www.brevitas.com${l.url}` : url,
-            distressSignals: {},
-            score: scoreLead({}),
-            status: 'new',
-            foundAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-          })
-        }
+      const jsonMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
+      if (jsonMatch) {
+        try {
+          const data = JSON.parse(jsonMatch[1])
+          const listings = data?.props?.pageProps?.listings || data?.props?.pageProps?.results || []
+          for (const l of listings.slice(0, 20)) {
+            leads.push({
+              id: generateLeadId(),
+              businessName: l.name || l.title || l.address || 'Brevitas Listing',
+              address: l.address || l.street || 'See Brevitas listing',
+              city: l.city || '', state: l.state || '',
+              askingPrice: l.price ? `$${Number(l.price).toLocaleString()}` : null,
+              ownerName: l.brokerName || l.agentName || 'Brevitas Listing',
+              source: 'brevitas',
+              sourceUrl: l.url ? `https://www.brevitas.com${l.url}` : url,
+              score: scoreLead({ bankruptcy: false }),
+              signals: {},
+              foundAt: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              notes: 'Brevitas CRE listing',
+            })
+          }
+        } catch(e) {}
       }
-
-      // Fallback: JSON-LD
-      if (leads.filter(l => l.source === 'brevitas').length === 0) {
-        const jldBlocks = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) || []
-        for (const block of jldBlocks) {
-          try {
-            const obj   = JSON.parse(block.replace(/<script[^>]*>/, '').replace(/<\/script>/, ''))
-            const items = Array.isArray(obj) ? obj : (obj['@graph'] || [obj])
-            for (const item of items) {
-              if (!item.name || !/storage/i.test(item.name) || seen.has(item.url || item.name)) continue
-              seen.add(item.url || item.name)
-              const addr = item.address || {}
-              leads.push({
-                id: generateLeadId(),
-                facilityName: item.name.slice(0, 80),
-                address: addr.streetAddress || 'See listing',
-                city: addr.addressLocality || 'Unknown',
-                state: addr.addressRegion || 'US',
-                askingPrice: item.offers?.price || undefined,
-                ownerName: 'Unknown',
-                source: 'brevitas',
-                sourceUrl: item.url || url,
-                distressSignals: {},
-                score: scoreLead({}),
-                status: 'new',
-                foundAt: new Date().toISOString(),
-                lastUpdated: new Date().toISOString(),
-              })
-            }
-          } catch { /* skip malformed block */ }
-        }
-      }
-    } catch (err) {
-      log('Brevitas', `Error: ${err.message}`)
     }
-  }
-
+  } catch (err) { log('Brevitas', `Error: ${err.message}`) }
   log('Brevitas', `Found ${leads.length} leads`)
   return leads
 }
 
-// ─── 5. FSBO.com — fetch ──────────────────────────────────────────────────────
+// ─── 5. FSBO.com ──────────────────────────────────────────────────────────────
 async function scanFSBO() {
   log('FSBO', 'Starting...')
   const leads = []
   try {
-    const res = await safeFetch('https://www.fsbo.com/search?keywords=self+storage&type=commercial')
+    const res = await safeFetch('https://www.fsbo.com/search?keywords=self+storage&type=commercial', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      }
+    })
     if (!res.ok) { log('FSBO', `HTTP ${res.status}`); return leads }
     const html = await res.text()
-
-    const jldBlocks = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) || []
-    for (const block of jldBlocks) {
-      try {
-        const obj   = JSON.parse(block.replace(/<script[^>]*>/, '').replace(/<\/script>/, ''))
-        const items = Array.isArray(obj) ? obj : (obj['@graph'] || [obj])
-        for (const item of items) {
-          if (!item.name || !/storage/i.test(item.name)) continue
-          const addr = item.address || {}
-          leads.push({
-            id: generateLeadId(),
-            facilityName: item.name.slice(0, 80),
-            address: addr.streetAddress || 'See listing',
-            city: addr.addressLocality || 'Unknown',
-            state: addr.addressRegion || 'US',
-            askingPrice: item.offers?.price || undefined,
-            ownerName: item.seller?.name || 'Unknown',
-            source: 'fsbo',
-            sourceUrl: item.url || 'https://www.fsbo.com',
-            distressSignals: {},
-            score: scoreLead({}),
-            status: 'new',
-            foundAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-          })
-        }
-      } catch { /* skip */ }
+    const titles = [...html.matchAll(/<h\d[^>]*>([\s\S]*?)<\/h\d>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim()).filter(t => /storage/i.test(t))
+    const links = [...html.matchAll(/href="(\/listing[^"?#]+)"/gi)].map(m => m[1]).filter((v,i,a) => a.indexOf(v)===i)
+    for (let i = 0; i < Math.min(titles.length, links.length, 20); i++) {
+      leads.push({
+        id: generateLeadId(),
+        businessName: titles[i] || 'FSBO Storage Listing',
+        address: 'See FSBO listing', city: '', state: '',
+        askingPrice: null,
+        ownerName: 'FSBO Owner',
+        source: 'fsbo',
+        sourceUrl: `https://www.fsbo.com${links[i]}`,
+        score: scoreLead({ bankruptcy: false }),
+        signals: {},
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: 'FSBO.com commercial listing',
+      })
     }
-  } catch (err) {
-    log('FSBO', `Error: ${err.message}`)
-  }
+  } catch (err) { log('FSBO', `Error: ${err.message}`) }
   log('FSBO', `Found ${leads.length} leads`)
   return leads
 }
 
-// ─── 6. Crexi — fetch + __NEXT_DATA__ / JSON API ──────────────────────────────
-async function scanCrexi() {
-  log('Crexi', 'Starting...')
+// ─── 6. Crexi — Puppeteer stealth (403 on plain fetch) ────────────────────────
+async function scanCrexi(browser) {
+  log('Crexi', 'Starting (Puppeteer stealth)...')
   const leads = []
-  try {
-    // Crexi exposes search results in their page's __NEXT_DATA__ or a JSON endpoint
-    const res = await safeFetch(
-      'https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale',
-      { timeout: 15000 }
-    )
-    if (!res.ok) { log('Crexi', `HTTP ${res.status}`); return leads }
-    const html = await res.text()
-
-    const ndMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
-    if (ndMatch) {
-      const pageData = JSON.parse(ndMatch[1])
-      const properties = pageData?.props?.pageProps?.properties
-        || pageData?.props?.pageProps?.listings
-        || pageData?.props?.pageProps?.initialProperties
-        || []
-      for (const p of properties) {
-        const name = p.name || p.title || p.propertyName || ''
-        if (!name) continue
-        const addr   = p.address || p.location || ''
-        const stateM = (typeof addr === 'string' ? addr : '').match(/,\s*([A-Z]{2})/)
-        const state  = stateM?.[1] || p.state || 'US'
-        const cityM  = (typeof addr === 'string' ? addr : '').match(/^([^,]+)/)
-        const city   = cityM?.[1]?.trim() || p.city || state
-
-        leads.push({
-          id: generateLeadId(),
-          facilityName: name.slice(0, 80),
-          address: (typeof addr === 'string' ? addr : '') || 'See Crexi listing',
-          city, state,
-          askingPrice: p.askingPrice || p.price || undefined,
-          ownerName: 'Crexi Listing',
-          source: 'crexi',
-          sourceUrl: p.url ? `https://www.crexi.com${p.url}` : `https://www.crexi.com/properties/${p.id || p.slug}`,
-          distressSignals: {},
-          score: scoreLead({}),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-        })
+  if (!browser) { log('Crexi', 'No browser — skipping'); return leads }
+  const TARGET_STATES_CREXI = ['TX','GA','SC','TN','AZ','FL','AL','MS','NC','OH']
+  for (const state of TARGET_STATES_CREXI) {
+    try {
+      const page = await browser.newPage()
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+      const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale&states=${state}`
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
+      await new Promise(r => setTimeout(r, 2000))
+      const html = await page.content()
+      await page.close()
+      const jsonMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
+      if (jsonMatch) {
+        try {
+          const data = JSON.parse(jsonMatch[1])
+          const props = data?.props?.pageProps
+          const listings = props?.properties || props?.listings || props?.results || []
+          for (const p of listings.slice(0, 20)) {
+            const addr = p.address || p.location || p.street || ''
+            leads.push({
+              id: generateLeadId(),
+              businessName: p.name || p.title || (typeof addr === 'string' ? addr : '') || 'Crexi Listing',
+              address: typeof addr === 'string' ? addr : 'See Crexi listing',
+              city: p.city || '', state: p.state || state,
+              askingPrice: p.price ? `$${Number(p.price).toLocaleString()}` : null,
+              ownerName: p.brokerName || 'Crexi Listing',
+              source: 'crexi',
+              sourceUrl: p.url ? `https://www.crexi.com${p.url}` : `https://www.crexi.com/properties/${p.id || p.slug || ''}`,
+              score: scoreLead({ bankruptcy: false }),
+              signals: {},
+              foundAt: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              notes: `Crexi self-storage listing — ${state}`,
+            })
+          }
+        } catch(e) {}
       }
-    }
-  } catch (err) {
-    log('Crexi', `Error: ${err.message}`)
+      await new Promise(r => setTimeout(r, 1500))
+    } catch (err) { log('Crexi', `${state} error: ${err.message}`) }
   }
   log('Crexi', `Found ${leads.length} leads`)
   return leads
+}
+
+// ─── PAID STUBS — activate by adding API key to .env.local ────────────────────
+async function scanLisPendens() {
+  // REQUIRES: BATCHDATA_API_KEY in .env.local
+  // BatchData lis pendens API: https://batchdata.com/docs
+  if (!process.env.BATCHDATA_API_KEY) { log('LisPendens', 'BATCHDATA_API_KEY not set — skipping'); return [] }
+  log('LisPendens', 'TODO: implement BatchData lis pendens query')
+  return []
+}
+
+async function scanCountyTax() {
+  // REQUIRES: BATCHDATA_API_KEY in .env.local
+  if (!process.env.BATCHDATA_API_KEY) { log('CountyTax', 'BATCHDATA_API_KEY not set — skipping'); return [] }
+  log('CountyTax', 'TODO: implement BatchData tax delinquency query')
+  return []
+}
+
+async function scanUCCLiens() {
+  // REQUIRES: BATCHDATA_API_KEY in .env.local
+  if (!process.env.BATCHDATA_API_KEY) { log('UCCLiens', 'BATCHDATA_API_KEY not set — skipping'); return [] }
+  log('UCCLiens', 'TODO: implement BatchData UCC lien query')
+  return []
+}
+
+async function scanOutOfStateOwners() {
+  // REQUIRES: ATTOM_API_KEY in .env.local
+  if (!process.env.ATTOM_API_KEY) { log('OutOfStateOwners', 'ATTOM_API_KEY not set — skipping'); return [] }
+  log('OutOfStateOwners', 'TODO: implement ATTOM out-of-state owner query')
+  return []
+}
+
+async function scanFireMarshal() {
+  log('FireMarshal', 'TODO: county-level fire marshal violation feeds — skipping')
+  return []
 }
 
 // ─── 7. LoopNet — Puppeteer (JS-rendered, requires real browser) ───────────────
@@ -721,11 +787,16 @@ async function main() {
     log('Runner', 'Running API + fetch-based scrapers in parallel...')
     const fetchResults = await Promise.allSettled([
       scanCourtListener(),
-      scanLandsOfAmerica(),
+      scanBizBuySell(),
+      scanBizQuest(),
       scanShowcase(),
       scanBrevitas(),
       scanFSBO(),
-      scanCrexi(),
+      scanLisPendens(),
+      scanCountyTax(),
+      scanUCCLiens(),
+      scanOutOfStateOwners(),
+      scanFireMarshal(),
     ])
 
     const fetchLeads = fetchResults.flatMap(r => r.status === 'fulfilled' ? r.value : [])
@@ -735,6 +806,7 @@ async function main() {
     if (browser) {
       log('Runner', 'Running Puppeteer-based scrapers...')
       try { browserLeads.push(...await scanLoopNet(browser)) } catch (e) { log('LoopNet', `Fatal: ${e.message}`) }
+      try { browserLeads.push(...await scanCrexi(browser)) } catch (e) { log('Crexi', `Fatal: ${e.message}`) }
       try { browserLeads.push(...await scanFacebook(browser)) } catch (e) { log('Facebook', `Fatal: ${e.message}`) }
     }
 
