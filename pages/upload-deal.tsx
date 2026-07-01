@@ -305,20 +305,39 @@ export default function UploadDeal() {
         filesUploaded: files.map(f => ({ name: (f as any).file?.name ?? '', type: (f as any).mime ?? '', size: (f as any).file?.size ?? 0 })),
         batchResponses: debugRawBatches,
         mergedExtraction: data,
-        formFields: {
-          propertyName: (data as any)?.propertyName ?? (data as any)?.facilityName ?? null,
-          unitCount: (data as any)?.unitCount ?? (data as any)?.totalUnits ?? null,
-          totalSF: (data as any)?.totalSF ?? (data as any)?.sqft ?? null,
-          occupancy: (data as any)?.currentOccupancy ?? (data as any)?.occupancy ?? null,
-          t12NOI: (data as any)?.t12NOI ?? (data as any)?.noi ?? null,
-          currentAvgRent: (data as any)?.currentAvgRentPerUnit ?? null,
-          marketAvgRent: (data as any)?.marketAvgRentPerUnit ?? null,
-          askingPrice: (data as any)?.askingPrice ?? null,
-          sheetsDetected: (data as any)?.sheetsClassified ?? (data as any)?.extraction?.sheetsClassified ?? null,
-          confidence: (data as any)?.confidence ?? (data as any)?.extraction?.confidence ?? null,
-          provenance: (data as any)?.provenance ?? (data as any)?.extraction?.provenance ?? null,
-          extractionErrors: (data as any)?.errors ?? (data as any)?.extractionErrors ?? null,
-        },
+        formFields: (() => {
+          const d = data as any
+          const canon = d?.extraction?.canonical ?? {}
+          const selVal = (f: string) => canon[f]?.selectedValue ?? null
+          const selConf = (f: string) => canon[f]?.confidence ?? null
+          const selSheet = (f: string) => canon[f]?.source?.sheetName ?? null
+          const selLabel = (f: string) => canon[f]?.source?.label ?? null
+          const conflictCount = (f: string) => canon[f]?.conflicts?.length ?? 0
+          return {
+            propertyName: d?.propertyName ?? d?.facilityName ?? null,
+            unitCount: selVal('unitCount') ?? d?.unitCount ?? null,
+            totalSF: selVal('totalSF') ?? d?.totalSF ?? null,
+            occupancy: selVal('occupancy') ?? d?.currentOccupancy ?? null,
+            t12Revenue: selVal('t12Revenue') ?? d?.t12Revenue ?? null,
+            t12TotalExpenses: selVal('t12TotalExpenses') ?? d?.t12TotalExpenses ?? null,
+            t12NOI: selVal('t12NOI') ?? d?.t12NOI ?? null,
+            t12NOI_confidence: selConf('t12NOI'),
+            t12NOI_sheet: selSheet('t12NOI'),
+            t12NOI_label: selLabel('t12NOI'),
+            t12NOI_conflicts: conflictCount('t12NOI'),
+            t3NOI: selVal('t3NOI') ?? d?.t3NOI ?? null,
+            historicalCapexTotal: selVal('historicalCapexTotal') ?? d?.historicalCapexTotal ?? null,
+            historicalCapexTotal_sheet: selSheet('historicalCapexTotal'),
+            historicalCapexTotal_conflicts: conflictCount('historicalCapexTotal'),
+            currentAvgRent: selVal('currentAvgRentPerUnit') ?? d?.currentAvgRentPerUnit ?? null,
+            marketAvgRent: selVal('marketAvgRentPerUnit') ?? d?.marketAvgRentPerUnit ?? null,
+            askingPrice: d?.askingPrice ?? null,
+            needsReview: d?.extraction?.needsReview ?? null,
+            sourceFiles: d?.extraction?.sourceFiles?.map((s: any) => `${s.fileName} (${s.sourceType})`).join(', ') ?? null,
+            warnings: d?.extraction?.warnings ?? null,
+            extractionErrors: d?.errors ?? d?.extractionErrors ?? null,
+          }
+        })(),
         ok: true,
       })
       setForm({
@@ -581,17 +600,29 @@ export default function UploadDeal() {
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'16px'}}>
             {([
               ['API Success', debugResult.ok ? '✅ YES' : '❌ ' + (debugResult.error || 'NO')],
+              ['Needs Review', String(debugResult.formFields?.needsReview ?? '—')],
+              ['Source Files', debugResult.formFields?.sourceFiles || '—'],
               ['Property Name', debugResult.formFields?.propertyName || '—'],
               ['Unit Count', String(debugResult.formFields?.unitCount ?? '—')],
               ['Square Footage', String(debugResult.formFields?.totalSF ?? '—')],
               ['Occupancy', String(debugResult.formFields?.occupancy ?? '—')],
+              ['T-12 Revenue', String(debugResult.formFields?.t12Revenue ?? '—')],
+              ['T-12 Expenses', String(debugResult.formFields?.t12TotalExpenses ?? '—')],
               ['T-12 NOI', String(debugResult.formFields?.t12NOI ?? '—')],
+              ['T-12 NOI Confidence', String(debugResult.formFields?.t12NOI_confidence ?? '—')],
+              ['T-12 NOI Sheet', String(debugResult.formFields?.t12NOI_sheet ?? '—')],
+              ['T-12 NOI Label', String(debugResult.formFields?.t12NOI_label ?? '—')],
+              ['T-12 NOI Conflicts', String(debugResult.formFields?.t12NOI_conflicts ?? '—')],
+              ['T-3 NOI', String(debugResult.formFields?.t3NOI ?? '—')],
+              ['CapEx Total', String(debugResult.formFields?.historicalCapexTotal ?? '—')],
+              ['CapEx Sheet', String(debugResult.formFields?.historicalCapexTotal_sheet ?? '—')],
+              ['CapEx Conflicts', String(debugResult.formFields?.historicalCapexTotal_conflicts ?? '—')],
               ['Avg Rent/Unit', String(debugResult.formFields?.currentAvgRent ?? '—')],
+              ['Market Rent/Unit', String(debugResult.formFields?.marketAvgRent ?? '—')],
               ['Asking Price', String(debugResult.formFields?.askingPrice ?? '—')],
-              ['Sheets Detected', JSON.stringify(debugResult.formFields?.sheetsDetected ?? '—')],
-              ['Confidence', String(debugResult.formFields?.confidence ?? '—')],
+              ['Warnings', JSON.stringify(debugResult.formFields?.warnings ?? '—')],
               ['Extraction Errors', JSON.stringify(debugResult.formFields?.extractionErrors ?? '—')],
-              ['Files', debugResult.filesUploaded?.map((f: any) => f.name).join(', ') || '—'],
+              ['Files Uploaded', debugResult.filesUploaded?.map((f: any) => f.name).join(', ') || '—'],
             ] as [string,string][]).map(([label, value]) => (
               <div key={label} style={{background:'#1a202c',borderRadius:'4px',padding:'8px 12px'}}>
                 <div style={{fontSize:'10px',color:'#718096',textTransform:'uppercase' as const,letterSpacing:'0.05em',marginBottom:'2px'}}>{label}</div>

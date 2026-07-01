@@ -14,6 +14,22 @@ const LABEL_PRIORITY: Record<string, string[]> = {
   t12NOI: ['net noi', 'net operating income', 'noi', 'storage noi'],
 };
 
+// Source-sheet priority for fields where a dedicated sheet beats a T-12 line item.
+// Lower index = higher priority. Matched against candidate.source.sheetName (case-insensitive).
+const SOURCE_SHEET_PRIORITY: Record<string, string[]> = {
+  historicalCapexTotal: ['capex', 'capital expenditure', 'cap ex', 'capex summary'],
+};
+
+function sourceSheetPriorityIndex(field: string, sheetName: string | undefined): number {
+  const list = SOURCE_SHEET_PRIORITY[field];
+  if (!list || !sheetName) return Number.POSITIVE_INFINITY;
+  const normalized = sheetName.toLowerCase();
+  for (let i = 0; i < list.length; i++) {
+    if (normalized.includes(list[i])) return i;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
 function labelPriorityIndex(field: string, label: string | undefined): number {
   const list = LABEL_PRIORITY[field];
   if (!list || !label) return Number.POSITIVE_INFINITY;
@@ -37,6 +53,13 @@ function compareCandidates(
   const confB = b.confidence ?? -Infinity;
   if (confA !== confB) {
     return confB - confA;
+  }
+
+  // Source-sheet priority (e.g. CapEx Summary beats T-12 line for historicalCapexTotal)
+  const sheetPrioA = sourceSheetPriorityIndex(field, a.source.sheetName);
+  const sheetPrioB = sourceSheetPriorityIndex(field, b.source.sheetName);
+  if (sheetPrioA !== sheetPrioB) {
+    return sheetPrioA - sheetPrioB;
   }
 
   const prioA = labelPriorityIndex(field, a.source.label);
