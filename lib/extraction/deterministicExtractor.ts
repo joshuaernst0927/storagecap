@@ -9,6 +9,7 @@ export interface ExtractionSourceRef {
   cell: string;
   label: string;
   rawText: string;
+  sheetCategory?: string;
 }
 
 export interface ExtractedFieldCandidate {
@@ -226,7 +227,8 @@ function extractFieldFromSheet(
           cell: cell.address,
           label,
           rawText: rowRawText(row.cells),
-        },
+        sheetCategory,
+    },
         confidence,
         needsReview,
         // Any value matched from a labeled row is documented evidence, not an

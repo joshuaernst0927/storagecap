@@ -26,6 +26,8 @@ export function toCanonicalCandidate(
     cellAddress: local.source.cell,
     label: local.source.label,
     rawText: local.source.rawText,
+  
+    sheetCategory: local.source.sheetCategory,
   };
 
   return {

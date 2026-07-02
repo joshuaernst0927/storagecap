@@ -30,6 +30,21 @@ function candidateTypePriorityIndex(candidateType: string | undefined): number {
   return CANDIDATE_TYPE_PRIORITY[candidateType] ?? Number.POSITIVE_INFINITY;
 }
 
+// Generic evidence-strength ordering per field, keyed by structural sheet
+// category (from sheetClassifier.ts) -- never a sheet name or deal. A
+// category earlier in the list is more dedicated evidence for that field.
+// Categories not listed (including 'unknown') rank lowest.
+const EVIDENCE_STRENGTH_PRIORITY: Record<string, string[]> = {
+  historicalCapexTotal: ['capex', 't12', 'operatingStatement'],
+};
+
+function evidenceStrengthIndex(field: string, sheetCategory: string | undefined): number {
+  const list = EVIDENCE_STRENGTH_PRIORITY[field];
+  if (!list || !sheetCategory) return Number.POSITIVE_INFINITY;
+  const idx = list.indexOf(sheetCategory);
+  return idx === -1 ? Number.POSITIVE_INFINITY : idx;
+}
+
 function labelPriorityIndex(field: string, label: string | undefined): number {
   const list = LABEL_PRIORITY[field];
   if (!list || !label) return Number.POSITIVE_INFINITY;
@@ -54,6 +69,15 @@ function compareCandidates(
   const typePrioB = candidateTypePriorityIndex((b as any).candidateType);
   if (typePrioA !== typePrioB) {
     return typePrioA - typePrioB;
+  }
+
+  // Generic evidence-strength priority (dedicated structural category beats
+  // incidental/unknown context), only applied among candidates that tied on
+  // candidateType above.
+  const evidencePrioA = evidenceStrengthIndex(field, (a.source as any).sheetCategory);
+  const evidencePrioB = evidenceStrengthIndex(field, (b.source as any).sheetCategory);
+  if (evidencePrioA !== evidencePrioB) {
+    return evidencePrioA - evidencePrioB;
   }
 
   const confA = a.confidence ?? -Infinity;

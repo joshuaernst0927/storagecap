@@ -112,6 +112,10 @@ export interface ExtractionSourceRef {
   fileName?: string
   sourceType: ExtractionSourceType
   sheetName?: string
+  // Generic structural sheet classification (e.g. 'capex', 't12',
+  // 'operatingStatement', 'unknown') from sheetClassifier.ts. Not a sheet
+  // name -- used to judge evidence strength without any deal-specific text.
+  sheetCategory?: string
   pageNumber?: number
   rowNumber?: number
   columnName?: string
