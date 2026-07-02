@@ -127,6 +127,13 @@ export interface ExtractedFieldCandidate<T = ExtractedFieldValue> {
   confidence: number | null
   needsReview: boolean
   reason?: string
+  // Generic classification of HOW a value was derived — not which deal,
+  // sheet, or label it came from. Lets selection prefer documented evidence
+  // over calculated/estimated values in a deal-agnostic way. Optional for
+  // backward compatibility with existing candidate producers.
+  candidateType?: 'documented' | 'calculated' | 'blended'
+  // Meaningful only when candidateType is 'documented' or 'blended'.
+  coveragePeriod?: { coveredMonths: number; totalMonths: number }
 }
 
 export interface CanonicalExtractedField<T = ExtractedFieldValue> {

@@ -33,6 +33,7 @@ export function toCanonicalCandidate(
     source: canonicalSource,
     confidence: local.confidence,
     needsReview: local.needsReview,
+    candidateType: local.candidateType,
   };
 }
 

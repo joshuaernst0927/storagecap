@@ -17,6 +17,10 @@ export interface ExtractedFieldCandidate {
   source: ExtractionSourceRef;
   confidence: number;
   needsReview: boolean;
+  // Generic classification of how this value was derived. Only set for
+  // fields with a defined resolver (currently historicalCapexTotal via
+  // capexResolver.ts). Not deal-specific.
+  candidateType?: 'documented' | 'calculated' | 'blended';
 }
 
 interface ConceptPattern {
@@ -225,6 +229,10 @@ function extractFieldFromSheet(
         },
         confidence,
         needsReview,
+        // Any value matched from a labeled row is documented evidence, not an
+        // estimate. Generic across all fields -- not tied to historicalCapexTotal
+        // specifically or to any deal.
+        candidateType: 'documented',
       });
     }
   }
