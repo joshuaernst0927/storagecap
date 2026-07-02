@@ -215,7 +215,7 @@ function extractFieldFromSheet(
       const confidence = isAuthoritative
         ? matched.baseConfidence
         : Math.round(matched.baseConfidence * FALLBACK_DAMPING_FACTOR * 100) / 100;
-      const needsReview = matched.baseNeedsReview || !isAuthoritative;
+      const needsReview = !isAuthoritative && matched.baseNeedsReview;
 
       candidates.push({
         field,
