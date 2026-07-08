@@ -458,9 +458,8 @@ async function scanFSBO() {
 
 // ─── 6. Crexi — Puppeteer stealth (403 on plain fetch) ────────────────────────
 async function scanCrexi(browser) {
-  log('Crexi', 'Starting (Puppeteer + API intercept)...')
-  const leads = []
-  if (!browser) { log('Crexi', 'No browser — skipping'); return leads }
+  log('Crexi', 'Temporarily disabled — re-enable after request interception fix')
+  return []
   const TARGET_STATES_CREXI = ['TX','GA','SC','TN','AZ','FL','AL','MS','NC','OH']
   for (const state of TARGET_STATES_CREXI) {
     try {
@@ -469,7 +468,7 @@ async function scanCrexi(browser) {
       await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
       const apiResults = []
       await page.setRequestInterception(true)
-      page.on('request', req => req.continue())
+      page.on('request', req => { try { if (!req.isInterceptResolutionHandled()) req.continue() } catch (_) {} })
       page.on('response', async res => {
         try {
           const u = res.url()
@@ -803,7 +802,7 @@ async function main() {
     // ── Fetch-based scrapers run in parallel ──
     log('Runner', 'Running API + fetch-based scrapers in parallel...')
     const fetchResults = await Promise.allSettled([
-      scanCourtListener(),
+      Promise.race([scanCourtListener(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('CourtListener hard timeout')),90000))]),
       // scanBizBuySell moved to browser block
       scanBizQuest(),
       scanShowcase(),
@@ -818,7 +817,20 @@ async function main() {
 
     const fetchLeads = fetchResults.flatMap(r => r.status === 'fulfilled' ? r.value : [])
 
-    // ── Browser-based scrapers run sequentially ──
+    // ── Persist fetch leads immediately — do not wait for browser scrapers ──
+    console.log('\n================================================')
+    console.log('  FETCH RESULTS')
+    console.log('================================================')
+    const fetchCounts = {}
+    for (const l of fetchLeads) fetchCounts[l.source] = (fetchCounts[l.source] || 0) + 1
+    for (const [source, count] of Object.entries(fetchCounts)) {
+      console.log(`  ${source.padEnd(16)}: ${count}`)
+    }
+    console.log(`  ${'FETCH TOTAL'.padEnd(16)}: ${fetchLeads.length}`)
+    persistLeads(fetchLeads)
+    console.log('  [Persist] Fetch leads persisted successfully.')
+
+    // ── Browser-based scrapers run sequentially — optional, non-blocking ──
     const browserLeads = []
     if (browser) {
       log('Runner', 'Running Puppeteer-based scrapers...')
@@ -828,21 +840,25 @@ async function main() {
       try { browserLeads.push(...await scanFacebook(browser)) } catch (e) { log('Facebook', `Fatal: ${e.message}`) }
     }
 
-    const allLeads = [...fetchLeads, ...browserLeads]
-
-    // ── Summary ──
-    const counts = {}
-    for (const l of allLeads) counts[l.source] = (counts[l.source] || 0) + 1
-
-    console.log('\n================================================')
-    console.log('  RESULTS')
-    console.log('================================================')
-    for (const [source, count] of Object.entries(counts)) {
-      console.log(`  ${source.padEnd(16)}: ${count}`)
+    // ── Persist browser leads if any found ──
+    if (browserLeads.length > 0) {
+      console.log('\n================================================')
+      console.log('  BROWSER RESULTS')
+      console.log('================================================')
+      const browserCounts = {}
+      for (const l of browserLeads) browserCounts[l.source] = (browserCounts[l.source] || 0) + 1
+      for (const [source, count] of Object.entries(browserCounts)) {
+        console.log(`  ${source.padEnd(16)}: ${count}`)
+      }
+      console.log(`  ${'BROWSER TOTAL'.padEnd(16)}: ${browserLeads.length}`)
+      persistLeads(browserLeads)
+      console.log('  [Persist] Browser leads persisted successfully.')
+    } else {
+      console.log('\n  [Browser] No browser leads found or browser scrapers skipped.')
     }
-    console.log(`  ${'TOTAL'.padEnd(16)}: ${allLeads.length}`)
 
-    persistLeads(allLeads)
+    const allLeads = [...fetchLeads, ...browserLeads]
+    console.log(`\n  [Done] Total leads collected this run: ${allLeads.length}`)
 
     // ── Daily email digest ──
     try {
@@ -881,6 +897,7 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('\nFatal error:', err)
+  console.error('\nFatal error:', err.message)
+  console.error(err.stack)
   process.exit(1)
 })
