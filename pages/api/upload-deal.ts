@@ -382,6 +382,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         if (sel('currentAvgRentPerUnit') != null) finalResult.currentAvgRentPerUnit = sel('currentAvgRentPerUnit')
         if (sel('marketAvgRentPerUnit')  != null) finalResult.marketAvgRentPerUnit  = sel('marketAvgRentPerUnit')
+        // Deal-agnostic fallback: if currentAvgRentPerUnit is still null, calculate
+        // it from documented T12 revenue, occupancy, and unit count. Pure arithmetic
+        // on already-verified fields, not an estimate of unverified data.
+        if (finalResult.currentAvgRentPerUnit == null) {
+          const rev = finalResult.t12Revenue as number | null
+          const occPct = (finalResult.occupancy ?? finalResult.currentOccupancy) as number | null
+          const units = (finalResult.unitCount ?? finalResult.totalUnits) as number | null
+          if (typeof rev === "number" && typeof occPct === "number" && typeof units === "number" && occPct > 0 && units > 0) {
+            const occupiedUnits = units * (occPct / 100)
+            if (occupiedUnits > 0) {
+              finalResult.currentAvgRentPerUnit = Math.round((rev / 12 / occupiedUnits) * 100) / 100
+            }
+          }
+        }
+        // Deal-agnostic fallback: if marketAvgRentPerUnit is still null, calculate a
+        // unit-count-weighted average from the extracted unit mix, using only rows
+        // that already have a documented marketRent. No invented values.
+        if (finalResult.marketAvgRentPerUnit == null) {
+          const mix = finalResult.unitMix as Array<{ units?: number; marketRent?: number }> | undefined
+          if (Array.isArray(mix) && mix.length > 0) {
+            let unitSum = 0
+            let weightedSum = 0
+            for (const row of mix) {
+              if (typeof row.units === "number" && typeof row.marketRent === "number") {
+                unitSum += row.units
+                weightedSum += row.units * row.marketRent
+              }
+            }
+            if (unitSum > 0) {
+              finalResult.marketAvgRentPerUnit = Math.round((weightedSum / unitSum) * 100) / 100
+            }
+          }
+        }
         // historicalCapexTotal: prefer deterministic capex sheet parse, then canonical
         if (deterministicCapexTotal == null && sel('historicalCapexTotal') != null) {
           finalResult.historicalCapexTotal = sel('historicalCapexTotal')
