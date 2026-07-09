@@ -283,7 +283,6 @@ async function scanBizQuest() {
   try {
     const urls = [
       'https://www.bizquest.com/self-storage-businesses-for-sale/',
-      'https://www.bizquest.com/industry/storage-and-warehousing-businesses-for-sale/IBB205/',
     ]
     for (const url of urls) {
       const res = await safeFetch(url, {
@@ -295,14 +294,19 @@ async function scanBizQuest() {
       if (!res.ok) { log('BizQuest', `HTTP ${res.status}`); continue }
       const html = await res.text()
       const titles = [...html.matchAll(/<h\d[^>]*class="[^"]*(?:title|name|listing)[^"]*"[^>]*>([\s\S]*?)<\/h\d>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim()).filter(t => t.length > 5)
-      const links = [...html.matchAll(/href="(\/(?:buy\/)?[^"?#]+(?:storage|warehouse)[^"?#]*)"/gi)].map(m => m[1]).filter((v,i,a) => a.indexOf(v) === i)
+      const links = [...html.matchAll(/href="(\/(?:buy\/)?[^"?#]+storage[^"?#]*)"/gi)].map(m => m[1]).filter((v,i,a) => a.indexOf(v) === i)
       const prices = [...html.matchAll(/\$([\d,]+(?:\s*(?:Million|M|K))?)/gi)].map(m => m[0])
+      const INCLUDE_TERMS = /(self[\s-]?storage|mini[\s-]?storage|storage facilit|storage unit|storage yard|boat.{0,10}storage|rv.{0,10}storage|secure storage)/i
+      const EXCLUDE_TERMS = /(logistic|freight|3pl|trucking|fulfillment|warehous|saas|software|moving compan|portable storage|franchise|auto repair|marine|waterfront|dealership|flex building|transportation|delivery|courier)/i
       for (let i = 0; i < Math.min(titles.length, 20); i++) {
         if (!titles[i] || titles[i].length < 5) continue
+        const t = titles[i]
+        if (EXCLUDE_TERMS.test(t)) continue
+        if (!INCLUDE_TERMS.test(t)) continue
         leads.push({
           id: generateLeadId(),
-          businessName: titles[i].substring(0, 100),
-          address: 'See BizQuest listing',
+          businessName: t.substring(0, 100),
+          address: '',
           city: '', state: '',
           askingPrice: prices[i] || null,
           ownerName: 'BizQuest Listing',
@@ -310,9 +314,17 @@ async function scanBizQuest() {
           sourceUrl: links[i] ? `https://www.bizquest.com${links[i]}` : url,
           score: scoreLead({ bankruptcy: false }),
           signals: {},
+          distressSignals: {
+            taxDelinquency: false,
+            fireCodeViolations: false,
+            lisPendens: false,
+            decliningOccupancy: false,
+            outOfStateOwner: false,
+            longTermOwner: false,
+          },
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
-          notes: 'BizQuest self-storage listing',
+          notes: 'BizQuest listing \u2014 address not provided by source, see sourceUrl for details.',
         })
       }
       await new Promise(r => setTimeout(r, 800))

@@ -112,9 +112,9 @@ function ContactSection({
     </div>
   )
 
-  const ownerAge = lead.distressSignals.ownerAge
-  const yearsOwned = lead.distressSignals.yearsOwned
-  const isOutOfState = lead.distressSignals.outOfStateOwner
+  const ownerAge = lead.distressSignals?.ownerAge
+  const yearsOwned = lead.distressSignals?.yearsOwned
+  const isOutOfState = lead.distressSignals?.outOfStateOwner
 
   return (
     <div className="space-y-4">
@@ -415,12 +415,12 @@ function LeadDetailModal({
   const saveNotes = () => onUpdate(lead.id, { notes, outreachLetter: letter })
 
   const signals = Object.entries({
-    'Tax Delinquency': lead.distressSignals.taxDelinquency,
-    'Fire Code Violations': lead.distressSignals.fireCodeViolations,
-    'Lis Pendens': lead.distressSignals.lisPendens,
-    'Declining Occupancy': lead.distressSignals.decliningOccupancy,
-    'Out-of-State Owner': lead.distressSignals.outOfStateOwner,
-    'Long-Term Owner': lead.distressSignals.longTermOwner,
+    'Tax Delinquency': lead.distressSignals?.taxDelinquency,
+    'Fire Code Violations': lead.distressSignals?.fireCodeViolations,
+    'Lis Pendens': lead.distressSignals?.lisPendens,
+    'Declining Occupancy': lead.distressSignals?.decliningOccupancy,
+    'Out-of-State Owner': lead.distressSignals?.outOfStateOwner,
+    'Long-Term Owner': lead.distressSignals?.longTermOwner,
   }).filter(([, v]) => v).map(([k]) => k)
 
   const tabs: { id: DetailTab; label: string }[] = [
