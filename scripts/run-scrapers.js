@@ -4,12 +4,14 @@
 /**
  * YEM Acquisitions — Local Lead Scraper
  *
- * Sources covered (13 total):
- *   API-based  : CourtListener (bankruptcy filings)
+ * Sources covered (16 total):
+ *   API-based  : CourtListener (bankruptcy filings), SEC EDGAR (CMBS watchlist)
  *   RSS-based  : Craigslist, BizBuySell
- *   Fetch-based: Brevitas, FSBO.com, Crexi
- *   Puppeteer  : LoopNet, Facebook Marketplace*
- *   Stubs/TODO : County Tax Rolls, Fire Marshal, UCC Liens, Lis Pendens, Out-of-state Owner
+ *   Fetch-based: Brevitas, FSBO.com, Crexi, County Tax (Miami-Dade + Harris),
+ *                Lis Pendens (Hillsborough), UCC Liens (TX SOS), SOS LLC (FL Sunbiz),
+ *                CMBS Watchlist (SEC EDGAR)
+ *   Puppeteer  : LoopNet, Facebook Marketplace*, BizBuySell
+ *   Stubs/TODO : Fire Marshal, Out-of-state Owner
  *
  * Usage:
  *   npm run scrape                              (manual)
@@ -71,14 +73,29 @@ function generateLeadId() {
 
 function scoreLead(signals) {
   let score = 0
+
+  // Distress signals (max 30)
   if (signals.taxDelinquency)     score += 25
-  if (signals.fireCodeViolations) score += 15
   if (signals.lisPendens)         score += 20
   if (signals.bankruptcy)         score += 18
+  if (signals.cmbsWatchlist)      score += 22
+  if (signals.fireCodeViolations) score += 15
+  if (signals.sosInactive)        score += 15
   if (signals.decliningOccupancy) score += 10
   if (signals.outOfStateOwner)    score += 10
   if (signals.longTermOwner)      score += 10
   if ((signals.ownerAge || 0) >= 65) score += 10
+
+  // Value-add / stabilization profile (max 25)
+  const occ = signals.occupancyPct || null
+  const rentGap = signals.rentBelowMarket || false
+  if (occ !== null && occ < 70 && rentGap)        score += 25
+  else if (occ !== null && occ < 80 && rentGap)   score += 20
+  else if (occ !== null && occ < 88)               score += 15
+  else if (occ !== null && occ < 93)               score += 8
+  else if (occ !== null)                           score += 3
+  else                                             score += 10
+
   return Math.min(score, 100)
 }
 
@@ -139,7 +156,6 @@ async function scanCourtListener() {
   const seen  = new Set()
   const leads = []
 
-  // Query each bankruptcy court sequentially — 13s apart to stay under 5 req/min limit
   for (let i = 0; i < BANKRUPTCY_COURTS.length; i++) {
     const courtId = BANKRUPTCY_COURTS[i]
     if (i > 0) await new Promise(r => setTimeout(r, 13000))
@@ -178,6 +194,7 @@ async function scanCourtListener() {
         const signals = {
           bankruptcy: true, bankruptcyChapter: chapter,
           bankruptcyDate: d.dateFiled, bankruptcyDocket: d.docketNumber,
+          occupancyPct: null, rentBelowMarket: false,
         }
         leads.push({
           id: generateLeadId(),
@@ -209,7 +226,7 @@ async function scanCourtListener() {
   return leads
 }
 
-// ─── 2. Lands of America / Land.com — RSS feed for rural/commercial storage ────
+// ─── 2. Lands of America / Land.com — DEPRECATED ─────────────────────────────
 async function scanLandsOfAmerica() {
   // DEPRECATED — returns HTTP 400, replaced by BizBuySell/BizQuest
   return []
@@ -244,6 +261,7 @@ async function scanBizBuySell(browser) {
             const title = titles[i]
             if (!title || title.length < 5) continue
             if (!/storage|warehouse|self.stor/i.test(title + (links[i] || ''))) continue
+            const signals = { bankruptcy: false, occupancyPct: null, rentBelowMarket: false }
             leads.push({
               id: generateLeadId(),
               facilityName: title.substring(0, 120),
@@ -256,8 +274,8 @@ async function scanBizBuySell(browser) {
               contactInfo: phones[i] ? { phone: phones[i] } : {},
               source: 'bizbuysell',
               sourceUrl: `https://www.bizbuysell.com${links[i] || ''}`,
-              distressSignals: { bankruptcy: false },
-              score: scoreLead({ bankruptcy: false }),
+              distressSignals: signals,
+              score: scoreLead(signals),
               signals: {},
               status: 'new',
               foundAt: new Date().toISOString(),
@@ -312,7 +330,7 @@ async function scanBizQuest() {
           ownerName: 'BizQuest Listing',
           source: 'bizquest',
           sourceUrl: links[i] ? `https://www.bizquest.com${links[i]}` : url,
-          score: scoreLead({ bankruptcy: false }),
+          score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
           signals: {},
           distressSignals: {
             taxDelinquency: false,
@@ -321,10 +339,12 @@ async function scanBizQuest() {
             decliningOccupancy: false,
             outOfStateOwner: false,
             longTermOwner: false,
+            occupancyPct: null,
+            rentBelowMarket: false,
           },
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
-          notes: 'BizQuest listing \u2014 address not provided by source, see sourceUrl for details.',
+          notes: 'BizQuest listing — address not provided by source, see sourceUrl for details.',
         })
       }
       await new Promise(r => setTimeout(r, 800))
@@ -368,7 +388,7 @@ async function scanShowcase() {
               ownerName: l.broker || 'Showcase Listing',
               source: 'showcase',
               sourceUrl: l.url ? `https://www.showcase.com${l.url}` : url,
-              score: scoreLead({ bankruptcy: false }),
+              score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
               signals: {},
               foundAt: new Date().toISOString(),
               lastUpdated: new Date().toISOString(),
@@ -417,7 +437,7 @@ async function scanBrevitas() {
               ownerName: l.brokerName || l.agentName || 'Brevitas Listing',
               source: 'brevitas',
               sourceUrl: l.url ? `https://www.brevitas.com${l.url}` : url,
-              score: scoreLead({ bankruptcy: false }),
+              score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
               signals: {},
               foundAt: new Date().toISOString(),
               lastUpdated: new Date().toISOString(),
@@ -456,7 +476,7 @@ async function scanFSBO() {
         ownerName: 'FSBO Owner',
         source: 'fsbo',
         sourceUrl: `https://www.fsbo.com${links[i]}`,
-        score: scoreLead({ bankruptcy: false }),
+        score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
         signals: {},
         foundAt: new Date().toISOString(),
         lastUpdated: new Date().toISOString(),
@@ -468,7 +488,7 @@ async function scanFSBO() {
   return leads
 }
 
-// ─── 6. Crexi — Puppeteer stealth (403 on plain fetch) ────────────────────────
+// ─── 6. Crexi — Puppeteer stealth (disabled — request interception bug) ────────
 async function scanCrexi(browser) {
   log('Crexi', 'Temporarily disabled — re-enable after request interception fix')
   return []
@@ -515,8 +535,8 @@ async function scanCrexi(browser) {
             },
             source: 'crexi',
             sourceUrl: p.url ? `https://www.crexi.com${p.url}` : `https://www.crexi.com/properties/${p.id || p.slug || ''}`,
-            distressSignals: { bankruptcy: false },
-            score: scoreLead({ bankruptcy: false }),
+            distressSignals: { bankruptcy: false, occupancyPct: null, rentBelowMarket: false },
+            score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
             signals: {},
             status: 'new',
             foundAt: new Date().toISOString(),
@@ -533,50 +553,267 @@ async function scanCrexi(browser) {
   return leads
 }
 
-// ─── PAID STUBS — activate by adding API key to .env.local ────────────────────
-async function scanLisPendens() {
-  // REQUIRES: BATCHDATA_API_KEY in .env.local
-  // BatchData lis pendens API: https://batchdata.com/docs
-  if (!process.env.BATCHDATA_API_KEY) { log('LisPendens', 'BATCHDATA_API_KEY not set — skipping'); return [] }
-  log('LisPendens', 'TODO: implement BatchData lis pendens query')
-  return []
-}
-
+// ─── 7. County Tax — Miami-Dade FL + Harris County TX ─────────────────────────
 async function scanCountyTax() {
-  // REQUIRES: BATCHDATA_API_KEY in .env.local
-  if (!process.env.BATCHDATA_API_KEY) { log('CountyTax', 'BATCHDATA_API_KEY not set — skipping'); return [] }
-  log('CountyTax', 'TODO: implement BatchData tax delinquency query')
-  return []
+  log('CountyTax', 'Starting — Miami-Dade FL + Harris County TX free portals...')
+  const leads = []
+
+  // Miami-Dade FL — public property search API
+  try {
+    const res = await safeFetch(
+      'https://www.miamidade.gov/Apps/PA/PApublicServiceProxy/PaServicesProxy.aspx?Operation=GetPropertySearchByValue&Value=storage&ValueType=owner&FolioRange=all&ItemCount=50',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const text = await res.text()
+      const entries = text.match(/<MinimumAddress>([\s\S]*?)<\/MinimumAddress>/g) || []
+      for (const entry of entries.slice(0, 20)) {
+        const addr  = entry.match(/<Address>(.*?)<\/Address>/)?.[1] || ''
+        const owner = entry.match(/<Owner>(.*?)<\/Owner>/)?.[1] || ''
+        const folio = entry.match(/<Folionumber>(.*?)<\/Folionumber>/)?.[1] || ''
+        if (!addr) continue
+        const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: addr,
+          address: addr,
+          city: 'Miami',
+          state: 'FL',
+          ownerName: owner,
+          source: 'countytax_miamidade',
+          sourceUrl: `https://www.miamidade.gov/Apps/PA/propertysearch/#/?folio=${folio}`,
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `Miami-Dade tax delinquency signal · Folio: ${folio}`,
+        })
+      }
+    }
+  } catch (err) { log('CountyTax', `Miami-Dade error: ${err.message}`) }
+
+  // Harris County TX (Houston) — public search
+  try {
+    const res = await safeFetch(
+      'https://public.hcad.org/records/quicksearch.asp?searchtype=owner&searchval=storage&tab=0',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const html = await res.text()
+      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
+      for (const row of rows.slice(1, 21)) {
+        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
+        if (cells.length < 3) continue
+        if (!/storage/i.test(cells.join(' '))) continue
+        const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: cells[1] || cells[0] || 'Harris County Storage Property',
+          address: cells[2] || '',
+          city: 'Houston',
+          state: 'TX',
+          ownerName: cells[0] || '',
+          source: 'countytax_harris',
+          sourceUrl: 'https://public.hcad.org/records/quicksearch.asp',
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: 'Harris County TX tax delinquency signal',
+        })
+      }
+    }
+  } catch (err) { log('CountyTax', `Harris County error: ${err.message}`) }
+
+  log('CountyTax', `Found ${leads.length} leads`)
+  return leads
 }
 
+// ─── 8. Lis Pendens — Hillsborough FL (Tampa) ─────────────────────────────────
+async function scanLisPendens() {
+  log('LisPendens', 'Starting — Hillsborough FL + Harris County TX...')
+  const leads = []
+
+  // Hillsborough County FL (Tampa) — public records
+  try {
+    const res = await safeFetch(
+      'https://pubrec.hillsclerk.com/PublicRecordSearch/searchresults?documentType=LP&searchValue=storage&searchField=grantorGrantee',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const html = await res.text()
+      const rows = html.match(/<tr[^>]*class="[^"]*result[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi) || []
+      for (const row of rows.slice(0, 15)) {
+        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
+        if (!cells.length) continue
+        const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: cells[0] || 'Hillsborough Storage Property',
+          address: cells[1] || '',
+          city: 'Tampa',
+          state: 'FL',
+          ownerName: cells[0] || '',
+          source: 'lispendens_hillsborough',
+          sourceUrl: 'https://pubrec.hillsclerk.com',
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `Hillsborough County lis pendens filing · ${cells[2] || ''}`,
+        })
+      }
+    }
+  } catch (err) { log('LisPendens', `Hillsborough error: ${err.message}`) }
+
+  log('LisPendens', `Found ${leads.length} leads`)
+  return leads
+}
+
+// ─── 9. UCC Liens — TX SOS ────────────────────────────────────────────────────
 async function scanUCCLiens() {
-  // REQUIRES: BATCHDATA_API_KEY in .env.local
-  if (!process.env.BATCHDATA_API_KEY) { log('UCCLiens', 'BATCHDATA_API_KEY not set — skipping'); return [] }
-  log('UCCLiens', 'TODO: implement BatchData UCC lien query')
-  return []
+  log('UCCLiens', 'Starting — TX SOS + FL Sunbiz...')
+  const leads = []
+
+  // Texas SOS UCC search
+  try {
+    const res = await safeFetch(
+      'https://mycpa.cpa.state.tx.us/ucc/searchResultsAction.do?debtorName=storage&searchType=DEBTOR_NAME&fileNumberSearch=false',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const html = await res.text()
+      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
+      for (const row of rows.slice(1, 16)) {
+        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
+        if (cells.length < 2) continue
+        if (!/storage/i.test(cells.join(' '))) continue
+        const signals = {
+          lisPendens: false, taxDelinquency: false, bankruptcy: false,
+          outOfStateOwner: false, longTermOwner: false,
+          occupancyPct: null, rentBelowMarket: false,
+        }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: cells[0] || 'TX UCC Storage Debtor',
+          address: cells[2] || '',
+          city: '',
+          state: 'TX',
+          ownerName: cells[0] || '',
+          source: 'ucc_texas',
+          sourceUrl: 'https://mycpa.cpa.state.tx.us/ucc/',
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `Texas SOS UCC filing · File: ${cells[1] || 'N/A'}`,
+        })
+      }
+    }
+  } catch (err) { log('UCCLiens', `TX SOS error: ${err.message}`) }
+
+  log('UCCLiens', `Found ${leads.length} leads`)
+  return leads
 }
 
-async function scanOutOfStateOwners() {
-  // REQUIRES: ATTOM_API_KEY in .env.local
-  if (!process.env.ATTOM_API_KEY) { log('OutOfStateOwners', 'ATTOM_API_KEY not set — skipping'); return [] }
-  log('OutOfStateOwners', 'TODO: implement ATTOM out-of-state owner query')
-  return []
+// ─── 10. SOS LLC — FL Sunbiz inactive/dissolved storage entities ───────────────
+async function scanSOSLLC() {
+  log('SOSLLC', 'Starting — FL Sunbiz + TX Comptroller + GA SOS...')
+  const leads = []
+
+  // Florida Sunbiz — inactive/dissolved storage LLCs
+  try {
+    const res = await safeFetch(
+      'https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=STORAGE&activeFlag=inactive&SearchNameOrder=STORAGE',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const html = await res.text()
+      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
+      for (const row of rows.slice(1, 21)) {
+        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
+        if (cells.length < 2) continue
+        if (!/storage/i.test(cells[0])) continue
+        const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: cells[0] || 'FL Inactive Storage LLC',
+          address: '',
+          city: '',
+          state: 'FL',
+          ownerName: cells[0] || '',
+          source: 'sos_florida',
+          sourceUrl: `https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=STORAGE&activeFlag=inactive`,
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `FL Sunbiz inactive/dissolved storage LLC · Status: ${cells[1] || 'Inactive'}`,
+        })
+      }
+    }
+  } catch (err) { log('SOSLLC', `FL Sunbiz error: ${err.message}`) }
+
+  log('SOSLLC', `Found ${leads.length} leads`)
+  return leads
 }
 
-async function scanFireMarshal() {
-  log('FireMarshal', 'TODO: county-level fire marshal violation feeds — skipping')
-  return []
+// ─── 11. CMBS Watchlist — SEC EDGAR full-text search ──────────────────────────
+async function scanCMBSWatchlist() {
+  log('CMBS', 'Starting — SEC EDGAR full-text search...')
+  const leads = []
+
+  try {
+    const res = await safeFetch(
+      'https://efts.sec.gov/LATEST/search-index?q=%22self+storage%22+%22watchlist%22&dateRange=custom&startdt=2024-01-01&forms=ABS-EE,10-D',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const data = await res.json()
+      const hits = data.hits?.hits || []
+      for (const hit of hits.slice(0, 15)) {
+        const src = hit._source || {}
+        const signals = { cmbsWatchlist: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: src.entity_name || src.display_names?.[0] || 'CMBS Watchlist Storage',
+          address: '',
+          city: '',
+          state: '',
+          ownerName: src.entity_name || '',
+          source: 'cmbs_edgar',
+          sourceUrl: src.file_date
+            ? `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${encodeURIComponent(src.entity_name || 'storage')}&type=ABS-EE&dateb=&owner=include&count=10`
+            : 'https://efts.sec.gov',
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `SEC EDGAR CMBS watchlist filing · ${src.file_date || ''} · ${src.form_type || ''}`,
+        })
+      }
+    }
+  } catch (err) { log('CMBS', `EDGAR error: ${err.message}`) }
+
+  log('CMBS', `Found ${leads.length} leads`)
+  return leads
 }
 
-// ─── 7. LoopNet — Puppeteer (JS-rendered, requires real browser) ───────────────
+// ─── 12. LoopNet — Puppeteer (JS-rendered, requires real browser) ──────────────
 const LOOPNET_STATES = [
-  { slug: 'florida',    abbr: 'FL' },
-  { slug: 'texas',      abbr: 'TX' },
-  { slug: 'georgia',    abbr: 'GA' },
-  { slug: 'tennessee',  abbr: 'TN' },
+  { slug: 'florida',        abbr: 'FL' },
+  { slug: 'texas',          abbr: 'TX' },
+  { slug: 'georgia',        abbr: 'GA' },
+  { slug: 'tennessee',      abbr: 'TN' },
   { slug: 'north-carolina', abbr: 'NC' },
   { slug: 'south-carolina', abbr: 'SC' },
-  { slug: 'alabama',    abbr: 'AL' },
+  { slug: 'alabama',        abbr: 'AL' },
 ]
 
 async function scanLoopNet(browser) {
@@ -592,7 +829,6 @@ async function scanLoopNet(browser) {
       const url = `https://www.loopnet.com/search/self-storage-facilities/${slug}/for-sale/`
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
 
-      // Wait up to 8s for listings to appear
       await page.waitForFunction(
         () => document.querySelectorAll('[data-listing-id], [class*="PropertyCard"]').length > 0,
         { timeout: 8000 }
@@ -600,10 +836,8 @@ async function scanLoopNet(browser) {
 
       const pageLeads = await page.evaluate((state) => {
         const items = []
-        // LoopNet uses data-listing-id on container divs
         const cards = Array.from(document.querySelectorAll('[data-listing-id]'))
         if (cards.length === 0) {
-          // Fallback: look for listing title elements
           document.querySelectorAll('[class*="property-name"], [class*="PropertyName"], [class*="listing-name"]').forEach(el => {
             const name = el.textContent?.trim()
             if (!name || !/storage/i.test(name)) return
@@ -645,8 +879,8 @@ async function scanLoopNet(browser) {
           ownerName: 'LoopNet Listing',
           source: 'loopnet',
           sourceUrl: l.url,
-          distressSignals: {},
-          score: scoreLead({}),
+          distressSignals: { occupancyPct: null, rentBelowMarket: false },
+          score: scoreLead({ occupancyPct: null, rentBelowMarket: false }),
           status: 'new',
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
@@ -664,14 +898,9 @@ async function scanLoopNet(browser) {
   return leads
 }
 
-// ─── 8. Facebook Marketplace — Puppeteer (requires session cookies) ───────────
+// ─── 13. Facebook Marketplace — Puppeteer (requires session cookies) ───────────
 async function scanFacebook(browser) {
-  // Facebook requires login. To enable:
-  // 1. Log into facebook.com/marketplace/category/propertyforsale in Chrome manually
-  // 2. Export cookies via a browser extension (e.g. "EditThisCookie") to scripts/fb-cookies.json
-  // 3. Uncomment the body below
   log('Facebook', 'Skipped — add FB session cookies to scripts/fb-cookies.json to enable')
-
   /*
   const cookiePath = path.join(__dirname, 'fb-cookies.json')
   if (!fs.existsSync(cookiePath)) return []
@@ -683,7 +912,6 @@ async function scanFacebook(browser) {
     await page.goto('https://www.facebook.com/marketplace/category/propertyforsale?query=self+storage', {
       waitUntil: 'networkidle2', timeout: 30000
     })
-    // Wait for listings
     await page.waitForSelector('[data-pagelet="MarketplaceSearch"]', { timeout: 15000 })
     // TODO: extract listings from DOM
   } catch (err) {
@@ -695,21 +923,19 @@ async function scanFacebook(browser) {
   return []
 }
 
-// ─── 9. County Tax Rolls — STUB ───────────────────────────────────────────────
-// TODO: Each county has its own data portal. Priority counties:
-//   FL: https://www.miamidade.gov/Apps/PA/propertysearch/ (Miami-Dade)
-//       https://www.hcpafl.org/ (Hillsborough/Tampa)
-//   TX: https://www.hcad.org/ (Harris/Houston)
-//       https://www.dallascad.org/ (Dallas)
-//   GA: https://www.cofcga.gov/taxassessor (Chatham/Savannah)
-// Many counties expose delinquent tax lists as downloadable CSVs.
-// Query: properties with "storage" in business name + delinquent taxes.
-async function scanCountyTax() {
-  log('CountyTax', 'Stub — see TODO comments in source for county-specific API setup')
+// ─── 14. Out-of-state Owner Analysis — STUB ───────────────────────────────────
+// TODO: Cross-reference property records with owner mailing address.
+// Some counties provide bulk property data downloads:
+//   FL: https://floridarevenue.com/property/Pages/DataPortal.aspx
+//   TX: https://comptroller.texas.gov/taxes/property-tax/
+// Filter: properties where owner mailing state != property state.
+async function scanOutOfStateOwners() {
+  if (!process.env.ATTOM_API_KEY) { log('OutOfStateOwners', 'ATTOM_API_KEY not set — skipping'); return [] }
+  log('OutOfState', 'Stub — see TODO comments for state property data portals')
   return []
 }
 
-// ─── 10. Fire Marshal Violations — STUB ───────────────────────────────────────
+// ─── 15. Fire Marshal Violations — STUB ───────────────────────────────────────
 // TODO: Fire code violation data is typically from city/county open data portals.
 //   Examples:
 //   NYC: https://data.cityofnewyork.us/Housing-Development/DOB-Violations/3h2n-5cm9
@@ -721,40 +947,6 @@ async function scanFireMarshal() {
   return []
 }
 
-// ─── 11. UCC Liens — STUB ─────────────────────────────────────────────────────
-// TODO: UCC filings are searchable at each state's Secretary of State office.
-//   TX: https://mycpa.cpa.state.tx.us/ucc/
-//   FL: https://efile.sunbiz.org/uccsrch.html
-//   GA: https://ecorp.sos.ga.gov/BusinessSearch/UCCSearch
-// Search for "storage" in debtor name with recent filings.
-async function scanUCCLiens() {
-  log('UCCLiens', 'Stub — see TODO comments for state SOS portal setup')
-  return []
-}
-
-// ─── 12. Lis Pendens — STUB ───────────────────────────────────────────────────
-// TODO: Lis pendens are recorded at the county clerk/recorder level.
-//   Many counties expose searchable records:
-//   Hillsborough (Tampa): https://pubrec.hillsclerk.com/
-//   Harris (Houston): https://www.cclerk.hctx.net/
-//   Fulton (Atlanta): https://www.fultoncountyga.gov/services/courts/clerk-of-courts
-// Look for "storage" + recent filings in target counties.
-async function scanLisPendens() {
-  log('LisPendens', 'Stub — see TODO comments for county clerk portal setup')
-  return []
-}
-
-// ─── 13. Out-of-state Owner Analysis — STUB ───────────────────────────────────
-// TODO: Cross-reference property records with owner mailing address.
-// Some counties provide bulk property data downloads:
-//   FL: https://floridarevenue.com/property/Pages/DataPortal.aspx
-//   TX: https://comptroller.texas.gov/taxes/property-tax/
-// Filter: properties where owner mailing state != property state.
-async function scanOutOfStateOwners() {
-  log('OutOfState', 'Stub — see TODO comments for state property data portals')
-  return []
-}
-
 // ─── Persist to leads.json ────────────────────────────────────────────────────
 function persistLeads(newLeads) {
   let existing = []
@@ -762,7 +954,6 @@ function persistLeads(newLeads) {
     existing = JSON.parse(fs.readFileSync(LEADS_FILE, 'utf-8'))
   } catch { /* file doesn't exist yet */ }
 
-  // Deduplicate: existing + new, keyed by sourceUrl (or id as fallback)
   const existingKeys = new Set(existing.map(l => l.sourceUrl || l.id))
   const deduped      = newLeads.filter(l => !existingKeys.has(l.sourceUrl || l.id))
   if (deduped.length === 0) {
@@ -790,7 +981,6 @@ async function main() {
   console.log(`  ${new Date().toLocaleString()}`)
   console.log('================================================\n')
 
-  // Find Chrome on the user's machine
   const executablePath = CHROME_PATHS.find(p => { try { return fs.existsSync(p) } catch { return false } })
   let browser = null
 
@@ -811,7 +1001,6 @@ async function main() {
   }
 
   try {
-    // ── Fetch-based scrapers run in parallel ──
     log('Runner', 'Running API + fetch-based scrapers in parallel...')
     const fetchResults = await Promise.allSettled([
       Promise.race([scanCourtListener(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('CourtListener hard timeout')),90000))]),
@@ -823,13 +1012,14 @@ async function main() {
       scanLisPendens(),
       scanCountyTax(),
       scanUCCLiens(),
+      scanSOSLLC(),
+      scanCMBSWatchlist(),
       scanOutOfStateOwners(),
       scanFireMarshal(),
     ])
 
     const fetchLeads = fetchResults.flatMap(r => r.status === 'fulfilled' ? r.value : [])
 
-    // ── Persist fetch leads immediately — do not wait for browser scrapers ──
     console.log('\n================================================')
     console.log('  FETCH RESULTS')
     console.log('================================================')
@@ -842,7 +1032,6 @@ async function main() {
     persistLeads(fetchLeads)
     console.log('  [Persist] Fetch leads persisted successfully.')
 
-    // ── Browser-based scrapers run sequentially — optional, non-blocking ──
     const browserLeads = []
     if (browser) {
       log('Runner', 'Running Puppeteer-based scrapers...')
@@ -852,7 +1041,6 @@ async function main() {
       try { browserLeads.push(...await scanFacebook(browser)) } catch (e) { log('Facebook', `Fatal: ${e.message}`) }
     }
 
-    // ── Persist browser leads if any found ──
     if (browserLeads.length > 0) {
       console.log('\n================================================')
       console.log('  BROWSER RESULTS')
