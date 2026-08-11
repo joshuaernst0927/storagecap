@@ -81,6 +81,7 @@ function scoreLead(signals) {
   if (signals.cmbsWatchlist)      score += 22
   if (signals.fireCodeViolations) score += 15
   if (signals.sosInactive)        score += 15
+  if (signals.uccLien)            score += 15
   if (signals.decliningOccupancy) score += 10
   if (signals.outOfStateOwner)    score += 10
   if (signals.longTermOwner)      score += 10
@@ -99,6 +100,22 @@ function scoreLead(signals) {
   return Math.min(score, 100)
 }
 
+
+function isSelfStorage(text) {
+  const hits = ['self storage', 'self-storage', 'storage facility',
+    'storage units', 'mini storage', 'mini-storage', 'boat storage',
+    'rv storage', 'public storage', 'extra space', 'cubesmart',
+    'life storage', 'national storage', 'simply storage', 'storage post',
+    'storage mart', 'storagemart', 'storage express', 'storage depot']
+  const rejects = ['cold storage', 'data storage', 'wine storage',
+    'document storage', 'file storage', 'grain storage',
+    'warehouse storage', 'moving and storage', 'u-haul', 'uhaul',
+    'records storage', 'pool storage', 'luggage storage']
+  const lower = (text || '').toLowerCase()
+  const hasHit = hits.some(h => lower.includes(h))
+  const hasReject = rejects.some(r => lower.includes(r))
+  return hasHit && !hasReject
+}
 function log(source, msg) {
   const ts = new Date().toISOString().slice(11, 19)
   console.log(`[${ts}] [${source.padEnd(14)}] ${msg}`)
@@ -158,10 +175,10 @@ async function scanCourtListener() {
 
   for (let i = 0; i < BANKRUPTCY_COURTS.length; i++) {
     const courtId = BANKRUPTCY_COURTS[i]
-    if (i > 0) await new Promise(r => setTimeout(r, 13000))
+    if (i > 0) await new Promise(r => setTimeout(r, 8000))
     try {
       const params = new URLSearchParams({
-        q: 'storage', type: 'r', court: courtId,
+        q: '"self storage" OR "self-storage" OR "mini storage" OR "storage units" OR "storage facility"', type: 'r', court: courtId,
         page_size: '50', order_by: 'dateFiled desc',
       })
       const res = await fetch(`https://www.courtlistener.com/api/rest/v4/search/?${params}`, {
@@ -181,6 +198,7 @@ async function scanCourtListener() {
         seen.add(d.docket_id)
         const caseName = d.caseName || ''
         if (!/storage/i.test(caseName)) continue
+        if (!isSelfStorage(caseName)) continue
         if (d.dateFiled && d.dateFiled < filedAfter) continue
 
         const state    = COURT_STATE[courtId.slice(0, 2)] || 'US'
@@ -561,7 +579,7 @@ async function scanCountyTax() {
   // Miami-Dade FL — public property search API
   try {
     const res = await safeFetch(
-      'https://www.miamidade.gov/Apps/PA/PApublicServiceProxy/PaServicesProxy.aspx?Operation=GetPropertySearchByValue&Value=storage&ValueType=owner&FolioRange=all&ItemCount=50',
+      'https://www.miamidade.gov/Apps/PA/PApublicServiceProxy/PaServicesProxy.aspx?Operation=GetPropertySearchByValue&Value=self+storage&ValueType=owner&FolioRange=all&ItemCount=50',
       { timeout: 15000 }
     )
     if (res.ok) {
@@ -572,6 +590,7 @@ async function scanCountyTax() {
         const owner = entry.match(/<Owner>(.*?)<\/Owner>/)?.[1] || ''
         const folio = entry.match(/<Folionumber>(.*?)<\/Folionumber>/)?.[1] || ''
         if (!addr) continue
+        if (!isSelfStorage(addr + ' ' + owner)) continue
         const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
         leads.push({
           id: generateLeadId(),
@@ -605,7 +624,7 @@ async function scanCountyTax() {
       for (const row of rows.slice(1, 21)) {
         const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
         if (cells.length < 3) continue
-        if (!/storage/i.test(cells.join(' '))) continue
+        if (!isSelfStorage(cells.join(' '))) continue
         const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
         leads.push({
           id: generateLeadId(),
@@ -631,15 +650,15 @@ async function scanCountyTax() {
   return leads
 }
 
-// ─── 8. Lis Pendens — Hillsborough FL (Tampa) ─────────────────────────────────
+// ─── 8. Lis Pendens — Hillsborough FL + Harris County TX ─────────────────────
 async function scanLisPendens() {
   log('LisPendens', 'Starting — Hillsborough FL + Harris County TX...')
   const leads = []
 
-  // Hillsborough County FL (Tampa) — public records
+  // Hillsborough County FL (Tampa)
   try {
     const res = await safeFetch(
-      'https://pubrec.hillsclerk.com/PublicRecordSearch/searchresults?documentType=LP&searchValue=storage&searchField=grantorGrantee',
+      'https://pubrec.hillsclerk.com/PublicRecordSearch/searchresults?documentType=LP&searchValue=self+storage&searchField=grantorGrantee',
       { timeout: 15000 }
     )
     if (res.ok) {
@@ -648,40 +667,31 @@ async function scanLisPendens() {
       for (const row of rows.slice(0, 15)) {
         const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
         if (!cells.length) continue
+        if (!isSelfStorage(cells.join(' '))) continue
+        const href = row.match(/href="([^"]*document[^"]*)"/i)?.[1] || ''
         const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
         leads.push({
           id: generateLeadId(),
           facilityName: cells[0] || 'Hillsborough Storage Property',
-          address: cells[1] || '',
-          city: 'Tampa',
-          state: 'FL',
+          address: cells[1] || '', city: 'Tampa', state: 'FL',
           ownerName: cells[0] || '',
           source: 'lispendens_hillsborough',
-          sourceUrl: 'https://pubrec.hillsclerk.com',
+          sourceUrl: href ? `https://pubrec.hillsclerk.com${href}` : 'https://pubrec.hillsclerk.com',
           distressSignals: signals,
           score: scoreLead(signals),
           status: 'new',
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
-          notes: `Hillsborough County lis pendens filing · ${cells[2] || ''}`,
+          notes: `Hillsborough County lis pendens · ${cells[2] || ''}`,
         })
       }
     }
   } catch (err) { log('LisPendens', `Hillsborough error: ${err.message}`) }
 
-  log('LisPendens', `Found ${leads.length} leads`)
-  return leads
-}
-
-// ─── 9. UCC Liens — TX SOS ────────────────────────────────────────────────────
-async function scanUCCLiens() {
-  log('UCCLiens', 'Starting — TX SOS + FL Sunbiz...')
-  const leads = []
-
-  // Texas SOS UCC search
+  // Harris County TX
   try {
     const res = await safeFetch(
-      'https://mycpa.cpa.state.tx.us/ucc/searchResultsAction.do?debtorName=storage&searchType=DEBTOR_NAME&fileNumberSearch=false',
+      'https://www.cclerk.hctx.net/Applications/WebSearch/SP.aspx?From=RP&SearchType=Party&PartyName=self+storage&DocType=LP&DateFrom=01/01/2023&DateTo=12/31/2026',
       { timeout: 15000 }
     )
     if (res.ok) {
@@ -690,45 +700,116 @@ async function scanUCCLiens() {
       for (const row of rows.slice(1, 16)) {
         const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
         if (cells.length < 2) continue
-        if (!/storage/i.test(cells.join(' '))) continue
-        const signals = {
-          lisPendens: false, taxDelinquency: false, bankruptcy: false,
-          outOfStateOwner: false, longTermOwner: false,
-          occupancyPct: null, rentBelowMarket: false,
-        }
+        if (!isSelfStorage(cells.join(' '))) continue
+        const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
         leads.push({
           id: generateLeadId(),
-          facilityName: cells[0] || 'TX UCC Storage Debtor',
-          address: cells[2] || '',
-          city: '',
-          state: 'TX',
+          facilityName: cells[0] || 'Harris County Storage Property',
+          address: '', city: 'Houston', state: 'TX',
           ownerName: cells[0] || '',
-          source: 'ucc_texas',
-          sourceUrl: 'https://mycpa.cpa.state.tx.us/ucc/',
+          source: 'lispendens_harris',
+          sourceUrl: 'https://www.cclerk.hctx.net',
           distressSignals: signals,
           score: scoreLead(signals),
           status: 'new',
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
-          notes: `Texas SOS UCC filing · File: ${cells[1] || 'N/A'}`,
+          notes: `Harris County TX lis pendens · ${cells[1] || ''}`,
+        })
+      }
+    }
+  } catch (err) { log('LisPendens', `Harris County error: ${err.message}`) }
+
+  log('LisPendens', `Found ${leads.length} leads`)
+  return leads
+}
+
+// ─── 9. UCC Liens — TX SOS + FL Sunbiz ───────────────────────────────────────
+async function scanUCCLiens() {
+  log('UCCLiens', 'Starting — TX SOS + FL Sunbiz...')
+  const leads = []
+
+  // Texas SOS UCC
+  try {
+    const res = await safeFetch(
+      'https://mycpa.cpa.state.tx.us/ucc/searchResultsAction.do?debtorName=self+storage&searchType=DEBTOR_NAME&fileNumberSearch=false',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const html = await res.text()
+      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
+      for (const row of rows.slice(1, 16)) {
+        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
+        if (cells.length < 2) continue
+        if (!isSelfStorage(cells.join(' '))) continue
+        const fileNum = cells[1] || ''
+        const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: cells[0] || 'TX UCC Storage Debtor',
+          address: cells[2] || '', city: '', state: 'TX',
+          ownerName: cells[0] || '',
+          source: 'ucc_texas',
+          sourceUrl: fileNum
+            ? `https://mycpa.cpa.state.tx.us/ucc/searchResultsAction.do?fileNumber=${fileNum}&fileNumberSearch=true`
+            : 'https://mycpa.cpa.state.tx.us/ucc/',
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `Texas SOS UCC lien filing · File: ${fileNum || 'N/A'}`,
         })
       }
     }
   } catch (err) { log('UCCLiens', `TX SOS error: ${err.message}`) }
 
+  // Florida Sunbiz UCC
+  try {
+    const res = await safeFetch(
+      'https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=SELF+STORAGE&activeFlag=inactive',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const html = await res.text()
+      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
+      for (const row of rows.slice(1, 16)) {
+        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
+        if (cells.length < 2) continue
+        if (!isSelfStorage(cells[0])) continue
+        const href = row.match(/href="([^"]*SearchResultDetail[^"]*)"/)?.[1] || ''
+        const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: cells[0] || 'FL UCC Storage Entity',
+          address: '', city: '', state: 'FL',
+          ownerName: cells[0] || '',
+          source: 'ucc_florida',
+          sourceUrl: href ? `https://search.sunbiz.org${href}` : 'https://search.sunbiz.org',
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `FL Sunbiz UCC lien signal · Status: ${cells[1] || 'N/A'}`,
+        })
+      }
+    }
+  } catch (err) { log('UCCLiens', `FL Sunbiz error: ${err.message}`) }
+
   log('UCCLiens', `Found ${leads.length} leads`)
   return leads
 }
 
-// ─── 10. SOS LLC — FL Sunbiz inactive/dissolved storage entities ───────────────
+// ─── 10. SOS LLC — FL Sunbiz + TX Comptroller + GA SOS ───────────────────────
 async function scanSOSLLC() {
   log('SOSLLC', 'Starting — FL Sunbiz + TX Comptroller + GA SOS...')
   const leads = []
 
-  // Florida Sunbiz — inactive/dissolved storage LLCs
+  // Florida Sunbiz
   try {
     const res = await safeFetch(
-      'https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=STORAGE&activeFlag=inactive&SearchNameOrder=STORAGE',
+      'https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=SELF+STORAGE&activeFlag=inactive',
       { timeout: 15000 }
     )
     if (res.ok) {
@@ -737,17 +818,16 @@ async function scanSOSLLC() {
       for (const row of rows.slice(1, 21)) {
         const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
         if (cells.length < 2) continue
-        if (!/storage/i.test(cells[0])) continue
+        if (!isSelfStorage(cells[0])) continue
+        const href = row.match(/href="([^"]*SearchResultDetail[^"]*)"/)?.[1] || ''
         const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
         leads.push({
           id: generateLeadId(),
           facilityName: cells[0] || 'FL Inactive Storage LLC',
-          address: '',
-          city: '',
-          state: 'FL',
+          address: '', city: '', state: 'FL',
           ownerName: cells[0] || '',
           source: 'sos_florida',
-          sourceUrl: `https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=STORAGE&activeFlag=inactive`,
+          sourceUrl: href ? `https://search.sunbiz.org${href}` : 'https://search.sunbiz.org',
           distressSignals: signals,
           score: scoreLead(signals),
           status: 'new',
@@ -758,6 +838,71 @@ async function scanSOSLLC() {
       }
     }
   } catch (err) { log('SOSLLC', `FL Sunbiz error: ${err.message}`) }
+
+  // Texas Comptroller
+  try {
+    const res = await safeFetch(
+      'https://mycpa.cpa.state.tx.us/coa/coaSearchBtn.do?sortDir=&sortBy=&totalRows=&searchType=name&searchBar=self+storage&submitBtn=Search',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const html = await res.text()
+      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
+      for (const row of rows.slice(1, 21)) {
+        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
+        if (cells.length < 2) continue
+        if (!isSelfStorage(cells[0])) continue
+        if (!/inactive|forfeited|dissolved/i.test(cells.join(' '))) continue
+        const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: cells[0] || 'TX Inactive Storage LLC',
+          address: '', city: '', state: 'TX',
+          ownerName: cells[0] || '',
+          source: 'sos_texas',
+          sourceUrl: 'https://mycpa.cpa.state.tx.us/coa/',
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `TX Comptroller inactive storage entity · Status: ${cells[1] || 'Inactive'}`,
+        })
+      }
+    }
+  } catch (err) { log('SOSLLC', `TX Comptroller error: ${err.message}`) }
+
+  // Georgia SOS
+  try {
+    const res = await safeFetch(
+      'https://ecorp.sos.ga.gov/BusinessSearch/BusinessInformation?businessId=0&businessType=domestic+limited+liability+company&businessStatus=Dissolved&searchTerm=self+storage',
+      { timeout: 15000 }
+    )
+    if (res.ok) {
+      const html = await res.text()
+      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
+      for (const row of rows.slice(1, 21)) {
+        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
+        if (cells.length < 2) continue
+        if (!isSelfStorage(cells[0])) continue
+        const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: cells[0] || 'GA Inactive Storage LLC',
+          address: '', city: '', state: 'GA',
+          ownerName: cells[0] || '',
+          source: 'sos_georgia',
+          sourceUrl: 'https://ecorp.sos.ga.gov/BusinessSearch',
+          distressSignals: signals,
+          score: scoreLead(signals),
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `GA SOS dissolved storage entity · Status: ${cells[1] || 'Dissolved'}`,
+        })
+      }
+    }
+  } catch (err) { log('SOSLLC', `GA SOS error: ${err.message}`) }
 
   log('SOSLLC', `Found ${leads.length} leads`)
   return leads
@@ -778,6 +923,7 @@ async function scanCMBSWatchlist() {
       const hits = data.hits?.hits || []
       for (const hit of hits.slice(0, 15)) {
         const src = hit._source || {}
+        if (!isSelfStorage(src.entity_name || src.display_names?.[0] || '')) continue
         const signals = { cmbsWatchlist: true, occupancyPct: null, rentBelowMarket: false }
         leads.push({
           id: generateLeadId(),
@@ -1101,3 +1247,4 @@ main().catch(err => {
   console.error(err.stack)
   process.exit(1)
 })
+
