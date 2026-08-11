@@ -1,5 +1,305 @@
 [
   {
+    "id": "lead_1786451415237_3ofm8",
+    "facilityName": "Wells Fargo Commercial Mortgage Trust 2019-C50  (CIK 0001770572)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.238Z",
+    "lastUpdated": "2026-08-11T12:30:15.238Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-04-30 · "
+  },
+  {
+    "id": "lead_1786451415238_8qohv",
+    "facilityName": "BANK 2018-BNK15  (CIK 0001756271)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.238Z",
+    "lastUpdated": "2026-08-11T12:30:15.238Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-08-26 · "
+  },
+  {
+    "id": "lead_1786451415238_aeobc",
+    "facilityName": "WFRBS Commercial Mortgage Trust 2014-C24  (CIK 0001621466)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.238Z",
+    "lastUpdated": "2026-08-11T12:30:15.238Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-07-31 · "
+  },
+  {
+    "id": "lead_1786451415238_cs1fa",
+    "facilityName": "WFRBS Commercial Mortgage Trust 2014-C24  (CIK 0001621466)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.238Z",
+    "lastUpdated": "2026-08-11T12:30:15.238Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-08-31 · "
+  },
+  {
+    "id": "lead_1786451415238_wise6",
+    "facilityName": "Wells Fargo Commercial Mortgage Trust 2016-C34  (CIK 0001672587)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.238Z",
+    "lastUpdated": "2026-08-11T12:30:15.238Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-07-02 · "
+  },
+  {
+    "id": "lead_1786451415238_a6vxa",
+    "facilityName": "Wells Fargo Commercial Mortgage Trust 2016-C33  (CIK 0001668931)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.238Z",
+    "lastUpdated": "2026-08-11T12:30:15.238Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2019-07-31 · "
+  },
+  {
+    "id": "lead_1786451415235_hppnt",
+    "facilityName": "Wells Fargo Commercial Mortgage Trust 2019-C51  (CIK 0001776721)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-05-29 · "
+  },
+  {
+    "id": "lead_1786451415237_qns2h",
+    "facilityName": "BANK 2017-BNK6  (CIK 0001710261)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-06-26 · "
+  },
+  {
+    "id": "lead_1786451415237_2oh5l",
+    "facilityName": "UBS Commercial Mortgage Trust 2017-C6  (CIK 0001721905)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-10-01 · "
+  },
+  {
+    "id": "lead_1786451415237_wxtw0",
+    "facilityName": "UBS Commercial Mortgage Trust 2017-C6  (CIK 0001721905)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-08-03 · "
+  },
+  {
+    "id": "lead_1786451415237_6fkg1",
+    "facilityName": "BANK 2018-BNK14  (CIK 0001749973)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-07-31 · "
+  },
+  {
+    "id": "lead_1786451415237_c0ay8",
+    "facilityName": "Wells Fargo Commercial Mortgage Trust 2016-BNK1  (CIK 0001679420)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-07-31 · "
+  },
+  {
+    "id": "lead_1786451415237_4whfu",
+    "facilityName": "Wells Fargo Commercial Mortgage Trust 2019-C50  (CIK 0001770572)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-03-31 · "
+  },
+  {
+    "id": "lead_1786451415237_3i918",
+    "facilityName": "WFRBS Commercial Mortgage Trust 2012-C6  (CIK 0001542830)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2020-06-01 · "
+  },
+  {
+    "id": "lead_1786451415237_c4h2o",
+    "facilityName": "Wells Fargo Commercial Mortgage Trust 2019-C50  (CIK 0001770572)",
+    "address": "",
+    "city": "",
+    "state": "",
+    "ownerName": "",
+    "source": "cmbs_edgar",
+    "sourceUrl": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=storage&type=ABS-EE&dateb=&owner=include&count=10",
+    "distressSignals": {
+      "cmbsWatchlist": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 32,
+    "status": "new",
+    "foundAt": "2026-08-11T12:30:15.237Z",
+    "lastUpdated": "2026-08-11T12:30:15.237Z",
+    "notes": "SEC EDGAR CMBS watchlist filing · 2019-12-30 · "
+  },
+  {
     "id": "lead_1783544561538_jfnyo",
     "businessName": "Boat &amp; RV Storage",
     "address": "",
