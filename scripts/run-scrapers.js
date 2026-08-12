@@ -5,11 +5,10 @@
  * YEM Acquisitions — Local Lead Scraper
  *
  * Sources covered (16 total):
- *   API-based  : CourtListener (bankruptcy filings), SEC EDGAR (CMBS watchlist)
+ *   API-based  : CourtListener (bankruptcy filings)
  *   RSS-based  : Craigslist, BizBuySell
  *   Fetch-based: Brevitas, FSBO.com, Crexi, County Tax (Miami-Dade + Harris),
  *                Lis Pendens (Hillsborough), UCC Liens (TX SOS), SOS LLC (FL Sunbiz),
- *                CMBS Watchlist (SEC EDGAR)
  *   Puppeteer  : LoopNet, Facebook Marketplace*, BizBuySell
  *   Stubs/TODO : Fire Marshal, Out-of-state Owner
  *
@@ -78,7 +77,6 @@ function scoreLead(signals) {
   if (signals.taxDelinquency)     score += 25
   if (signals.lisPendens)         score += 20
   if (signals.bankruptcy)         score += 18
-  if (signals.cmbsWatchlist)      score += 22
   if (signals.fireCodeViolations) score += 15
   if (signals.sosInactive)        score += 15
   if (signals.uccLien)            score += 15
@@ -919,47 +917,6 @@ async function scanSOSLLC() {
   return leads
 }
 
-// ─── 11. CMBS Watchlist — SEC EDGAR full-text search ──────────────────────────
-async function scanCMBSWatchlist() {
-  log('CMBS', 'Starting — SEC EDGAR full-text search...')
-  const leads = []
-  try {
-    const res = await safeFetch(
-      'https://efts.sec.gov/LATEST/search-index?q=%22self+storage%22+%22watchlist%22&dateRange=custom&startdt=2024-01-01&forms=10-D,ABS-EE',
-      { timeout: 15000 }
-    )
-    if (res.ok) {
-      const data = await res.json()
-      const hits = data.hits?.hits || []
-      for (const hit of hits.slice(0, 20)) {
-        const src = hit._source || {}
-        const cleanName = Array.isArray(src.display_names)
-          ? src.display_names[0]?.replace(/\s*\(CIK[^)]*\)/g, '').trim()
-          : (src.entity_name || 'CMBS Watchlist Storage')
-        const signals = { cmbsWatchlist: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cleanName || 'CMBS Watchlist Storage',
-          address: '',
-          city: '',
-          state: '',
-          ownerName: cleanName || '',
-          source: 'cmbs_edgar',
-          sourceUrl: `https://efts.sec.gov/LATEST/search-index?q=%22self+storage%22+%22watchlist%22&forms=10-D,ABS-EE`,
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `SEC EDGAR CMBS watchlist · ${src.file_date || ''} · ${src.form_type || ''} · ${cleanName || ''}`,
-        })
-      }
-    }
-  } catch (err) { log('CMBS', `EDGAR error: ${err.message}`) }
-  log('CMBS', `Found ${leads.length} leads`)
-  return leads
-}
-
 // ─── 12. LoopNet — Puppeteer (JS-rendered, requires real browser) ──────────────
 const LOOPNET_STATES = [
   { slug: 'florida',        abbr: 'FL' },
@@ -1168,7 +1125,6 @@ async function main() {
       scanCountyTax(),
       scanUCCLiens(),
       scanSOSLLC(),
-      scanCMBSWatchlist(),
       scanOutOfStateOwners(),
       scanFireMarshal(),
     ])
