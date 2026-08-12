@@ -925,7 +925,7 @@ async function scanCMBSWatchlist() {
   const leads = []
   try {
     const res = await safeFetch(
-      'https://efts.sec.gov/LATEST/search-index?q=%22self+storage%22+%22watchlist%22&dateRange=custom&startdt=2024-01-01&forms=10-D,ABS-EE&hits.hits.total.value=true&hits.hits._source=file_date,period_of_report,entity_name,display_names,form_type,file_num',
+      'https://efts.sec.gov/LATEST/search-index?q=%22self+storage%22+%22watchlist%22&dateRange=custom&startdt=2024-01-01&forms=10-D,ABS-EE',
       { timeout: 15000 }
     )
     if (res.ok) {
@@ -933,12 +933,6 @@ async function scanCMBSWatchlist() {
       const hits = data.hits?.hits || []
       for (const hit of hits.slice(0, 20)) {
         const src = hit._source || {}
-        const displayNames = Array.isArray(src.display_names)
-          ? src.display_names.join(' ')
-          : (src.display_names || '')
-        const entityName = src.entity_name || ''
-        const searchText = `${entityName} ${displayNames} self storage`
-        if (!isSelfStorage(searchText)) continue
         const cleanName = Array.isArray(src.display_names)
           ? src.display_names[0]?.replace(/\s*\(CIK[^)]*\)/g, '').trim()
           : (src.entity_name || 'CMBS Watchlist Storage')
