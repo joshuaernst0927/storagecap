@@ -156,12 +156,12 @@ function parseRssXml(xml) {
 
 // ─── 1. CourtListener — real API, bankruptcy filings ──────────────────────────
 const BANKRUPTCY_COURTS = [
-  'flsb','flmb','flnb',
-  'txsb','txeb','txnb','txwb',
-  'nceb','ncmb','ncwb',
-  'ganb','gamb','gasb',
-  'tneb','tnmb','tnwb',
-  'ohnb','ohsb',
+  'flsb','flmb',
+  'txsb','txnb',
+  'nceb','ncwb',
+  'ganb',
+  'tnmb',
+  'ohnb',
   'scb',
 ]
 const COURT_CITY = {
@@ -184,7 +184,7 @@ async function scanCourtListener() {
 
   for (let i = 0; i < BANKRUPTCY_COURTS.length; i++) {
     const courtId = BANKRUPTCY_COURTS[i]
-    if (i > 0) await new Promise(r => setTimeout(r, 8000))
+    if (i > 0) await new Promise(r => setTimeout(r, 5000))
     try {
       const params = new URLSearchParams({
         q: '"self storage" OR "self-storage" OR "mini storage" OR "storage units" OR "storage facility"', type: 'r', court: courtId,
@@ -195,7 +195,7 @@ async function scanCourtListener() {
           Authorization: `Token ${CL_TOKEN}`,
           'User-Agent': 'YEMAcquisitions/1.0 (joshuaernst@gmail.com)',
         },
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(15000),
       })
       if (!res.ok) { log('CourtListener', `${courtId}: HTTP ${res.status}`); continue }
       const data = await res.json()
