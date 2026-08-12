@@ -923,41 +923,45 @@ async function scanSOSLLC() {
 async function scanCMBSWatchlist() {
   log('CMBS', 'Starting — SEC EDGAR full-text search...')
   const leads = []
-
   try {
     const res = await safeFetch(
-      'https://efts.sec.gov/LATEST/search-index?q=%22self+storage%22+%22watchlist%22&dateRange=custom&startdt=2024-01-01&forms=ABS-EE,10-D',
+      'https://efts.sec.gov/LATEST/search-index?q=%22self+storage%22+%22watchlist%22&dateRange=custom&startdt=2024-01-01&forms=10-D,ABS-EE&hits.hits.total.value=true&hits.hits._source=file_date,period_of_report,entity_name,display_names,form_type,file_num',
       { timeout: 15000 }
     )
     if (res.ok) {
       const data = await res.json()
       const hits = data.hits?.hits || []
-      for (const hit of hits.slice(0, 15)) {
+      for (const hit of hits.slice(0, 20)) {
         const src = hit._source || {}
-        if (!isSelfStorage(src.entity_name || src.display_names?.[0] || '')) continue
+        const displayNames = Array.isArray(src.display_names)
+          ? src.display_names.join(' ')
+          : (src.display_names || '')
+        const entityName = src.entity_name || ''
+        const searchText = `${entityName} ${displayNames} self storage`
+        if (!isSelfStorage(searchText)) continue
+        const cleanName = Array.isArray(src.display_names)
+          ? src.display_names[0]?.replace(/\s*\(CIK[^)]*\)/g, '').trim()
+          : (src.entity_name || 'CMBS Watchlist Storage')
         const signals = { cmbsWatchlist: true, occupancyPct: null, rentBelowMarket: false }
         leads.push({
           id: generateLeadId(),
-          facilityName: src.entity_name || src.display_names?.[0] || 'CMBS Watchlist Storage',
+          facilityName: cleanName || 'CMBS Watchlist Storage',
           address: '',
           city: '',
           state: '',
-          ownerName: src.entity_name || '',
+          ownerName: cleanName || '',
           source: 'cmbs_edgar',
-          sourceUrl: src.file_date
-            ? `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${encodeURIComponent(src.entity_name || 'storage')}&type=ABS-EE&dateb=&owner=include&count=10`
-            : 'https://efts.sec.gov',
+          sourceUrl: `https://efts.sec.gov/LATEST/search-index?q=%22self+storage%22+%22watchlist%22&forms=10-D,ABS-EE`,
           distressSignals: signals,
           score: scoreLead(signals),
           status: 'new',
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
-          notes: `SEC EDGAR CMBS watchlist filing · ${src.file_date || ''} · ${src.form_type || ''}`,
+          notes: `SEC EDGAR CMBS watchlist · ${src.file_date || ''} · ${src.form_type || ''} · ${cleanName || ''}`,
         })
       }
     }
   } catch (err) { log('CMBS', `EDGAR error: ${err.message}`) }
-
   log('CMBS', `Found ${leads.length} leads`)
   return leads
 }
