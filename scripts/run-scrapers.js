@@ -184,7 +184,7 @@ async function scanCourtListener() {
 
   for (let i = 0; i < BANKRUPTCY_COURTS.length; i++) {
     const courtId = BANKRUPTCY_COURTS[i]
-    if (i > 0) await new Promise(r => setTimeout(r, 5000))
+    if (i > 0) await new Promise(r => setTimeout(r, 10000))
     try {
       const params = new URLSearchParams({
         q: '"self storage" OR "self-storage" OR "mini storage" OR "storage units" OR "storage facility"', type: 'r', court: courtId,
