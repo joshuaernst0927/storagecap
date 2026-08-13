@@ -190,14 +190,29 @@ async function scanCourtListener() {
         q: '"self storage" OR "self-storage" OR "mini storage" OR "storage units" OR "storage facility"', type: 'r', court: courtId,
         page_size: '50', order_by: 'dateFiled desc',
       })
-      const res = await fetch(`https://www.courtlistener.com/api/rest/v4/search/?${params}`, {
-        headers: {
-          Authorization: `Token ${CL_TOKEN}`,
-          'User-Agent': 'YEMAcquisitions/1.0 (joshuaernst@gmail.com)',
-        },
-        signal: AbortSignal.timeout(15000),
-      })
-      if (!res.ok) { log('CourtListener', `${courtId}: HTTP ${res.status}`); continue }
+
+      let res
+      for (let attempt = 0; attempt <= 1; attempt++) {
+        res = await fetch(`https://www.courtlistener.com/api/rest/v4/search/?${params}`, {
+          headers: {
+            Authorization: `Token ${CL_TOKEN}`,
+            'User-Agent': 'YEMAcquisitions/1.0 (joshuaernst@gmail.com)',
+          },
+          signal: AbortSignal.timeout(15000),
+        })
+        if (res.status === 429) {
+          if (attempt === 0) {
+            log('CourtListener', `${courtId}: 429 rate-limited — waiting 60s before retry...`)
+            await new Promise(r => setTimeout(r, 60000))
+          } else {
+            log('CourtListener', `${courtId}: 429 on retry — skipping court`)
+          }
+          continue
+        }
+        break
+      }
+
+      if (!res || !res.ok) { log('CourtListener', `${courtId}: HTTP ${res ? res.status : 'no response'}`); continue }
       const data = await res.json()
       if (data.detail) { log('CourtListener', `${courtId}: ${data.detail}`); continue }
 
@@ -264,26 +279,59 @@ async function scanBizBuySell(browser) {
   log('BizBuySell', 'Starting (Puppeteer stealth)...')
   const leads = []
   if (!browser) { log('BizBuySell', 'No browser — skipping'); return leads }
-  const states = ['texas','georgia','south-carolina','tennessee','arizona','florida','alabama','mississippi','north-carolina','ohio']
+
+  const states = ['texas','georgia','south-carolina','tennessee','arizona','florida','alabama','mississippi','north-carolina','ohio','wisconsin','indiana']
+
+  const randDelay = (min = 2000, max = 5000) => new Promise(r => setTimeout(r, min + Math.floor(Math.random() * (max - min))))
+
+  const randomViewport = () => ({
+    width:  1200 + Math.floor(Math.random() * 320),
+    height: 800  + Math.floor(Math.random() * 200),
+    deviceScaleFactor: 1,
+  })
+
+  const stealthMouseMove = async (page) => {
+    const vp = page.viewport() || { width: 1280, height: 900 }
+    const steps = 3 + Math.floor(Math.random() * 4)
+    for (let s = 0; s < steps; s++) {
+      const x = 100 + Math.floor(Math.random() * (vp.width  - 200))
+      const y = 100 + Math.floor(Math.random() * (vp.height - 200))
+      await page.mouse.move(x, y, { steps: 10 + Math.floor(Math.random() * 10) })
+      await new Promise(r => setTimeout(r, 80 + Math.floor(Math.random() * 150)))
+    }
+  }
+
   for (const state of states) {
     try {
       const page = await browser.newPage()
+      await page.setViewport(randomViewport())
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
       await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+
       const urls = [
         `https://www.bizbuysell.com/${state}/storage-facilities-and-warehouses-for-sale/`,
         `https://www.bizbuysell.com/${state}/storage-facility-and-warehouse-business-real-estate/`,
       ]
       for (const url of urls) {
         try {
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 })
-          await new Promise(r => setTimeout(r, 1500))
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+          await randDelay(2000, 5000)
+          await stealthMouseMove(page)
+          await randDelay(500, 1500)
+
           const html = await page.content()
           const stateName = state.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+          const stateAbbr = {
+            texas:'TX', georgia:'GA', 'south-carolina':'SC', tennessee:'TN', arizona:'AZ',
+            florida:'FL', alabama:'AL', mississippi:'MS', 'north-carolina':'NC', ohio:'OH',
+            wisconsin:'WI', indiana:'IN',
+          }[state] || state.slice(0,2).toUpperCase()
+
           const titles = [...html.matchAll(/<h4[^>]*>([\s\S]*?)<\/h4>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(t => t.length > 5)
           const links = [...html.matchAll(/href="(\/(?:businesses|real-estate)\/[^"?#]+)"/gi)].map(m => m[1]).filter((v, i, a) => a.indexOf(v) === i)
           const prices = [...html.matchAll(/\$([\d,]+(?:\.\d+)?(?:\s*(?:Million|M|K))?)/gi)].map(m => m[0])
           const phones = [...html.matchAll(/\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/g)].map(m => m[0])
+
           for (let i = 0; i < Math.min(titles.length, links.length, 25); i++) {
             const title = titles[i]
             if (!title || title.length < 5) continue
@@ -295,7 +343,7 @@ async function scanBizBuySell(browser) {
               businessName: title.substring(0, 120),
               address: stateName,
               city: stateName,
-              state: state.substring(0, 2).toUpperCase(),
+              state: stateAbbr,
               askingPrice: prices[i] || null,
               ownerName: 'BizBuySell Listing',
               contactInfo: phones[i] ? { phone: phones[i] } : {},
@@ -311,11 +359,11 @@ async function scanBizBuySell(browser) {
             })
           }
         } catch (pe) { log('BizBuySell', `${state} page error: ${pe.message}`) }
-        await new Promise(r => setTimeout(r, 1000))
+        await randDelay(2000, 5000)
       }
       await page.close()
     } catch (err) { log('BizBuySell', `${state} error: ${err.message}`) }
-    await new Promise(r => setTimeout(r, 800))
+    await randDelay(2000, 4000)
   }
   log('BizBuySell', `Found ${leads.length} leads`)
   return leads
@@ -692,6 +740,249 @@ async function scanCountyTax(browser) {
     if (page2) await page2.close().catch(() => {})
   }
 
+  // Franklin County OH (Columbus)
+  let page3
+  try {
+    page3 = await browser.newPage()
+    await page3.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page3.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page3.goto(
+      'https://property.franklincountyauditor.com/_web/search/commonsearch.aspx?mode=address',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2000))
+    // Search via evaluate to submit the form
+    const ohRows = await page3.evaluate(async () => {
+      try {
+        const res = await fetch(
+          'https://oh-franklin-treasurer.publicaccessnow.com/api/PropertySearch?query=self+storage&type=owner',
+          { headers: { Accept: 'application/json' } }
+        )
+        if (!res.ok) return []
+        const data = await res.json()
+        return (data.items || data.results || []).slice(0, 20).map(p => ({
+          addr:  p.address || p.siteAddress || '',
+          owner: p.ownerName || p.owner || '',
+        }))
+      } catch { return [] }
+    })
+    const beforeOH = leads.length
+    for (const { addr, owner } of ohRows) {
+      if (!addr && !owner) continue
+      if (!isSelfStorage(addr + ' ' + owner)) continue
+      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: addr || owner,
+        address: addr,
+        city: 'Columbus',
+        state: 'OH',
+        ownerName: owner,
+        source: 'countytax_franklin_oh',
+        sourceUrl: 'https://property.franklincountyauditor.com',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: 'Franklin County OH tax delinquency signal',
+      })
+    }
+    log('CountyTax', `Franklin County OH: ${leads.length - beforeOH} leads`)
+  } catch (err) {
+    log('CountyTax', `Franklin County OH error: ${err.message}`)
+  } finally {
+    if (page3) await page3.close().catch(() => {})
+  }
+
+  // Davidson County TN (Nashville) — Trustee delinquent list
+  let page4
+  try {
+    page4 = await browser.newPage()
+    await page4.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page4.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page4.goto(
+      'https://www.padctn.org/prc/property/search/3?owner_name=self+storage',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeTN = leads.length
+    const tnRows = await page4.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of tnRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[1] || cells[0] || 'Davidson County TN Storage',
+        address: cells[2] || '',
+        city: 'Nashville',
+        state: 'TN',
+        ownerName: cells[0] || '',
+        source: 'countytax_davidson_tn',
+        sourceUrl: 'https://www.padctn.org/prc/property/search/3',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: 'Davidson County TN tax delinquency signal',
+      })
+    }
+    log('CountyTax', `Davidson County TN: ${leads.length - beforeTN} leads`)
+  } catch (err) {
+    log('CountyTax', `Davidson County TN error: ${err.message}`)
+  } finally {
+    if (page4) await page4.close().catch(() => {})
+  }
+
+  // Mecklenburg County NC (Charlotte)
+  let page5
+  try {
+    page5 = await browser.newPage()
+    await page5.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page5.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page5.goto(
+      'https://polaris3g.mecklenburgcountync.gov/#',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2000))
+    const beforeNC = leads.length
+    const ncRows = await page5.evaluate(async () => {
+      try {
+        const res = await fetch(
+          'https://polaris3g.mecklenburgcountync.gov/api/feature?fields=OWNER%2CADDRESS&where=UPPER(OWNER)+LIKE+%27%25SELF+STORAGE%25%27&returnGeometry=false',
+          { headers: { Accept: 'application/json' } }
+        )
+        if (!res.ok) return []
+        const data = await res.json()
+        return (data.features || []).slice(0, 20).map(f => ({
+          addr:  f.attributes?.ADDRESS || '',
+          owner: f.attributes?.OWNER   || '',
+        }))
+      } catch { return [] }
+    })
+    for (const { addr, owner } of ncRows) {
+      if (!isSelfStorage(addr + ' ' + owner)) continue
+      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: addr || owner,
+        address: addr,
+        city: 'Charlotte',
+        state: 'NC',
+        ownerName: owner,
+        source: 'countytax_mecklenburg_nc',
+        sourceUrl: 'https://polaris3g.mecklenburgcountync.gov',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: 'Mecklenburg County NC tax delinquency signal',
+      })
+    }
+    log('CountyTax', `Mecklenburg County NC: ${leads.length - beforeNC} leads`)
+  } catch (err) {
+    log('CountyTax', `Mecklenburg County NC error: ${err.message}`)
+  } finally {
+    if (page5) await page5.close().catch(() => {})
+  }
+
+  // Milwaukee County WI
+  let page6
+  try {
+    page6 = await browser.newPage()
+    await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page6.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page6.goto(
+      'https://milwaukee.county-taxes.com/public/search/property_tax?search%5Baddress%5D=self+storage',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeWI = leads.length
+    const wiRows = await page6.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr, .result-row, [class*="property-row"]')).slice(0, 20)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td, [class*="col"]')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of wiRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'Milwaukee County WI Storage',
+        address: cells[1] || '',
+        city: 'Milwaukee',
+        state: 'WI',
+        ownerName: cells[0] || '',
+        source: 'countytax_milwaukee_wi',
+        sourceUrl: 'https://milwaukee.county-taxes.com/public',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: 'Milwaukee County WI tax delinquency signal',
+      })
+    }
+    log('CountyTax', `Milwaukee County WI: ${leads.length - beforeWI} leads`)
+  } catch (err) {
+    log('CountyTax', `Milwaukee County WI error: ${err.message}`)
+  } finally {
+    if (page6) await page6.close().catch(() => {})
+  }
+
+  // Marion County IN (Indianapolis)
+  let page7
+  try {
+    page7 = await browser.newPage()
+    await page7.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page7.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page7.goto(
+      'https://www.assessor.indygov.org/search/?owner=self+storage',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeIN = leads.length
+    const inRows = await page7.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of inRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[1] || cells[0] || 'Marion County IN Storage',
+        address: cells[2] || '',
+        city: 'Indianapolis',
+        state: 'IN',
+        ownerName: cells[0] || '',
+        source: 'countytax_marion_in',
+        sourceUrl: 'https://www.assessor.indygov.org',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: 'Marion County IN tax delinquency signal',
+      })
+    }
+    log('CountyTax', `Marion County IN: ${leads.length - beforeIN} leads`)
+  } catch (err) {
+    log('CountyTax', `Marion County IN error: ${err.message}`)
+  } finally {
+    if (page7) await page7.close().catch(() => {})
+  }
+
   log('CountyTax', `Found ${leads.length} total leads`)
   return leads
 }
@@ -794,6 +1085,232 @@ async function scanLisPendens(browser) {
     log('LisPendens', `Harris County error: ${err.message}`)
   } finally {
     if (page2) await page2.close().catch(() => {})
+  }
+
+  // Cuyahoga County OH (Cleveland) — Common Pleas Court
+  let page3
+  try {
+    page3 = await browser.newPage()
+    await page3.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page3.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page3.goto(
+      'https://cpdocket.cp.cuyahogacounty.us/Search.aspx?q=self+storage&t=case',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeOH = leads.length
+    const ohRows = await page3.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr, .search-result')).slice(1, 16)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of ohRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'Cuyahoga County OH Storage Property',
+        address: '',
+        city: 'Cleveland',
+        state: 'OH',
+        ownerName: cells[0] || '',
+        source: 'lispendens_cuyahoga_oh',
+        sourceUrl: 'https://cpdocket.cp.cuyahogacounty.us',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Cuyahoga County OH lis pendens · ${cells[1] || ''}`,
+      })
+    }
+    log('LisPendens', `Cuyahoga County OH: ${leads.length - beforeOH} leads`)
+  } catch (err) {
+    log('LisPendens', `Cuyahoga County OH error: ${err.message}`)
+  } finally {
+    if (page3) await page3.close().catch(() => {})
+  }
+
+  // Davidson County TN (Nashville) — Circuit Court Clerk
+  let page4
+  try {
+    page4 = await browser.newPage()
+    await page4.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page4.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page4.goto(
+      'https://sci.ccc.nashville.gov/Search/CaseSearch?casetype=Civil&party=self+storage',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeTN = leads.length
+    const tnRows = await page4.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of tnRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'Davidson County TN Storage Property',
+        address: '',
+        city: 'Nashville',
+        state: 'TN',
+        ownerName: cells[0] || '',
+        source: 'lispendens_davidson_tn',
+        sourceUrl: 'https://sci.ccc.nashville.gov',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Davidson County TN lis pendens · ${cells[1] || ''}`,
+      })
+    }
+    log('LisPendens', `Davidson County TN: ${leads.length - beforeTN} leads`)
+  } catch (err) {
+    log('LisPendens', `Davidson County TN error: ${err.message}`)
+  } finally {
+    if (page4) await page4.close().catch(() => {})
+  }
+
+  // Mecklenburg County NC (Charlotte) — Register of Deeds
+  let page5
+  try {
+    page5 = await browser.newPage()
+    await page5.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page5.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page5.goto(
+      'https://meckrod.manatron.com/RealEstate/SearchEntry.aspx?SearchType=GrantorGrantee&GrantorGrantee=self+storage&DocType=LP',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeNC = leads.length
+    const ncRows = await page5.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
+      return rows.map(row => ({
+        cells: Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim()),
+        href:  row.querySelector('a')?.getAttribute('href') || '',
+      })).filter(r => r.cells.length >= 2)
+    })
+    for (const { cells, href } of ncRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'Mecklenburg County NC Storage Property',
+        address: '',
+        city: 'Charlotte',
+        state: 'NC',
+        ownerName: cells[0] || '',
+        source: 'lispendens_mecklenburg_nc',
+        sourceUrl: href ? `https://meckrod.manatron.com${href}` : 'https://meckrod.manatron.com',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Mecklenburg County NC lis pendens · ${cells[1] || ''}`,
+      })
+    }
+    log('LisPendens', `Mecklenburg County NC: ${leads.length - beforeNC} leads`)
+  } catch (err) {
+    log('LisPendens', `Mecklenburg County NC error: ${err.message}`)
+  } finally {
+    if (page5) await page5.close().catch(() => {})
+  }
+
+  // Milwaukee County WI — Register of Deeds
+  let page6
+  try {
+    page6 = await browser.newPage()
+    await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page6.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page6.goto(
+      'https://rod.milwaukee.county.wi.gov/rod/search?grantorName=self+storage&docType=LISPENDENS',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeWI = leads.length
+    const wiRows = await page6.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of wiRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'Milwaukee County WI Storage Property',
+        address: '',
+        city: 'Milwaukee',
+        state: 'WI',
+        ownerName: cells[0] || '',
+        source: 'lispendens_milwaukee_wi',
+        sourceUrl: 'https://rod.milwaukee.county.wi.gov',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Milwaukee County WI lis pendens · ${cells[1] || ''}`,
+      })
+    }
+    log('LisPendens', `Milwaukee County WI: ${leads.length - beforeWI} leads`)
+  } catch (err) {
+    log('LisPendens', `Milwaukee County WI error: ${err.message}`)
+  } finally {
+    if (page6) await page6.close().catch(() => {})
+  }
+
+  // Marion County IN (Indianapolis) — Superior Court
+  let page7
+  try {
+    page7 = await browser.newPage()
+    await page7.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page7.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page7.goto(
+      'https://public.courts.in.gov/mycase/#/vw/Search?court=39D01&party=self+storage&caseType=MF',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeIN = leads.length
+    const inRows = await page7.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr, [class*="case-row"]')).slice(1, 16)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of inRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'Marion County IN Storage Property',
+        address: '',
+        city: 'Indianapolis',
+        state: 'IN',
+        ownerName: cells[0] || '',
+        source: 'lispendens_marion_in',
+        sourceUrl: 'https://public.courts.in.gov/mycase',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Marion County IN lis pendens · ${cells[1] || ''}`,
+      })
+    }
+    log('LisPendens', `Marion County IN: ${leads.length - beforeIN} leads`)
+  } catch (err) {
+    log('LisPendens', `Marion County IN error: ${err.message}`)
+  } finally {
+    if (page7) await page7.close().catch(() => {})
   }
 
   log('LisPendens', `Found ${leads.length} total leads`)
@@ -901,6 +1418,96 @@ async function scanUCCLiens(browser) {
     log('UCCLiens', `FL Sunbiz error: ${err.message}`)
   } finally {
     if (page2) await page2.close().catch(() => {})
+  }
+
+  // Ohio SOS UCC
+  let page3
+  try {
+    page3 = await browser.newPage()
+    await page3.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page3.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page3.goto(
+      'https://www5.sos.state.oh.us/ourcfis/CFIS_CF/CF_SearchResults.aspx?SearchType=Name&DebtorName=self+storage',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeOH = leads.length
+    const ohRows = await page3.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of ohRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'OH UCC Storage Debtor',
+        address: cells[2] || '',
+        city: '',
+        state: 'OH',
+        ownerName: cells[0] || '',
+        source: 'ucc_ohio',
+        sourceUrl: 'https://www5.sos.state.oh.us/ourcfis/',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Ohio SOS UCC lien filing · File: ${cells[1] || 'N/A'}`,
+      })
+    }
+    log('UCCLiens', `OH SOS: ${leads.length - beforeOH} leads`)
+  } catch (err) {
+    log('UCCLiens', `OH SOS error: ${err.message}`)
+  } finally {
+    if (page3) await page3.close().catch(() => {})
+  }
+
+  // North Carolina SOS UCC
+  let page4
+  try {
+    page4 = await browser.newPage()
+    await page4.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page4.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page4.goto(
+      'https://www.sosnc.gov/online_services/ucc/search_results?search_type=debtor_name&debtor_name=self+storage',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeNC = leads.length
+    const ncRows = await page4.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of ncRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'NC UCC Storage Debtor',
+        address: cells[2] || '',
+        city: '',
+        state: 'NC',
+        ownerName: cells[0] || '',
+        source: 'ucc_nc',
+        sourceUrl: 'https://www.sosnc.gov/online_services/ucc',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `NC SOS UCC lien filing · File: ${cells[1] || 'N/A'}`,
+      })
+    }
+    log('UCCLiens', `NC SOS: ${leads.length - beforeNC} leads`)
+  } catch (err) {
+    log('UCCLiens', `NC SOS error: ${err.message}`)
+  } finally {
+    if (page4) await page4.close().catch(() => {})
   }
 
   log('UCCLiens', `Found ${leads.length} total leads`)
@@ -1055,6 +1662,224 @@ async function scanSOSLLC(browser) {
     if (page3) await page3.close().catch(() => {})
   }
 
+  // Ohio SOS
+  let page4
+  try {
+    page4 = await browser.newPage()
+    await page4.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page4.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page4.goto(
+      'https://businesssearch.ohiosos.gov/?=businessDetails&businessType=LLC&status=Cancelled&searchVal=self+storage',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeOH = leads.length
+    const ohRows = await page4.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr, [class*="result-row"]')).slice(1, 21)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of ohRows) {
+      if (!isSelfStorage(cells[0])) continue
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'OH Inactive Storage LLC',
+        address: '', city: '', state: 'OH',
+        ownerName: cells[0] || '',
+        source: 'sos_ohio',
+        sourceUrl: 'https://businesssearch.ohiosos.gov',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `OH SOS inactive/cancelled storage LLC · Status: ${cells[1] || 'Inactive'}`,
+      })
+    }
+    log('SOSLLC', `OH SOS: ${leads.length - beforeOH} leads`)
+  } catch (err) {
+    log('SOSLLC', `OH SOS error: ${err.message}`)
+  } finally {
+    if (page4) await page4.close().catch(() => {})
+  }
+
+  // Tennessee SOS (TNBear)
+  let page5
+  try {
+    page5 = await browser.newPage()
+    await page5.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page5.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page5.goto(
+      'https://tnbear.tn.gov/Ecommerce/FilingSearch.aspx?ACN=self+storage&Status=Inactive',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeTN = leads.length
+    const tnRows = await page5.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of tnRows) {
+      if (!isSelfStorage(cells[0])) continue
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'TN Inactive Storage LLC',
+        address: '', city: '', state: 'TN',
+        ownerName: cells[0] || '',
+        source: 'sos_tennessee',
+        sourceUrl: 'https://tnbear.tn.gov/Ecommerce/FilingSearch.aspx',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `TN SOS inactive storage entity · Status: ${cells[1] || 'Inactive'}`,
+      })
+    }
+    log('SOSLLC', `TN SOS: ${leads.length - beforeTN} leads`)
+  } catch (err) {
+    log('SOSLLC', `TN SOS error: ${err.message}`)
+  } finally {
+    if (page5) await page5.close().catch(() => {})
+  }
+
+  // North Carolina SOS
+  let page6
+  try {
+    page6 = await browser.newPage()
+    await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page6.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page6.goto(
+      'https://www.sosnc.gov/online_services/search/by_title/_business_registration_results?name=self+storage&status=Withdrawn',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeNC = leads.length
+    const ncRows = await page6.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row => ({
+        cells: Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim()),
+        href:  row.querySelector('a')?.getAttribute('href') || '',
+      })).filter(r => r.cells.length >= 2)
+    })
+    for (const { cells, href } of ncRows) {
+      if (!isSelfStorage(cells[0])) continue
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'NC Inactive Storage LLC',
+        address: '', city: '', state: 'NC',
+        ownerName: cells[0] || '',
+        source: 'sos_nc',
+        sourceUrl: href ? `https://www.sosnc.gov${href}` : 'https://www.sosnc.gov',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `NC SOS inactive/withdrawn storage entity · Status: ${cells[1] || 'Inactive'}`,
+      })
+    }
+    log('SOSLLC', `NC SOS: ${leads.length - beforeNC} leads`)
+  } catch (err) {
+    log('SOSLLC', `NC SOS error: ${err.message}`)
+  } finally {
+    if (page6) await page6.close().catch(() => {})
+  }
+
+  // Wisconsin DFI
+  let page7
+  try {
+    page7 = await browser.newPage()
+    await page7.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page7.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page7.goto(
+      'https://www.wdfi.org/apps/CorpSearch/Results.aspx?type=Simple&q=self+storage&status=Dissolved',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeWI = leads.length
+    const wiRows = await page7.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row => ({
+        cells: Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim()),
+        href:  row.querySelector('a')?.getAttribute('href') || '',
+      })).filter(r => r.cells.length >= 2)
+    })
+    for (const { cells, href } of wiRows) {
+      if (!isSelfStorage(cells[0])) continue
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'WI Dissolved Storage LLC',
+        address: '', city: '', state: 'WI',
+        ownerName: cells[0] || '',
+        source: 'sos_wisconsin',
+        sourceUrl: href ? `https://www.wdfi.org${href}` : 'https://www.wdfi.org/apps/CorpSearch',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `WI DFI dissolved storage entity · Status: ${cells[1] || 'Dissolved'}`,
+      })
+    }
+    log('SOSLLC', `WI DFI: ${leads.length - beforeWI} leads`)
+  } catch (err) {
+    log('SOSLLC', `WI DFI error: ${err.message}`)
+  } finally {
+    if (page7) await page7.close().catch(() => {})
+  }
+
+  // Indiana SOS
+  let page8
+  try {
+    page8 = await browser.newPage()
+    await page8.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page8.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page8.goto(
+      'https://bsd.sos.in.gov/PublicBusiness/GetPublicBusiness?SearchText=self+storage&Status=Inactive',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    )
+    await new Promise(r => setTimeout(r, 2500))
+    const beforeIN = leads.length
+    const inRows = await page8.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr, [class*="result"]')).slice(1, 21)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+    for (const cells of inRows) {
+      if (!isSelfStorage(cells[0])) continue
+      if (!/inactive|dissolved|revoked/i.test(cells.join(' '))) continue
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'IN Inactive Storage LLC',
+        address: '', city: '', state: 'IN',
+        ownerName: cells[0] || '',
+        source: 'sos_indiana',
+        sourceUrl: 'https://bsd.sos.in.gov/PublicBusiness',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `IN SOS inactive storage entity · Status: ${cells[1] || 'Inactive'}`,
+      })
+    }
+    log('SOSLLC', `IN SOS: ${leads.length - beforeIN} leads`)
+  } catch (err) {
+    log('SOSLLC', `IN SOS error: ${err.message}`)
+  } finally {
+    if (page8) await page8.close().catch(() => {})
+  }
+
   log('SOSLLC', `Found ${leads.length} total leads`)
   return leads
 }
@@ -1068,20 +1893,48 @@ const LOOPNET_STATES = [
   { slug: 'north-carolina', abbr: 'NC' },
   { slug: 'south-carolina', abbr: 'SC' },
   { slug: 'alabama',        abbr: 'AL' },
+  { slug: 'ohio',           abbr: 'OH' },
+  { slug: 'wisconsin',      abbr: 'WI' },
+  { slug: 'indiana',        abbr: 'IN' },
 ]
 
 async function scanLoopNet(browser) {
   log('LoopNet', 'Starting (Puppeteer)...')
   const leads = []
 
+  const randDelay = (min = 2000, max = 5000) => new Promise(r => setTimeout(r, min + Math.floor(Math.random() * (max - min))))
+
+  const randomViewport = () => ({
+    width:  1200 + Math.floor(Math.random() * 320),
+    height: 800  + Math.floor(Math.random() * 200),
+    deviceScaleFactor: 1,
+  })
+
+  const stealthMouseMove = async (page) => {
+    const vp = page.viewport() || { width: 1280, height: 900 }
+    const steps = 3 + Math.floor(Math.random() * 4)
+    for (let s = 0; s < steps; s++) {
+      const x = 100 + Math.floor(Math.random() * (vp.width  - 200))
+      const y = 100 + Math.floor(Math.random() * (vp.height - 200))
+      await page.mouse.move(x, y, { steps: 10 + Math.floor(Math.random() * 10) })
+      await new Promise(r => setTimeout(r, 80 + Math.floor(Math.random() * 150)))
+    }
+  }
+
   for (const { slug, abbr } of LOOPNET_STATES) {
     let page
     try {
       page = await browser.newPage()
-      await page.setViewport({ width: 1280, height: 900 })
+      await page.setViewport(randomViewport())
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
 
       const url = `https://www.loopnet.com/search/self-storage-facilities/${slug}/for-sale/`
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+      await randDelay(2000, 5000)
+      await stealthMouseMove(page)
+      await randDelay(500, 1500)
 
       await page.waitForFunction(
         () => document.querySelectorAll('[data-listing-id], [class*="PropertyCard"]').length > 0,
@@ -1146,6 +1999,7 @@ async function scanLoopNet(browser) {
     } finally {
       if (page) await page.close().catch(() => {})
     }
+    await randDelay(2000, 5000)
   }
 
   log('LoopNet', `Total: ${leads.length} leads`)
@@ -1354,4 +2208,3 @@ main().catch(err => {
   console.error(err.stack)
   process.exit(1)
 })
-
