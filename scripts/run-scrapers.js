@@ -581,339 +581,481 @@ async function scanCrexi(browser) {
 }
 
 // ─── 7. County Tax — Miami-Dade FL + Harris County TX ─────────────────────────
-async function scanCountyTax() {
-  log('CountyTax', 'Starting — Miami-Dade FL + Harris County TX free portals...')
+async function scanCountyTax(browser) {
+  log('CountyTax', 'Starting — Miami-Dade FL + Harris County TX (Puppeteer)...')
   const leads = []
+  if (!browser) { log('CountyTax', 'No browser — skipping'); return leads }
 
-  // Miami-Dade FL — public property search API
+  // Miami-Dade FL
+  let page
   try {
-    const res = await safeFetch(
-      'https://www.miamidade.gov/Apps/PA/PApublicServiceProxy/PaServicesProxy.aspx?Operation=GetPropertySearchByValue&Value=self+storage&ValueType=owner&FolioRange=all&ItemCount=50',
-      { timeout: 15000 }
+    page = await browser.newPage()
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page.goto(
+      'https://www.miamidade.gov/Apps/PA/propertysearch/#/',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const text = await res.text()
-      const entries = text.match(/<MinimumAddress>([\s\S]*?)<\/MinimumAddress>/g) || []
-      for (const entry of entries.slice(0, 20)) {
-        const addr  = entry.match(/<Address>(.*?)<\/Address>/)?.[1] || ''
-        const owner = entry.match(/<Owner>(.*?)<\/Owner>/)?.[1] || ''
-        const folio = entry.match(/<Folionumber>(.*?)<\/Folionumber>/)?.[1] || ''
-        if (!addr) continue
-        if (!isSelfStorage(addr + ' ' + owner)) continue
-        const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: addr,
-          address: addr,
-          city: 'Miami',
-          state: 'FL',
-          ownerName: owner,
-          source: 'countytax_miamidade',
-          sourceUrl: `https://www.miamidade.gov/Apps/PA/propertysearch/#/?folio=${folio}`,
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `Miami-Dade tax delinquency signal · Folio: ${folio}`,
-        })
-      }
-    }
-  } catch (err) { log('CountyTax', `Miami-Dade error: ${err.message}`) }
+    await new Promise(r => setTimeout(r, 2000))
 
-  // Harris County TX (Houston) — public search
+    // Use the XML proxy — run inside page.evaluate() to bypass CORS
+    const mdResults = await page.evaluate(async () => {
+      try {
+        const res = await fetch(
+          'https://www.miamidade.gov/Apps/PA/PApublicServiceProxy/PaServicesProxy.aspx?Operation=GetPropertySearchByValue&Value=self+storage&ValueType=owner&FolioRange=all&ItemCount=50',
+          { headers: { 'Accept': 'application/xml, text/xml, */*' } }
+        )
+        if (!res.ok) return []
+        const text = await res.text()
+        const entries = text.match(/<MinimumAddress>[\s\S]*?<\/MinimumAddress>/g) || []
+        return entries.slice(0, 20).map(entry => ({
+          addr:  entry.match(/<Address>(.*?)<\/Address>/)?.[1] || '',
+          owner: entry.match(/<Owner>(.*?)<\/Owner>/)?.[1] || '',
+          folio: entry.match(/<Folionumber>(.*?)<\/Folionumber>/)?.[1] || '',
+        }))
+      } catch (e) { return [] }
+    })
+
+    for (const { addr, owner, folio } of mdResults) {
+      if (!addr) continue
+      if (!isSelfStorage(addr + ' ' + owner)) continue
+      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: addr,
+        address: addr,
+        city: 'Miami',
+        state: 'FL',
+        ownerName: owner,
+        source: 'countytax_miamidade',
+        sourceUrl: `https://www.miamidade.gov/Apps/PA/propertysearch/#/?folio=${folio}`,
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Miami-Dade tax delinquency signal · Folio: ${folio}`,
+      })
+    }
+    log('CountyTax', `Miami-Dade: ${leads.length} leads`)
+  } catch (err) {
+    log('CountyTax', `Miami-Dade error: ${err.message}`)
+  } finally {
+    if (page) await page.close().catch(() => {})
+  }
+
+  // Harris County TX
+  let page2
   try {
-    const res = await safeFetch(
+    page2 = await browser.newPage()
+    await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page2.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page2.goto(
       'https://public.hcad.org/records/quicksearch.asp?searchtype=owner&searchval=storage&tab=0',
-      { timeout: 15000 }
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const html = await res.text()
-      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
-      for (const row of rows.slice(1, 21)) {
-        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
-        if (cells.length < 3) continue
-        if (!isSelfStorage(cells.join(' '))) continue
-        const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cells[1] || cells[0] || 'Harris County Storage Property',
-          address: cells[2] || '',
-          city: 'Houston',
-          state: 'TX',
-          ownerName: cells[0] || '',
-          source: 'countytax_harris',
-          sourceUrl: 'https://public.hcad.org/records/quicksearch.asp',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: 'Harris County TX tax delinquency signal',
-        })
-      }
-    }
-  } catch (err) { log('CountyTax', `Harris County error: ${err.message}`) }
+    await new Promise(r => setTimeout(r, 2500))
 
-  log('CountyTax', `Found ${leads.length} leads`)
+    const beforeCount = leads.length
+    const harrisRows = await page2.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+        return cells
+      }).filter(cells => cells.length >= 3)
+    })
+
+    for (const cells of harrisRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[1] || cells[0] || 'Harris County Storage Property',
+        address: cells[2] || '',
+        city: 'Houston',
+        state: 'TX',
+        ownerName: cells[0] || '',
+        source: 'countytax_harris',
+        sourceUrl: 'https://public.hcad.org/records/quicksearch.asp',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: 'Harris County TX tax delinquency signal',
+      })
+    }
+    log('CountyTax', `Harris County: ${leads.length - beforeCount} leads`)
+  } catch (err) {
+    log('CountyTax', `Harris County error: ${err.message}`)
+  } finally {
+    if (page2) await page2.close().catch(() => {})
+  }
+
+  log('CountyTax', `Found ${leads.length} total leads`)
   return leads
 }
 
 // ─── 8. Lis Pendens — Hillsborough FL + Harris County TX ─────────────────────
-async function scanLisPendens() {
-  log('LisPendens', 'Starting — Hillsborough FL + Harris County TX...')
+async function scanLisPendens(browser) {
+  log('LisPendens', 'Starting — Hillsborough FL + Harris County TX (Puppeteer)...')
   const leads = []
+  if (!browser) { log('LisPendens', 'No browser — skipping'); return leads }
 
   // Hillsborough County FL (Tampa)
+  let page
   try {
-    const res = await safeFetch(
+    page = await browser.newPage()
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page.goto(
       'https://pubrec.hillsclerk.com/PublicRecordSearch/searchresults?documentType=LP&searchValue=self+storage&searchField=grantorGrantee',
-      { timeout: 15000 }
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const html = await res.text()
-      const rows = html.match(/<tr[^>]*class="[^"]*result[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi) || []
-      for (const row of rows.slice(0, 15)) {
-        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
-        if (!cells.length) continue
-        if (!isSelfStorage(cells.join(' '))) continue
-        const href = row.match(/href="([^"]*document[^"]*)"/i)?.[1] || ''
-        const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cells[0] || 'Hillsborough Storage Property',
-          address: cells[1] || '', city: 'Tampa', state: 'FL',
-          ownerName: cells[0] || '',
-          source: 'lispendens_hillsborough',
-          sourceUrl: href ? `https://pubrec.hillsclerk.com${href}` : 'https://pubrec.hillsclerk.com',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `Hillsborough County lis pendens · ${cells[2] || ''}`,
-        })
-      }
+    await new Promise(r => setTimeout(r, 2500))
+
+    const hillsRows = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('tr[class*="result"], tbody tr')).slice(0, 15)
+      return rows.map(row => ({
+        cells: Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim()),
+        href:  row.querySelector('a[href*="document"]')?.getAttribute('href') || '',
+      })).filter(r => r.cells.length > 0)
+    })
+
+    for (const { cells, href } of hillsRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'Hillsborough Storage Property',
+        address: cells[1] || '',
+        city: 'Tampa',
+        state: 'FL',
+        ownerName: cells[0] || '',
+        source: 'lispendens_hillsborough',
+        sourceUrl: href ? `https://pubrec.hillsclerk.com${href}` : 'https://pubrec.hillsclerk.com',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Hillsborough County lis pendens · ${cells[2] || ''}`,
+      })
     }
-  } catch (err) { log('LisPendens', `Hillsborough error: ${err.message}`) }
+    log('LisPendens', `Hillsborough: ${leads.length} leads`)
+  } catch (err) {
+    log('LisPendens', `Hillsborough error: ${err.message}`)
+  } finally {
+    if (page) await page.close().catch(() => {})
+  }
 
   // Harris County TX
+  let page2
   try {
-    const res = await safeFetch(
+    page2 = await browser.newPage()
+    await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page2.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page2.goto(
       'https://www.cclerk.hctx.net/Applications/WebSearch/SP.aspx?From=RP&SearchType=Party&PartyName=self+storage&DocType=LP&DateFrom=01/01/2023&DateTo=12/31/2026',
-      { timeout: 15000 }
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const html = await res.text()
-      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
-      for (const row of rows.slice(1, 16)) {
-        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
-        if (cells.length < 2) continue
-        if (!isSelfStorage(cells.join(' '))) continue
-        const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cells[0] || 'Harris County Storage Property',
-          address: '', city: 'Houston', state: 'TX',
-          ownerName: cells[0] || '',
-          source: 'lispendens_harris',
-          sourceUrl: 'https://www.cclerk.hctx.net',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `Harris County TX lis pendens · ${cells[1] || ''}`,
-        })
-      }
-    }
-  } catch (err) { log('LisPendens', `Harris County error: ${err.message}`) }
+    await new Promise(r => setTimeout(r, 2500))
 
-  log('LisPendens', `Found ${leads.length} leads`)
+    const beforeCount = leads.length
+    const harrisRows = await page2.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+
+    for (const cells of harrisRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'Harris County Storage Property',
+        address: '',
+        city: 'Houston',
+        state: 'TX',
+        ownerName: cells[0] || '',
+        source: 'lispendens_harris',
+        sourceUrl: 'https://www.cclerk.hctx.net',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Harris County TX lis pendens · ${cells[1] || ''}`,
+      })
+    }
+    log('LisPendens', `Harris County: ${leads.length - beforeCount} leads`)
+  } catch (err) {
+    log('LisPendens', `Harris County error: ${err.message}`)
+  } finally {
+    if (page2) await page2.close().catch(() => {})
+  }
+
+  log('LisPendens', `Found ${leads.length} total leads`)
   return leads
 }
 
 // ─── 9. UCC Liens — TX SOS + FL Sunbiz ───────────────────────────────────────
-async function scanUCCLiens() {
-  log('UCCLiens', 'Starting — TX SOS + FL Sunbiz...')
+async function scanUCCLiens(browser) {
+  log('UCCLiens', 'Starting — TX SOS + FL Sunbiz (Puppeteer)...')
   const leads = []
+  if (!browser) { log('UCCLiens', 'No browser — skipping'); return leads }
 
   // Texas SOS UCC
+  let page
   try {
-    const res = await safeFetch(
+    page = await browser.newPage()
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page.goto(
       'https://mycpa.cpa.state.tx.us/ucc/searchResultsAction.do?debtorName=self+storage&searchType=DEBTOR_NAME&fileNumberSearch=false',
-      { timeout: 15000 }
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const html = await res.text()
-      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
-      for (const row of rows.slice(1, 16)) {
-        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
-        if (cells.length < 2) continue
-        if (!isSelfStorage(cells.join(' '))) continue
-        const fileNum = cells[1] || ''
-        const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cells[0] || 'TX UCC Storage Debtor',
-          address: cells[2] || '', city: '', state: 'TX',
-          ownerName: cells[0] || '',
-          source: 'ucc_texas',
-          sourceUrl: fileNum
-            ? `https://mycpa.cpa.state.tx.us/ucc/searchResultsAction.do?fileNumber=${fileNum}&fileNumberSearch=true`
-            : 'https://mycpa.cpa.state.tx.us/ucc/',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `Texas SOS UCC lien filing · File: ${fileNum || 'N/A'}`,
-        })
-      }
+    await new Promise(r => setTimeout(r, 2500))
+
+    const txRows = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+
+    for (const cells of txRows) {
+      if (!isSelfStorage(cells.join(' '))) continue
+      const fileNum = cells[1] || ''
+      const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'TX UCC Storage Debtor',
+        address: cells[2] || '',
+        city: '',
+        state: 'TX',
+        ownerName: cells[0] || '',
+        source: 'ucc_texas',
+        sourceUrl: fileNum
+          ? `https://mycpa.cpa.state.tx.us/ucc/searchResultsAction.do?fileNumber=${fileNum}&fileNumberSearch=true`
+          : 'https://mycpa.cpa.state.tx.us/ucc/',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `Texas SOS UCC lien filing · File: ${fileNum || 'N/A'}`,
+      })
     }
-  } catch (err) { log('UCCLiens', `TX SOS error: ${err.message}`) }
+    log('UCCLiens', `TX SOS: ${leads.length} leads`)
+  } catch (err) {
+    log('UCCLiens', `TX SOS error: ${err.message}`)
+  } finally {
+    if (page) await page.close().catch(() => {})
+  }
 
   // Florida Sunbiz UCC
+  let page2
   try {
-    const res = await safeFetch(
+    page2 = await browser.newPage()
+    await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page2.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page2.goto(
       'https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=SELF+STORAGE&activeFlag=inactive',
-      { timeout: 15000 }
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const html = await res.text()
-      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
-      for (const row of rows.slice(1, 16)) {
-        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
-        if (cells.length < 2) continue
-        if (!isSelfStorage(cells[0])) continue
-        const href = row.match(/href="([^"]*SearchResultDetail[^"]*)"/)?.[1] || ''
-        const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cells[0] || 'FL UCC Storage Entity',
-          address: '', city: '', state: 'FL',
-          ownerName: cells[0] || '',
-          source: 'ucc_florida',
-          sourceUrl: href ? `https://search.sunbiz.org${href}` : 'https://search.sunbiz.org',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `FL Sunbiz UCC lien signal · Status: ${cells[1] || 'N/A'}`,
-        })
-      }
-    }
-  } catch (err) { log('UCCLiens', `FL Sunbiz error: ${err.message}`) }
+    await new Promise(r => setTimeout(r, 2500))
 
-  log('UCCLiens', `Found ${leads.length} leads`)
+    const beforeCount = leads.length
+    const flRows = await page2.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
+      return rows.map(row => ({
+        cells: Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim()),
+        href:  row.querySelector('a[href*="SearchResultDetail"]')?.getAttribute('href') || '',
+      })).filter(r => r.cells.length >= 2)
+    })
+
+    for (const { cells, href } of flRows) {
+      if (!isSelfStorage(cells[0])) continue
+      const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'FL UCC Storage Entity',
+        address: '',
+        city: '',
+        state: 'FL',
+        ownerName: cells[0] || '',
+        source: 'ucc_florida',
+        sourceUrl: href ? `https://search.sunbiz.org${href}` : 'https://search.sunbiz.org',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `FL Sunbiz UCC lien signal · Status: ${cells[1] || 'N/A'}`,
+      })
+    }
+    log('UCCLiens', `FL Sunbiz: ${leads.length - beforeCount} leads`)
+  } catch (err) {
+    log('UCCLiens', `FL Sunbiz error: ${err.message}`)
+  } finally {
+    if (page2) await page2.close().catch(() => {})
+  }
+
+  log('UCCLiens', `Found ${leads.length} total leads`)
   return leads
 }
 
 // ─── 10. SOS LLC — FL Sunbiz + TX Comptroller + GA SOS ───────────────────────
-async function scanSOSLLC() {
-  log('SOSLLC', 'Starting — FL Sunbiz + TX Comptroller + GA SOS...')
+async function scanSOSLLC(browser) {
+  log('SOSLLC', 'Starting — FL Sunbiz + TX Comptroller + GA SOS (Puppeteer)...')
   const leads = []
+  if (!browser) { log('SOSLLC', 'No browser — skipping'); return leads }
 
   // Florida Sunbiz
+  let page
   try {
-    const res = await safeFetch(
+    page = await browser.newPage()
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page.goto(
       'https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=SELF+STORAGE&activeFlag=inactive',
-      { timeout: 15000 }
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const html = await res.text()
-      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
-      for (const row of rows.slice(1, 21)) {
-        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
-        if (cells.length < 2) continue
-        if (!isSelfStorage(cells[0])) continue
-        const href = row.match(/href="([^"]*SearchResultDetail[^"]*)"/)?.[1] || ''
-        const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cells[0] || 'FL Inactive Storage LLC',
-          address: '', city: '', state: 'FL',
-          ownerName: cells[0] || '',
-          source: 'sos_florida',
-          sourceUrl: href ? `https://search.sunbiz.org${href}` : 'https://search.sunbiz.org',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `FL Sunbiz inactive/dissolved storage LLC · Status: ${cells[1] || 'Inactive'}`,
-        })
-      }
+    await new Promise(r => setTimeout(r, 2500))
+
+    const flRows = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row => ({
+        cells: Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim()),
+        href:  row.querySelector('a[href*="SearchResultDetail"]')?.getAttribute('href') || '',
+      })).filter(r => r.cells.length >= 2)
+    })
+
+    for (const { cells, href } of flRows) {
+      if (!isSelfStorage(cells[0])) continue
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'FL Inactive Storage LLC',
+        address: '',
+        city: '',
+        state: 'FL',
+        ownerName: cells[0] || '',
+        source: 'sos_florida',
+        sourceUrl: href ? `https://search.sunbiz.org${href}` : 'https://search.sunbiz.org',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `FL Sunbiz inactive/dissolved storage LLC · Status: ${cells[1] || 'Inactive'}`,
+      })
     }
-  } catch (err) { log('SOSLLC', `FL Sunbiz error: ${err.message}`) }
+    log('SOSLLC', `FL Sunbiz: ${leads.length} leads`)
+  } catch (err) {
+    log('SOSLLC', `FL Sunbiz error: ${err.message}`)
+  } finally {
+    if (page) await page.close().catch(() => {})
+  }
 
   // Texas Comptroller
+  let page2
   try {
-    const res = await safeFetch(
+    page2 = await browser.newPage()
+    await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page2.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page2.goto(
       'https://mycpa.cpa.state.tx.us/coa/coaSearchBtn.do?sortDir=&sortBy=&totalRows=&searchType=name&searchBar=self+storage&submitBtn=Search',
-      { timeout: 15000 }
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const html = await res.text()
-      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
-      for (const row of rows.slice(1, 21)) {
-        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
-        if (cells.length < 2) continue
-        if (!isSelfStorage(cells[0])) continue
-        if (!/inactive|forfeited|dissolved/i.test(cells.join(' '))) continue
-        const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cells[0] || 'TX Inactive Storage LLC',
-          address: '', city: '', state: 'TX',
-          ownerName: cells[0] || '',
-          source: 'sos_texas',
-          sourceUrl: 'https://mycpa.cpa.state.tx.us/coa/',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `TX Comptroller inactive storage entity · Status: ${cells[1] || 'Inactive'}`,
-        })
-      }
+    await new Promise(r => setTimeout(r, 2500))
+
+    const beforeTX = leads.length
+    const txRows = await page2.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+
+    for (const cells of txRows) {
+      if (!isSelfStorage(cells[0])) continue
+      if (!/inactive|forfeited|dissolved/i.test(cells.join(' '))) continue
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'TX Inactive Storage LLC',
+        address: '',
+        city: '',
+        state: 'TX',
+        ownerName: cells[0] || '',
+        source: 'sos_texas',
+        sourceUrl: 'https://mycpa.cpa.state.tx.us/coa/',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `TX Comptroller inactive storage entity · Status: ${cells[1] || 'Inactive'}`,
+      })
     }
-  } catch (err) { log('SOSLLC', `TX Comptroller error: ${err.message}`) }
+    log('SOSLLC', `TX Comptroller: ${leads.length - beforeTX} leads`)
+  } catch (err) {
+    log('SOSLLC', `TX Comptroller error: ${err.message}`)
+  } finally {
+    if (page2) await page2.close().catch(() => {})
+  }
 
   // Georgia SOS
+  let page3
   try {
-    const res = await safeFetch(
+    page3 = await browser.newPage()
+    await page3.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page3.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page3.goto(
       'https://ecorp.sos.ga.gov/BusinessSearch/BusinessInformation?businessId=0&businessType=domestic+limited+liability+company&businessStatus=Dissolved&searchTerm=self+storage',
-      { timeout: 15000 }
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
-    if (res.ok) {
-      const html = await res.text()
-      const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || []
-      for (const row of rows.slice(1, 21)) {
-        const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim())
-        if (cells.length < 2) continue
-        if (!isSelfStorage(cells[0])) continue
-        const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: cells[0] || 'GA Inactive Storage LLC',
-          address: '', city: '', state: 'GA',
-          ownerName: cells[0] || '',
-          source: 'sos_georgia',
-          sourceUrl: 'https://ecorp.sos.ga.gov/BusinessSearch',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `GA SOS dissolved storage entity · Status: ${cells[1] || 'Dissolved'}`,
-        })
-      }
-    }
-  } catch (err) { log('SOSLLC', `GA SOS error: ${err.message}`) }
+    await new Promise(r => setTimeout(r, 2500))
 
-  log('SOSLLC', `Found ${leads.length} leads`)
+    const beforeGA = leads.length
+    const gaRows = await page3.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
+      return rows.map(row =>
+        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
+      ).filter(cells => cells.length >= 2)
+    })
+
+    for (const cells of gaRows) {
+      if (!isSelfStorage(cells[0])) continue
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: cells[0] || 'GA Inactive Storage LLC',
+        address: '',
+        city: '',
+        state: 'GA',
+        ownerName: cells[0] || '',
+        source: 'sos_georgia',
+        sourceUrl: 'https://ecorp.sos.ga.gov/BusinessSearch',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `GA SOS dissolved storage entity · Status: ${cells[1] || 'Dissolved'}`,
+      })
+    }
+    log('SOSLLC', `GA SOS: ${leads.length - beforeGA} leads`)
+  } catch (err) {
+    log('SOSLLC', `GA SOS error: ${err.message}`)
+  } finally {
+    if (page3) await page3.close().catch(() => {})
+  }
+
+  log('SOSLLC', `Found ${leads.length} total leads`)
   return leads
 }
 
@@ -1121,10 +1263,6 @@ async function main() {
       scanShowcase(),
       scanBrevitas(),
       scanFSBO(),
-      scanLisPendens(),
-      scanCountyTax(),
-      scanUCCLiens(),
-      scanSOSLLC(),
       scanOutOfStateOwners(),
       scanFireMarshal(),
     ])
@@ -1149,7 +1287,11 @@ async function main() {
       try { browserLeads.push(...await scanLoopNet(browser)) } catch (e) { log('LoopNet', `Fatal: ${e.message}`) }
       try { browserLeads.push(...await scanBizBuySell(browser)) } catch (e) { log('BizBuySell', `Fatal: ${e.message}`) }
       try { browserLeads.push(...await scanCrexi(browser)) } catch (e) { log('Crexi', `Fatal: ${e.message}`) }
-      try { browserLeads.push(...await scanFacebook(browser)) } catch (e) { log('Facebook', `Fatal: ${e.message}`) }
+      try { browserLeads.push(...await scanFacebook(browser))   } catch (e) { log('Facebook',   `Fatal: ${e.message}`) }
+      try { browserLeads.push(...await scanCountyTax(browser))  } catch (e) { log('CountyTax',  `Fatal: ${e.message}`) }
+      try { browserLeads.push(...await scanLisPendens(browser)) } catch (e) { log('LisPendens', `Fatal: ${e.message}`) }
+      try { browserLeads.push(...await scanUCCLiens(browser))   } catch (e) { log('UCCLiens',   `Fatal: ${e.message}`) }
+      try { browserLeads.push(...await scanSOSLLC(browser))     } catch (e) { log('SOSLLC',     `Fatal: ${e.message}`) }
     }
 
     if (browserLeads.length > 0) {
