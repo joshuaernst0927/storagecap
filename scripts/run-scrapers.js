@@ -921,59 +921,14 @@ async function scanCountyTax(browser) {
     if (page5) await page5.close().catch(() => {})
   }
 
-  // Milwaukee County WI
-  let page6
-  try {
-    page6 = await browser.newPage()
-    await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page6.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page6.goto(
-      'https://milwaukee.county-taxes.com/public/search/property_tax?search%5Baddress%5D=self+storage',
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
-    )
-    await new Promise(r => setTimeout(r, 2500))
-    const beforeWI = leads.length
-    const wiRows = await page6.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('table tr, .result-row, [class*="property-row"]')).slice(0, 20)
-      return rows.map(row =>
-        Array.from(row.querySelectorAll('td, [class*="col"]')).map(td => td.innerText.trim())
-      ).filter(cells => cells.length >= 2)
-    })
-    for (const cells of wiRows) {
-      if (!isSelfStorage(cells.join(' '))) continue
-      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
-      leads.push({
-        id: generateLeadId(),
-        facilityName: cells[0] || 'Milwaukee County WI Storage',
-        address: cells[1] || '',
-        city: 'Milwaukee',
-        state: 'WI',
-        ownerName: cells[0] || '',
-        source: 'countytax_milwaukee_wi',
-        sourceUrl: 'https://milwaukee.county-taxes.com/public',
-        distressSignals: signals,
-        score: scoreLead(signals),
-        status: 'new',
-        foundAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        notes: 'Milwaukee County WI tax delinquency signal',
-      })
-    }
-    log('CountyTax', `Milwaukee County WI: ${leads.length - beforeWI} leads`)
-  } catch (err) {
-    log('CountyTax', `Milwaukee County WI error: ${err.message}`)
-  } finally {
-    if (page6) await page6.close().catch(() => {})
-  }
-
   // Marion County IN (Indianapolis)
-  let page7
+  let page6
   try {
     page7 = await browser.newPage()
     await page7.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
     await page7.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
     await page7.goto(
-      'https://www.assessor.indygov.org/search/?owner=self+storage',
+      'https://www.indy.gov/activity/property-assessment-search',
       { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
     await new Promise(r => setTimeout(r, 2500))
@@ -995,7 +950,7 @@ async function scanCountyTax(browser) {
         state: 'IN',
         ownerName: cells[0] || '',
         source: 'countytax_marion_in',
-        sourceUrl: 'https://www.assessor.indygov.org',
+        sourceUrl: 'https://www.indy.gov/activity/property-assessment-search',
         distressSignals: signals,
         score: scoreLead(signals),
         status: 'new',
@@ -1008,7 +963,7 @@ async function scanCountyTax(browser) {
   } catch (err) {
     log('CountyTax', `Marion County IN error: ${err.message}`)
   } finally {
-    if (page7) await page7.close().catch(() => {})
+    if (page6) await page6.close().catch(() => {})
   }
 
   log('CountyTax', `Found ${leads.length} total leads`)
@@ -1028,7 +983,7 @@ async function scanLisPendens(browser) {
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
     await page.goto(
-      'https://pubrec.hillsclerk.com/PublicRecordSearch/searchresults?documentType=LP&searchValue=self+storage&searchField=grantorGrantee',
+      'https://www.hillsclerk.com/records/official-records-search',
       { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
     await new Promise(r => setTimeout(r, 2500))
@@ -1052,7 +1007,7 @@ async function scanLisPendens(browser) {
         state: 'FL',
         ownerName: cells[0] || '',
         source: 'lispendens_hillsborough',
-        sourceUrl: href ? `https://pubrec.hillsclerk.com${href}` : 'https://pubrec.hillsclerk.com',
+        sourceUrl: href ? `https://www.hillsclerk.com${href}` : 'https://www.hillsclerk.com/records/official-records-search',
         distressSignals: signals,
         score: scoreLead(signals),
         status: 'new',
@@ -1251,51 +1206,6 @@ async function scanLisPendens(browser) {
     if (page5) await page5.close().catch(() => {})
   }
 
-  // Milwaukee County WI — Register of Deeds
-  let page6
-  try {
-    page6 = await browser.newPage()
-    await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page6.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page6.goto(
-      'https://rod.milwaukee.county.wi.gov/rod/search?grantorName=self+storage&docType=LISPENDENS',
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
-    )
-    await new Promise(r => setTimeout(r, 2500))
-    const beforeWI = leads.length
-    const wiRows = await page6.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
-      return rows.map(row =>
-        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
-      ).filter(cells => cells.length >= 2)
-    })
-    for (const cells of wiRows) {
-      if (!isSelfStorage(cells.join(' '))) continue
-      const signals = { lisPendens: true, occupancyPct: null, rentBelowMarket: false }
-      leads.push({
-        id: generateLeadId(),
-        facilityName: cells[0] || 'Milwaukee County WI Storage Property',
-        address: '',
-        city: 'Milwaukee',
-        state: 'WI',
-        ownerName: cells[0] || '',
-        source: 'lispendens_milwaukee_wi',
-        sourceUrl: 'https://rod.milwaukee.county.wi.gov',
-        distressSignals: signals,
-        score: scoreLead(signals),
-        status: 'new',
-        foundAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        notes: `Milwaukee County WI lis pendens · ${cells[1] || ''}`,
-      })
-    }
-    log('LisPendens', `Milwaukee County WI: ${leads.length - beforeWI} leads`)
-  } catch (err) {
-    log('LisPendens', `Milwaukee County WI error: ${err.message}`)
-  } finally {
-    if (page6) await page6.close().catch(() => {})
-  }
-
   // Marion County IN (Indianapolis) — Superior Court
   let page7
   try {
@@ -1448,53 +1358,8 @@ async function scanUCCLiens(browser) {
     if (page2) await page2.close().catch(() => {})
   }
 
-  // Ohio SOS UCC
-  let page3
-  try {
-    page3 = await browser.newPage()
-    await page3.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page3.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page3.goto(
-      'https://www5.sos.state.oh.us/ourcfis/CFIS_CF/CF_SearchResults.aspx?SearchType=Name&DebtorName=self+storage',
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
-    )
-    await new Promise(r => setTimeout(r, 2500))
-    const beforeOH = leads.length
-    const ohRows = await page3.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
-      return rows.map(row =>
-        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
-      ).filter(cells => cells.length >= 2)
-    })
-    for (const cells of ohRows) {
-      if (!isSelfStorage(cells.join(' '))) continue
-      const signals = { uccLien: true, occupancyPct: null, rentBelowMarket: false }
-      leads.push({
-        id: generateLeadId(),
-        facilityName: cells[0] || 'OH UCC Storage Debtor',
-        address: cells[2] || '',
-        city: '',
-        state: 'OH',
-        ownerName: cells[0] || '',
-        source: 'ucc_ohio',
-        sourceUrl: 'https://www5.sos.state.oh.us/ourcfis/',
-        distressSignals: signals,
-        score: scoreLead(signals),
-        status: 'new',
-        foundAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        notes: `Ohio SOS UCC lien filing · File: ${cells[1] || 'N/A'}`,
-      })
-    }
-    log('UCCLiens', `OH SOS: ${leads.length - beforeOH} leads`)
-  } catch (err) {
-    log('UCCLiens', `OH SOS error: ${err.message}`)
-  } finally {
-    if (page3) await page3.close().catch(() => {})
-  }
-
   // North Carolina SOS UCC
-  let page4
+  let page3
   try {
     page4 = await browser.newPage()
     await page4.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
@@ -1733,51 +1598,8 @@ async function scanSOSLLC(browser) {
     if (page4) await page4.close().catch(() => {})
   }
 
-  // Tennessee SOS (TNBear)
-  let page5
-  try {
-    page5 = await browser.newPage()
-    await page5.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page5.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page5.goto(
-      'https://tnbear.tn.gov/Ecommerce/FilingSearch.aspx?ACN=self+storage&Status=Inactive',
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
-    )
-    await new Promise(r => setTimeout(r, 2500))
-    const beforeTN = leads.length
-    const tnRows = await page5.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
-      return rows.map(row =>
-        Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
-      ).filter(cells => cells.length >= 2)
-    })
-    for (const cells of tnRows) {
-      if (!isSelfStorage(cells[0])) continue
-      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
-      leads.push({
-        id: generateLeadId(),
-        facilityName: cells[0] || 'TN Inactive Storage LLC',
-        address: '', city: '', state: 'TN',
-        ownerName: cells[0] || '',
-        source: 'sos_tennessee',
-        sourceUrl: 'https://tnbear.tn.gov/Ecommerce/FilingSearch.aspx',
-        distressSignals: signals,
-        score: scoreLead(signals),
-        status: 'new',
-        foundAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        notes: `TN SOS inactive storage entity · Status: ${cells[1] || 'Inactive'}`,
-      })
-    }
-    log('SOSLLC', `TN SOS: ${leads.length - beforeTN} leads`)
-  } catch (err) {
-    log('SOSLLC', `TN SOS error: ${err.message}`)
-  } finally {
-    if (page5) await page5.close().catch(() => {})
-  }
-
   // North Carolina SOS
-  let page6
+  let page5
   try {
     page6 = await browser.newPage()
     await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
@@ -1820,52 +1642,8 @@ async function scanSOSLLC(browser) {
     if (page6) await page6.close().catch(() => {})
   }
 
-  // Wisconsin DFI
-  let page7
-  try {
-    page7 = await browser.newPage()
-    await page7.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page7.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page7.goto(
-      'https://www.wdfi.org/apps/CorpSearch/Results.aspx?type=Simple&q=self+storage&status=Dissolved',
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
-    )
-    await new Promise(r => setTimeout(r, 2500))
-    const beforeWI = leads.length
-    const wiRows = await page7.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
-      return rows.map(row => ({
-        cells: Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim()),
-        href:  row.querySelector('a')?.getAttribute('href') || '',
-      })).filter(r => r.cells.length >= 2)
-    })
-    for (const { cells, href } of wiRows) {
-      if (!isSelfStorage(cells[0])) continue
-      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
-      leads.push({
-        id: generateLeadId(),
-        facilityName: cells[0] || 'WI Dissolved Storage LLC',
-        address: '', city: '', state: 'WI',
-        ownerName: cells[0] || '',
-        source: 'sos_wisconsin',
-        sourceUrl: href ? `https://www.wdfi.org${href}` : 'https://www.wdfi.org/apps/CorpSearch',
-        distressSignals: signals,
-        score: scoreLead(signals),
-        status: 'new',
-        foundAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        notes: `WI DFI dissolved storage entity · Status: ${cells[1] || 'Dissolved'}`,
-      })
-    }
-    log('SOSLLC', `WI DFI: ${leads.length - beforeWI} leads`)
-  } catch (err) {
-    log('SOSLLC', `WI DFI error: ${err.message}`)
-  } finally {
-    if (page7) await page7.close().catch(() => {})
-  }
-
   // Indiana SOS
-  let page8
+  let page6
   try {
     page8 = await browser.newPage()
     await page8.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
