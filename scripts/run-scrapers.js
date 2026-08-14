@@ -1601,16 +1601,16 @@ async function scanSOSLLC(browser) {
   // North Carolina SOS
   let page5
   try {
-    page6 = await browser.newPage()
-    await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page6.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page6.goto(
+    page5 = await browser.newPage()
+    await page5.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page5.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page5.goto(
       'https://www.sosnc.gov/online_services/search/by_title/_business_registration_results?name=self+storage&status=Withdrawn',
       { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
     await new Promise(r => setTimeout(r, 2500))
     const beforeNC = leads.length
-    const ncRows = await page6.evaluate(() => {
+    const ncRows = await page5.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
       return rows.map(row => ({
         cells: Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim()),
@@ -1639,7 +1639,7 @@ async function scanSOSLLC(browser) {
   } catch (err) {
     log('SOSLLC', `NC SOS error: ${err.message}`)
   } finally {
-    if (page6) await page6.close().catch(() => {})
+    if (page5) await page5.close().catch(() => {})
   }
 
   // Indiana SOS
