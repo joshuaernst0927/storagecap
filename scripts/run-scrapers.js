@@ -924,16 +924,16 @@ async function scanCountyTax(browser) {
   // Marion County IN (Indianapolis)
   let page6
   try {
-    page7 = await browser.newPage()
-    await page7.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page7.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page7.goto(
+    page6 = await browser.newPage()
+    await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page6.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page6.goto(
       'https://www.indy.gov/activity/property-assessment-search',
       { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
     await new Promise(r => setTimeout(r, 2500))
     const beforeIN = leads.length
-    const inRows = await page7.evaluate(() => {
+    const inRows = await page6.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
       return rows.map(row =>
         Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
@@ -1361,16 +1361,16 @@ async function scanUCCLiens(browser) {
   // North Carolina SOS UCC
   let page3
   try {
-    page4 = await browser.newPage()
-    await page4.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page4.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page4.goto(
+    page3 = await browser.newPage()
+    await page3.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page3.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page3.goto(
       'https://www.sosnc.gov/online_services/ucc/search_results?search_type=debtor_name&debtor_name=self+storage',
       { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
     await new Promise(r => setTimeout(r, 2500))
     const beforeNC = leads.length
-    const ncRows = await page4.evaluate(() => {
+    const ncRows = await page3.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 16)
       return rows.map(row =>
         Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
@@ -1400,7 +1400,7 @@ async function scanUCCLiens(browser) {
   } catch (err) {
     log('UCCLiens', `NC SOS error: ${err.message}`)
   } finally {
-    if (page4) await page4.close().catch(() => {})
+    if (page3) await page3.close().catch(() => {})
   }
 
   log('UCCLiens', `Found ${leads.length} total leads`)
@@ -1645,16 +1645,16 @@ async function scanSOSLLC(browser) {
   // Indiana SOS
   let page6
   try {
-    page8 = await browser.newPage()
-    await page8.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page8.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page8.goto(
+    page6 = await browser.newPage()
+    await page6.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
+    await page6.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+    await page6.goto(
       'https://bsd.sos.in.gov/PublicBusiness/GetPublicBusiness?SearchText=self+storage&Status=Inactive',
       { waitUntil: 'domcontentloaded', timeout: 30000 }
     )
     await new Promise(r => setTimeout(r, 2500))
     const beforeIN = leads.length
-    const inRows = await page8.evaluate(() => {
+    const inRows = await page6.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('table tr, [class*="result"]')).slice(1, 21)
       return rows.map(row =>
         Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
@@ -1683,7 +1683,7 @@ async function scanSOSLLC(browser) {
   } catch (err) {
     log('SOSLLC', `IN SOS error: ${err.message}`)
   } finally {
-    if (page8) await page8.close().catch(() => {})
+    if (page6) await page6.close().catch(() => {})
   }
 
   log('SOSLLC', `Found ${leads.length} total leads`)
