@@ -762,7 +762,7 @@ async function scanPACERRSS() {
 
 // ─── 7. County Tax — Miami-Dade FL + Harris County TX ─────────────────────────
 async function scanCountyTax(browser) {
-  log('CountyTax', 'Starting — Miami-Dade FL + Harris County TX (Puppeteer)...')
+  log('CountyTax', 'Starting — Harris TX + OH + TN + NC + IN (Puppeteer)...')
   const leads = []
   if (!browser) { log('CountyTax', 'No browser — skipping'); return leads }
 
