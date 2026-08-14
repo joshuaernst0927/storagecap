@@ -2200,7 +2200,7 @@ async function main() {
       const allSaved = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'data', 'leads.json'), 'utf-8'))
       const newLeads = allSaved.filter(l => {
         const age = Date.now() - new Date(l.foundAt).getTime()
-        return age < 25 * 60 * 60 * 1000
+        return age < 6 * 60 * 60 * 1000
       })
       if (newLeads.length > 0 && process.env.EMAIL_PASSWORD) {
         const nodemailer = require('nodemailer')
