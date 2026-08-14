@@ -1690,7 +1690,7 @@ async function scanSOSLLC(browser) {
   return leads
 }
 
-// ─── 12. LoopNet — Puppeteer (JS-rendered, requires real browser) ──────────────
+// ─── 12. LoopNet — Puppeteer stealth, response sniffing ─────────────────────────
 const LOOPNET_STATES = [
   { slug: 'florida',        abbr: 'FL' },
   { slug: 'texas',          abbr: 'TX' },
@@ -1705,8 +1705,9 @@ const LOOPNET_STATES = [
 ]
 
 async function scanLoopNet(browser) {
-  log('LoopNet', 'Starting (Puppeteer)...')
+  log('LoopNet', 'Starting (Puppeteer stealth, response sniffing)...')
   const leads = []
+  if (!browser) { log('LoopNet', 'No browser — skipping'); return leads }
 
   const randDelay = (min = 2000, max = 5000) => new Promise(r => setTimeout(r, min + Math.floor(Math.random() * (max - min))))
 
@@ -1735,71 +1736,71 @@ async function scanLoopNet(browser) {
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
       await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
 
-      const url = `https://www.loopnet.com/search/self-storage-facilities/${slug}/for-sale/`
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      const apiResults = []
 
-      await randDelay(2000, 5000)
+      // Attach response listener BEFORE navigation — no setRequestInterception
+      page.on('response', async res => {
+        try {
+          const u = res.url()
+          const ct = res.headers()['content-type'] || ''
+          if (!ct.includes('json')) return
+          if (!u.includes('loopnet.com')) return
+          if (u.includes('/api/') || u.includes('/search') || u.includes('/listings') || u.includes('/graphql')) {
+            const json = await res.json().catch(() => null)
+            if (!json) return
+            const items =
+              json.data?.listings ||
+              json.data?.properties ||
+              json.data?.results ||
+              json.data?.searchListings?.listings ||
+              json.listings ||
+              json.properties ||
+              json.results ||
+              []
+            if (Array.isArray(items) && items.length > 0) apiResults.push(...items)
+          }
+        } catch (e) {}
+      })
+
       await stealthMouseMove(page)
-      await randDelay(500, 1500)
+      const url = `https://www.loopnet.com/search/self-storage-facilities/${slug}/for-sale/`
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 35000 })
+      await randDelay(2000, 4000)
 
-      await page.waitForFunction(
-        () => document.querySelectorAll('[data-listing-id], [class*="PropertyCard"]').length > 0,
-        { timeout: 8000 }
-      ).catch(() => {})
-
-      const pageLeads = await page.evaluate((state) => {
-        const items = []
-        const cards = Array.from(document.querySelectorAll('[data-listing-id]'))
-        if (cards.length === 0) {
-          document.querySelectorAll('[class*="property-name"], [class*="PropertyName"], [class*="listing-name"]').forEach(el => {
-            const name = el.textContent?.trim()
-            if (!name || !/storage/i.test(name)) return
-            const card  = el.closest('article, [class*="card"], [class*="Card"], li, div[class*="listing"]')
-            const link  = (card?.querySelector('a[href*="/listing/"]') || el.closest('a'))?.href
-            const price = card?.querySelector('[class*="price"], [class*="Price"]')?.textContent?.trim()
-            const addr  = card?.querySelector('[class*="address"], [class*="Address"]')?.textContent?.trim()
-            items.push({ name: name.slice(0, 80), address: addr || '', price: price || '', url: link || '' })
+      if (apiResults.length > 0) {
+        for (const p of apiResults.slice(0, 25)) {
+          const name = p.name || p.title || p.propertyName || p.listingName || ''
+          const addr = p.address || p.street || p.streetAddress || ''
+          if (!name && !addr) continue
+          const priceRaw = p.price || p.askingPrice || p.listPrice || p.salePrice || null
+          const askingPrice = priceRaw ? Math.round(Number(String(priceRaw).replace(/[^0-9.]/g, ''))) : undefined
+          const addrM = addr.match(/^([^,]+)/)
+          leads.push({
+            id: generateLeadId(),
+            facilityName: (name || addr).slice(0, 80),
+            address: addr || 'See LoopNet listing',
+            city: p.city || addrM?.[1]?.trim() || abbr,
+            state: p.state || p.stateCode || abbr,
+            askingPrice,
+            ownerName: p.brokerName || p.contactName || p.agentName || 'LoopNet Listing',
+            contactInfo: {
+              phone: p.brokerPhone || p.phone || null,
+              email: p.brokerEmail || p.email || null,
+            },
+            source: 'loopnet',
+            sourceUrl: p.url ? (p.url.startsWith('http') ? p.url : `https://www.loopnet.com${p.url}`)
+              : (p.id ? `https://www.loopnet.com/listing/${p.id}/` : url),
+            distressSignals: { occupancyPct: null, rentBelowMarket: false },
+            score: scoreLead({ occupancyPct: null, rentBelowMarket: false }),
+            signals: {},
+            status: 'new',
+            foundAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+            notes: `LoopNet self-storage listing — ${abbr}`,
           })
-          return items
         }
-        cards.forEach(card => {
-          const name  = card.querySelector('[class*="property-name"],[class*="PropertyName"],[class*="listing-name"],h3,h4')?.textContent?.trim()
-          const addr  = card.querySelector('[class*="address"],[class*="Address"],[class*="location"]')?.textContent?.trim()
-          const price = card.querySelector('[class*="price"],[class*="Price"]')?.textContent?.trim()
-          const link  = (card.querySelector('a[href*="/listing/"]') || card.closest('a'))?.href
-            || `https://www.loopnet.com/listing/${card.getAttribute('data-listing-id')}/`
-          if (!name || !/storage/i.test(name)) return
-          items.push({ name: name.slice(0, 80), address: addr || '', price: price || '', url: link })
-        })
-        return items
-      }, abbr)
-
-      for (const l of pageLeads) {
-        const priceM = (l.price || '').replace(/,/g, '').match(/\$([\d.]+)\s*([Mm])?/)
-        let askingPrice
-        if (priceM) {
-          const val = parseFloat(priceM[1])
-          askingPrice = priceM[2] ? Math.round(val * 1_000_000) : Math.round(val)
-        }
-        const addrM = (l.address || '').match(/^([^,]+)/)
-        leads.push({
-          id: generateLeadId(),
-          facilityName: l.name,
-          address: l.address || 'See LoopNet listing',
-          city: addrM?.[1]?.trim() || abbr,
-          state: abbr,
-          askingPrice,
-          ownerName: 'LoopNet Listing',
-          source: 'loopnet',
-          sourceUrl: l.url,
-          distressSignals: { occupancyPct: null, rentBelowMarket: false },
-          score: scoreLead({ occupancyPct: null, rentBelowMarket: false }),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-        })
       }
-      log('LoopNet', `${slug}: ${pageLeads.length} leads`)
+      log('LoopNet', `${slug}: ${apiResults.length} API results → ${leads.length} total leads so far`)
     } catch (err) {
       log('LoopNet', `${slug} error: ${err.message}`)
     } finally {
@@ -1811,6 +1812,7 @@ async function scanLoopNet(browser) {
   log('LoopNet', `Total: ${leads.length} leads`)
   return leads
 }
+
 
 // ─── 13. Facebook Marketplace — Puppeteer (requires session cookies) ───────────
 async function scanFacebook(browser) {
