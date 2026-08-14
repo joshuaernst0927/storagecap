@@ -563,19 +563,43 @@ async function scanFSBO() {
   return leads
 }
 
-// ─── 6. Crexi — Puppeteer stealth (disabled — request interception bug) ────────
+// ─── 6. Crexi — Puppeteer stealth, response sniffing only (no interception) ────
 async function scanCrexi(browser) {
-  log('Crexi', 'Temporarily disabled — re-enable after request interception fix')
-  return []
-  const TARGET_STATES_CREXI = ['TX','GA','SC','TN','AZ','FL','AL','MS','NC','OH']
+  log('Crexi', 'Starting (Puppeteer stealth, response sniffing)...')
+  const leads = []
+  if (!browser) { log('Crexi', 'No browser — skipping'); return leads }
+
+  const TARGET_STATES_CREXI = ['TX','GA','SC','TN','AZ','FL','AL','MS','NC','OH','WI','IN']
+
+  const randDelay = (min = 2000, max = 4000) => new Promise(r => setTimeout(r, min + Math.floor(Math.random() * (max - min))))
+
+  const randomViewport = () => ({
+    width:  1200 + Math.floor(Math.random() * 320),
+    height: 800  + Math.floor(Math.random() * 200),
+    deviceScaleFactor: 1,
+  })
+
+  const stealthMouseMove = async (page) => {
+    const vp = page.viewport() || { width: 1280, height: 900 }
+    const steps = 3 + Math.floor(Math.random() * 4)
+    for (let s = 0; s < steps; s++) {
+      const x = 100 + Math.floor(Math.random() * (vp.width  - 200))
+      const y = 100 + Math.floor(Math.random() * (vp.height - 200))
+      await page.mouse.move(x, y, { steps: 10 + Math.floor(Math.random() * 10) })
+      await new Promise(r => setTimeout(r, 80 + Math.floor(Math.random() * 150)))
+    }
+  }
+
   for (const state of TARGET_STATES_CREXI) {
+    let page
     try {
-      const page = await browser.newPage()
+      page = await browser.newPage()
+      await page.setViewport(randomViewport())
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
       await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
+
       const apiResults = []
-      await page.setRequestInterception(true)
-      page.on('request', req => { try { if (!req.isInterceptResolutionHandled()) req.continue() } catch (_) {} })
+
       page.on('response', async res => {
         try {
           const u = res.url()
@@ -588,10 +612,12 @@ async function scanCrexi(browser) {
           }
         } catch (e) {}
       })
+
+      await stealthMouseMove(page)
       const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale&states=${state}`
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 35000 })
-      await new Promise(r => setTimeout(r, 3000))
-      await page.setRequestInterception(false)
+      await randDelay(2000, 4000)
+
       if (apiResults.length > 0) {
         for (const p of apiResults.slice(0, 25)) {
           const addr = p.address || p.location || p.street || p.fullAddress || ''
@@ -620,11 +646,13 @@ async function scanCrexi(browser) {
           })
         }
       }
-      await page.close()
+      log('Crexi', `${state}: ${apiResults.length} API results`)
     } catch (err) { log('Crexi', `${state} error: ${err.message}`) }
-    await new Promise(r => setTimeout(r, 1200))
+    finally { if (page) await page.close().catch(() => {}) }
+    await randDelay(2000, 4000)
   }
-  log('Crexi', `Found ${leads.length} leads`)
+
+  log('Crexi', `Found ${leads.length} total leads`)
   return leads
 }
 
