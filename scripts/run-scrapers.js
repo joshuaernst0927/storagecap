@@ -656,43 +656,22 @@ async function scanCrexi(browser) {
   return leads
 }
 
-// ─── 7. County Tax — Miami-Dade FL + Harris County TX ─────────────────────────
-async function scanCountyTax(browser) {
-  log('CountyTax', 'Starting — Miami-Dade FL + Harris County TX (Puppeteer)...')
+// ─── 7a. Miami-Dade API — direct server-side fetch, no browser needed ─────────
+async function scanMiamiDadeAPI() {
+  log('MiamiDadeAPI', 'Starting — direct XML fetch (no browser)...')
   const leads = []
-  if (!browser) { log('CountyTax', 'No browser — skipping'); return leads }
-
-  // Miami-Dade FL
-  let page
   try {
-    page = await browser.newPage()
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page.goto(
-      'https://www.miamidade.gov/Apps/PA/propertysearch/#/',
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    const res = await safeFetch(
+      'https://www.miamidade.gov/Apps/PA/PApublicServiceProxy/PaServicesProxy.aspx?Operation=GetPropertySearchByValue&Value=self+storage&ValueType=owner&FolioRange=all&ItemCount=50',
+      { headers: { 'Accept': 'application/xml, text/xml, */*', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' } }
     )
-    await new Promise(r => setTimeout(r, 2000))
-
-    // Use the XML proxy — run inside page.evaluate() to bypass CORS
-    const mdResults = await page.evaluate(async () => {
-      try {
-        const res = await fetch(
-          'https://www.miamidade.gov/Apps/PA/PApublicServiceProxy/PaServicesProxy.aspx?Operation=GetPropertySearchByValue&Value=self+storage&ValueType=owner&FolioRange=all&ItemCount=50',
-          { headers: { 'Accept': 'application/xml, text/xml, */*' } }
-        )
-        if (!res.ok) return []
-        const text = await res.text()
-        const entries = text.match(/<MinimumAddress>[\s\S]*?<\/MinimumAddress>/g) || []
-        return entries.slice(0, 20).map(entry => ({
-          addr:  entry.match(/<Address>(.*?)<\/Address>/)?.[1] || '',
-          owner: entry.match(/<Owner>(.*?)<\/Owner>/)?.[1] || '',
-          folio: entry.match(/<Folionumber>(.*?)<\/Folionumber>/)?.[1] || '',
-        }))
-      } catch (e) { return [] }
-    })
-
-    for (const { addr, owner, folio } of mdResults) {
+    if (!res.ok) { log('MiamiDadeAPI', `HTTP ${res.status}`); return leads }
+    const text = await res.text()
+    const entries = text.match(/<MinimumAddress>[\s\S]*?<\/MinimumAddress>/g) || []
+    for (const entry of entries.slice(0, 20)) {
+      const addr  = entry.match(/<Address>(.*?)<\/Address>/)?.[1] || ''
+      const owner = entry.match(/<Owner>(.*?)<\/Owner>/)?.[1] || ''
+      const folio = entry.match(/<Folionumber>(.*?)<\/Folionumber>/)?.[1] || ''
       if (!addr) continue
       if (!isSelfStorage(addr + ' ' + owner)) continue
       const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
@@ -710,15 +689,82 @@ async function scanCountyTax(browser) {
         status: 'new',
         foundAt: new Date().toISOString(),
         lastUpdated: new Date().toISOString(),
-        notes: `Miami-Dade tax delinquency signal · Folio: ${folio}`,
+        notes: `Miami-Dade property owner match · Folio: ${folio}`,
       })
     }
-    log('CountyTax', `Miami-Dade: ${leads.length} leads`)
-  } catch (err) {
-    log('CountyTax', `Miami-Dade error: ${err.message}`)
-  } finally {
-    if (page) await page.close().catch(() => {})
+  } catch (err) { log('MiamiDadeAPI', `Error: ${err.message}`) }
+  log('MiamiDadeAPI', `Found ${leads.length} leads`)
+  return leads
+}
+
+// ─── 7b. PACER RSS — unauthenticated per-court bankruptcy feeds ────────────────
+const PACER_COURTS = [
+  { id: 'flsb', state: 'FL', city: 'Miami' },
+  { id: 'flmb', state: 'FL', city: 'Tampa' },
+  { id: 'txsb', state: 'TX', city: 'Houston' },
+  { id: 'txnb', state: 'TX', city: 'Dallas' },
+  { id: 'ganb', state: 'GA', city: 'Atlanta' },
+  { id: 'ncmb', state: 'NC', city: 'Greensboro' },
+  { id: 'ohnb', state: 'OH', city: 'Cleveland' },
+  { id: 'insb', state: 'IN', city: 'Indianapolis' },
+]
+
+async function scanPACERRSS() {
+  log('PACERRSS', `Starting — polling ${PACER_COURTS.length} courts...`)
+  const leads = []
+  for (const court of PACER_COURTS) {
+    try {
+      const url = `https://ecf.${court.id}.uscourts.gov/cgi-bin/rss_outside.pl`
+      const res = await safeFetch(url, {
+        headers: {
+          'User-Agent': 'YEMAcquisitions/1.0 (joshuaernst@gmail.com)',
+          'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+        },
+      })
+      if (!res.ok) { log('PACERRSS', `${court.id}: HTTP ${res.status}`); continue }
+      const xml = await res.text()
+      const items = xml.match(/<item>[\s\S]*?<\/item>/g) || []
+      const beforeCount = leads.length
+      for (const item of items) {
+        const title   = item.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, '$1')?.trim() || ''
+        const link    = item.match(/<link>([\s\S]*?)<\/link>/)?.[1]?.trim() || ''
+        const pubDate = item.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim() || ''
+        if (!title || !/storage/i.test(title)) continue
+        const signals = { bankruptcy: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: title.substring(0, 120),
+          businessName: title.substring(0, 120),
+          address: '',
+          city: court.city,
+          state: court.state,
+          ownerName: title.substring(0, 120),
+          source: 'pacer_rss',
+          sourceUrl: link || `https://ecf.${court.id}.uscourts.gov/`,
+          distressSignals: signals,
+          score: scoreLead(signals),
+          signals: {},
+          status: 'new',
+          foundAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `PACER RSS filing — ${court.id.toUpperCase()} · ${pubDate || 'date unknown'}`,
+        })
+      }
+      log('PACERRSS', `${court.id}: ${items.length} items → ${leads.length - beforeCount} storage matches`)
+    } catch (err) {
+      log('PACERRSS', `${court.id} error: ${err.message}`)
+    }
+    await new Promise(r => setTimeout(r, 3000))
   }
+  log('PACERRSS', `Found ${leads.length} total leads`)
+  return leads
+}
+
+// ─── 7. County Tax — Miami-Dade FL + Harris County TX ─────────────────────────
+async function scanCountyTax(browser) {
+  log('CountyTax', 'Starting — Miami-Dade FL + Harris County TX (Puppeteer)...')
+  const leads = []
+  if (!browser) { log('CountyTax', 'No browser — skipping'); return leads }
 
   // Harris County TX
   let page2
@@ -1920,6 +1966,8 @@ async function main() {
     log('Runner', 'Running API + fetch-based scrapers in parallel...')
     const fetchResults = await Promise.allSettled([
       Promise.race([scanCourtListener(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('CourtListener hard timeout')),90000))]),
+      Promise.race([scanPACERRSS(),      new Promise((_,rej)=>setTimeout(()=>rej(new Error('PACERRSS hard timeout')),   120000))]),
+      scanMiamiDadeAPI(),
       // scanBizBuySell moved to browser block
       scanBizQuest(),
       scanShowcase(),
