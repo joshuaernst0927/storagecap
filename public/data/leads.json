@@ -1,5 +1,49 @@
 [
   {
+    "id": "lead_1786969816204_3vs4m",
+    "facilityName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "businessName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?834392",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-17T04:13:28.000Z",
+    "lastUpdated": "2026-08-17T12:30:16.205Z",
+    "notes": "PACER RSS filing — FLSB · Mon, 17 Aug 2026 04:13:28 GMT"
+  },
+  {
+    "id": "lead_1786969816205_fxoax",
+    "facilityName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "businessName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?834392",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-17T04:13:28.000Z",
+    "lastUpdated": "2026-08-17T12:30:16.205Z",
+    "notes": "PACER RSS filing — FLSB · Mon, 17 Aug 2026 04:13:28 GMT"
+  },
+  {
     "id": "lead_1786537815975_c5qlf",
     "businessName": "Self-Storage Facility",
     "address": "",
@@ -23,7 +67,7 @@
     },
     "foundAt": "2026-08-12T12:30:15.976Z",
     "lastUpdated": "2026-08-12T12:30:15.976Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details."
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
   },
   {
     "id": "lead_1786537815976_92aiv",
@@ -49,7 +93,7 @@
     },
     "foundAt": "2026-08-12T12:30:15.976Z",
     "lastUpdated": "2026-08-12T12:30:15.976Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details."
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
   },
   {
     "id": "lead_1786537815976_e3gmg",
@@ -75,7 +119,7 @@
     },
     "foundAt": "2026-08-12T12:30:15.976Z",
     "lastUpdated": "2026-08-12T12:30:15.976Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details."
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
   },
   {
     "id": "lead_1786537815976_1i5q7",
@@ -101,7 +145,7 @@
     },
     "foundAt": "2026-08-12T12:30:15.976Z",
     "lastUpdated": "2026-08-12T12:30:15.976Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details."
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
   },
   {
     "id": "lead_1786537815976_0k3bn",
@@ -127,7 +171,7 @@
     },
     "foundAt": "2026-08-12T12:30:15.976Z",
     "lastUpdated": "2026-08-12T12:30:15.976Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details."
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
   },
   {
     "id": "lead_1786537815970_k727s",
@@ -153,7 +197,7 @@
     },
     "foundAt": "2026-08-12T12:30:15.975Z",
     "lastUpdated": "2026-08-12T12:30:15.975Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details."
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
   },
   {
     "id": "lead_1783544561538_jfnyo",
@@ -169,7 +213,7 @@
     "signals": {},
     "foundAt": "2026-07-08T21:02:41.538Z",
     "lastUpdated": "2026-07-08T21:02:41.538Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details.",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details.",
     "distressSignals": {
       "taxDelinquency": false,
       "fireCodeViolations": false,
@@ -193,7 +237,7 @@
     "signals": {},
     "foundAt": "2026-07-08T21:02:41.538Z",
     "lastUpdated": "2026-07-08T21:02:41.538Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details.",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details.",
     "distressSignals": {
       "taxDelinquency": false,
       "fireCodeViolations": false,
@@ -217,7 +261,7 @@
     "signals": {},
     "foundAt": "2026-07-08T21:02:41.538Z",
     "lastUpdated": "2026-07-08T21:02:41.538Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details.",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details.",
     "distressSignals": {
       "taxDelinquency": false,
       "fireCodeViolations": false,
@@ -241,7 +285,7 @@
     "signals": {},
     "foundAt": "2026-07-08T21:02:41.538Z",
     "lastUpdated": "2026-07-08T21:02:41.538Z",
-    "notes": "BizQuest listing \u2014 address not provided by source, see sourceUrl for details.",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details.",
     "distressSignals": {
       "taxDelinquency": false,
       "fireCodeViolations": false,
@@ -270,7 +314,7 @@
     "status": "new",
     "foundAt": "2026-06-03T12:31:44.906Z",
     "lastUpdated": "2026-06-03T12:31:44.906Z",
-    "notes": "Bankruptcy bankruptcy filing \u00b7 Filed: Jan 8, 2026 \u00b7 Court: TXWB"
+    "notes": "Bankruptcy bankruptcy filing · Filed: Jan 8, 2026 · Court: TXWB"
   },
   {
     "id": "lead_1780412247573_q8mxd",
@@ -291,7 +335,7 @@
     "status": "new",
     "foundAt": "2026-06-02T14:57:27.573Z",
     "lastUpdated": "2026-06-02T21:17:11.994Z",
-    "notes": "Chapter 11 bankruptcy filing \u00b7 Filed: Aug 29, 2025 \u00b7 Court: TXSB \u00b7 Attorney: Lloyd A. Lim \u00b7 713-844-3070 \u00b7 Kean Miller LLP",
+    "notes": "Chapter 11 bankruptcy filing · Filed: Aug 29, 2025 · Court: TXSB · Attorney: Lloyd A. Lim · 713-844-3070 · Kean Miller LLP",
     "contactInfo": {
       "mailingAddress": "902 S Friendswood Drive, Friendswood, TX 77546",
       "phone": "713-844-3070",
@@ -318,7 +362,7 @@
     "status": "new",
     "foundAt": "2026-06-02T14:57:24.238Z",
     "lastUpdated": "2026-06-02T20:38:02.633Z",
-    "notes": "Chapter 11 bankruptcy filing \u00b7 Filed: Aug 14, 2025 \u00b7 Court: FLNB \u00b7 Trustee: United States Trustee \u00b7 850-942-1660",
+    "notes": "Chapter 11 bankruptcy filing · Filed: Aug 14, 2025 · Court: FLNB · Trustee: United States Trustee · 850-942-1660",
     "contactInfo": {
       "mailingAddress": "1563 Capital Circle SE, Tallahassee, FL 32301, Leon-FL",
       "phone": "850-942-1660",
@@ -345,7 +389,7 @@
     "status": "new",
     "foundAt": "2026-06-02T14:57:24.237Z",
     "lastUpdated": "2026-06-02T20:38:18.933Z",
-    "notes": "Chapter 11 bankruptcy filing \u00b7 Filed: Aug 23, 2025 \u00b7 Court: FLMB \u00b7 Attorney: Rehan N Khawaja \u00b7 904-355-8055 \u00b7 Law Offices of Rehan N. Khawaja",
+    "notes": "Chapter 11 bankruptcy filing · Filed: Aug 23, 2025 · Court: FLMB · Attorney: Rehan N Khawaja · 904-355-8055 · Law Offices of Rehan N. Khawaja",
     "contactInfo": {
       "mailingAddress": "6155 Old Kings Road, Jacksonville, FL 32254",
       "phone": "904-355-8055",
@@ -372,6 +416,6 @@
     "status": "new",
     "foundAt": "2026-06-02T14:57:21.130Z",
     "lastUpdated": "2026-06-02T14:57:21.130Z",
-    "notes": "Chapter 11 bankruptcy filing \u00b7 Filed: Jan 28, 2026 \u00b7 Court: FLNB"
+    "notes": "Chapter 11 bankruptcy filing · Filed: Jan 28, 2026 · Court: FLNB"
   }
 ]
