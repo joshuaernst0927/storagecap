@@ -656,107 +656,13 @@ async function scanCrexi(browser) {
   return leads
 }
 
-// ─── 7a. Miami-Dade API — direct server-side fetch, no browser needed ─────────
-// The old PApublicServiceProxy endpoint returns 404. Tries candidates; if all
-// fail, logs and returns [] rather than erroring every run.
+// ─── 7a. Miami-Dade API — endpoint unavailable ────────────────────────────────
+// PApublicServiceProxy returns 404. The current PA search UI is an Angular SPA
+// backed by Solr; its REST endpoint requires a session token issued by the SPA
+// shell and cannot be fetched cold. Skip gracefully rather than 404 every run.
 async function scanMiamiDadeAPI() {
-  log('MiamiDadeAPI', 'Starting — direct fetch (no browser)...')
-  const leads = []
-
-  const ENDPOINTS = [
-    'https://www.miamidade.gov/Apps/PA/PApublicServiceProxy/PaServicesProxy.aspx?Operation=GetPropertySearchByValue&Value=self+storage&ValueType=owner&FolioRange=all&ItemCount=50',
-    'https://www.miamidade.gov/pa/public/search/owner?owner=self+storage&format=json&rows=50',
-  ]
-
-  let text = null
-  let usedEndpoint = null
-
-  for (const endpoint of ENDPOINTS) {
-    try {
-      const res = await safeFetch(endpoint, {
-        headers: { 'Accept': 'application/xml, application/json, text/xml, */*' },
-        timeout: 15000,
-      })
-      if (res.ok) {
-        text = await res.text()
-        usedEndpoint = endpoint
-        break
-      }
-      log('MiamiDadeAPI', `Endpoint returned HTTP ${res.status}: ${endpoint.split('?')[0]}`)
-    } catch (e) {
-      log('MiamiDadeAPI', `Endpoint error: ${e.message}`)
-    }
-  }
-
-  if (!text) {
-    log('MiamiDadeAPI', 'endpoint unavailable — all candidates failed, skipping')
-    return leads
-  }
-
-  const xmlEntries = text.match(/<MinimumAddress>[\s\S]*?<\/MinimumAddress>/g) || []
-
-  if (xmlEntries.length > 0) {
-    for (const entry of xmlEntries.slice(0, 20)) {
-      const addr  = entry.match(/<Address>(.*?)<\/Address>/)?.[1] || ''
-      const owner = entry.match(/<Owner>(.*?)<\/Owner>/)?.[1] || ''
-      const folio = entry.match(/<Folionumber>(.*?)<\/Folionumber>/)?.[1] || ''
-      if (!addr) continue
-      if (!isSelfStorage(addr + ' ' + owner)) continue
-      const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
-      leads.push({
-        id: generateLeadId(),
-        facilityName: addr,
-        address: addr,
-        city: 'Miami',
-        state: 'FL',
-        ownerName: owner,
-        source: 'countytax_miamidade',
-        sourceUrl: `https://www.miamidade.gov/Apps/PA/propertysearch/#/?folio=${folio}`,
-        distressSignals: signals,
-        score: scoreLead(signals),
-        status: 'new',
-        foundAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-        notes: `Miami-Dade property owner match · Folio: ${folio}`,
-      })
-    }
-  } else {
-    try {
-      const json = JSON.parse(text)
-      const items = json.results || json.data || json.properties || (Array.isArray(json) ? json : [])
-      for (const p of items.slice(0, 20)) {
-        const addr  = p.address || p.siteAddress || p.propertyAddress || ''
-        const owner = p.ownerName || p.owner || ''
-        const folio = p.folioNumber || p.folio || ''
-        if (!addr && !owner) continue
-        if (!isSelfStorage(addr + ' ' + owner)) continue
-        const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
-        leads.push({
-          id: generateLeadId(),
-          facilityName: addr || owner,
-          address: addr,
-          city: 'Miami',
-          state: 'FL',
-          ownerName: owner,
-          source: 'countytax_miamidade',
-          sourceUrl: folio
-            ? `https://www.miamidade.gov/Apps/PA/propertysearch/#/?folio=${folio}`
-            : 'https://www.miamidade.gov/Apps/PA/propertysearch/#/',
-          distressSignals: signals,
-          score: scoreLead(signals),
-          status: 'new',
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: `Miami-Dade property owner match · Folio: ${folio}`,
-        })
-      }
-    } catch (e) {
-      log('MiamiDadeAPI', 'Response not XML or JSON — endpoint format unknown, skipping parse')
-    }
-  }
-
-  log('MiamiDadeAPI', `Found ${leads.length} leads`)
-  return leads
+  log('MiamiDadeAPI', 'endpoint unavailable — PA API requires session token (SPA); skipping')
+  return []
 }
 
 // ─── 7b. PACER RSS — unauthenticated per-court bankruptcy feeds ────────────────
@@ -788,9 +694,30 @@ async function scanPACERRSS() {
       const items = xml.match(/<item>[\s\S]*?<\/item>/g) || []
       const beforeCount = leads.length
 
-      // Self-storage name patterns in bankruptcy filings — brand variants included
-      const STOR_INCLUDE = /\bstor(?:age|all|amer|co|e?-?n-?lock|ex|house|it|m(?:ax|or)|quest|right|safe|star|tek|wise)?\b|self[\s-]?stor|mini[\s-]?stor|boat\s+stor|rv\s+stor/i
-      const STOR_REJECT  = /cold\s+stor|data\s+stor|wine\s+stor|document\s+stor|file\s+stor|grain\s+stor|warehouse\s+stor|moving\s+and\s+stor|u-?haul|records?\s+stor|pool\s+stor|luggage\s+stor|furniture\s+stor|fine\s+art\s+stor|blood\s+stor|stem\s+cell/i
+      // Wider self-storage match for bankruptcy case names.
+      // Case names often say "StorQuest FL LLC", "U-Stor-It Inc", "iStorage",
+      // "Compass Self Storage", "Boat & RV Storage" — rarely just "storage".
+      const STOR_INCLUDE = new RegExp(
+        'stor(?:age|all|amer|away|co|ez|house|it|lock|m(?:ax|or)|n-lock|quest|right|safe|star|tek|wise|world)' +
+        '|[iue][-\\s]?stor' +
+        '|self[\\s-]?stor' +
+        '|mini[\\s-]?stor' +
+        '|boat[\\s&+]+(?:rv[\\s&+]+)?stor' +
+        '|rv[\\s&+]+stor' +
+        '|(?:warehouse|industrial)[\\s\\w]{0,20}(?:lease|rental|rent)' +
+        '|(?:lease|rental)[\\s\\w]{0,20}(?:warehouse|industrial\\s+space)',
+        'i'
+      )
+      const STOR_REJECT = new RegExp(
+        'cold[\\s-]stor|data[\\s-]stor|wine[\\s-]stor|document[\\s-]stor' +
+        '|file[\\s-]stor|grain[\\s-]stor|moving\\s+and\\s+stor' +
+        '|u-?haul|records?[\\s-]stor|pool[\\s-]stor|luggage[\\s-]stor' +
+        '|furniture[\\s-]stor|fine\\s+art|blood\\s+bank|stem\\s+cell' +
+        '|restore|restor|history|histor|pastoral|custodian|vendor|monitor' +
+        '|restoration|depositor|directory',
+        'i'
+      )
+
       for (const item of items) {
         const title   = item.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, '$1')?.trim() || ''
         const link    = item.match(/<link>([\s\S]*?)<\/link>/)?.[1]?.trim() || ''
