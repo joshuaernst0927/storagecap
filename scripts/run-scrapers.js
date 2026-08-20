@@ -75,6 +75,7 @@ function scoreLead(signals) {
 
   // Distress signals (max 30)
   if (signals.taxDelinquency)     score += 25
+  if (signals.loanDefault)        score += 25
   if (signals.lisPendens)         score += 20
   if (signals.bankruptcy)         score += 18
   if (signals.fireCodeViolations) score += 15
@@ -663,6 +664,228 @@ async function scanCrexi(browser) {
 async function scanMiamiDadeAPI() {
   log('MiamiDadeAPI', 'endpoint unavailable — PA API requires session token (SPA); skipping')
   return []
+}
+
+// ─── 7c. SBA FOIA — charged-off (defaulted) 7(a) + 504 loans, NAICS 531130 ────
+const SBA_CACHE_FILE = path.join(__dirname, '.sba-foia-cache.csv')
+const SBA_CACHE_TTL  = 7 * 24 * 60 * 60 * 1000
+const SBA_STATES     = ['FL','TX','GA','SC','TN','AZ','AL','MS','NC','OH','WI','IN']
+
+const SBA_CSV_URLS = [
+  'https://data.sba.gov/dataset/0ff8e8e9-b967-4f4e-987c-6ac78c575087/resource/6f558b9f-a7d4-4e0b-b5ee-0ee6e70a4dd8/download/foia-7afy2010-present-asof-241231.csv',
+]
+
+function parseCsvLine(line) {
+  const out = []
+  let cur = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++ }
+        else inQuotes = false
+      } else cur += ch
+    } else {
+      if (ch === '"') inQuotes = true
+      else if (ch === ',') { out.push(cur); cur = '' }
+      else cur += ch
+    }
+  }
+  out.push(cur)
+  return out.map(f => f.trim())
+}
+
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0)
+  if (lines.length < 2) return []
+  const headers = parseCsvLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim())
+  const rows = []
+  for (let i = 1; i < lines.length; i++) {
+    const fields = parseCsvLine(lines[i])
+    if (fields.length < 2) continue
+    const row = {}
+    for (let j = 0; j < headers.length; j++) row[headers[j]] = fields[j] || ''
+    rows.push(row)
+  }
+  return rows
+}
+
+function col(row, ...names) {
+  for (const n of names) {
+    if (row[n] !== undefined) return row[n]
+    const key = Object.keys(row).find(k => k.toLowerCase() === n.toLowerCase())
+    if (key) return row[key]
+  }
+  return ''
+}
+
+async function scanSBADefaults() {
+  log('SBADefaults', 'Starting — SBA FOIA charged-off loans (NAICS 531130)...')
+  const leads = []
+  let csvText = null
+
+  try {
+    if (fs.existsSync(SBA_CACHE_FILE)) {
+      const age = Date.now() - fs.statSync(SBA_CACHE_FILE).mtimeMs
+      if (age < SBA_CACHE_TTL) {
+        csvText = fs.readFileSync(SBA_CACHE_FILE, 'utf-8')
+        log('SBADefaults', `Using cached CSV (${Math.round(age / 86400000)}d old)`)
+      } else {
+        log('SBADefaults', 'Cache stale — re-downloading')
+      }
+    }
+  } catch (e) { log('SBADefaults', `Cache read error: ${e.message}`) }
+
+  if (!csvText) {
+    for (const url of SBA_CSV_URLS) {
+      try {
+        log('SBADefaults', `Downloading ${url.split('/').pop()}...`)
+        const res = await safeFetch(url, {
+          headers: { 'Accept': 'text/csv, application/csv, */*' },
+          timeout: 120000,
+        })
+        if (!res.ok) { log('SBADefaults', `HTTP ${res.status} — trying next mirror`); continue }
+        const text = await res.text()
+        if (text.length < 1000) { log('SBADefaults', 'Response too small — skipping'); continue }
+        csvText = text
+        log('SBADefaults', `Downloaded ${Math.round(text.length / 1048576)}MB`)
+        break
+      } catch (e) { log('SBADefaults', `Download error: ${e.message}`) }
+    }
+    if (csvText) {
+      try { fs.writeFileSync(SBA_CACHE_FILE, csvText); log('SBADefaults', 'Cached CSV to disk') }
+      catch (e) { log('SBADefaults', `Cache write error: ${e.message}`) }
+    }
+  }
+
+  if (!csvText) { log('SBADefaults', 'No CSV available — skipping'); return leads }
+
+  try {
+    const rows = parseCsv(csvText)
+    log('SBADefaults', `Parsed ${rows.length} total loan rows`)
+    let naicsMatches = 0
+    for (const row of rows) {
+      const naics = String(col(row, 'NaicsCode', 'NAICS_CODE', 'Naics')).trim()
+      if (!naics.startsWith('531130')) continue
+      naicsMatches++
+      const status = String(col(row, 'LoanStatus', 'LOAN_STATUS', 'Status')).toUpperCase()
+      if (!status.includes('CHGOFF')) continue
+      const state = String(col(row, 'BorrState', 'BORR_STATE', 'ProjectState')).trim().toUpperCase()
+      if (!SBA_STATES.includes(state)) continue
+      const name = col(row, 'BorrName', 'BORR_NAME', 'BorrowerName').trim()
+      if (!name) continue
+      const city = col(row, 'BorrCity', 'BORR_CITY', 'ProjectCity').trim()
+      const street = col(row, 'BorrStreet', 'BORR_STREET').trim()
+      const gross = col(row, 'GrossApproval', 'GROSS_APPROVAL').trim()
+      const appDate = col(row, 'ApprovalDate', 'APPROVAL_DATE').trim()
+      const bank = col(row, 'BankName', 'BANK_NAME').trim()
+      const chgOff = col(row, 'GrossChargeOffAmount', 'ChargeOffAmount').trim()
+      const signals = { loanDefault: true, occupancyPct: null, rentBelowMarket: false }
+      const grossNum = Number(String(gross).replace(/[^0-9.]/g, ''))
+      leads.push({
+        id: generateLeadId(),
+        facilityName: name.substring(0, 120),
+        businessName: name.substring(0, 120),
+        address: street || '',
+        city: city || '',
+        state,
+        askingPrice: null,
+        ownerName: name.substring(0, 120),
+        contactInfo: {},
+        source: 'sba_default',
+        sourceUrl: 'https://data.sba.gov/dataset/7-a-504-foia',
+        distressSignals: signals,
+        score: scoreLead(signals),
+        signals: {},
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `SBA loan CHARGED OFF (default) · NAICS ${naics}`
+             + (grossNum ? ` · Approved $${grossNum.toLocaleString()}` : '')
+             + (chgOff ? ` · Charged off $${Number(String(chgOff).replace(/[^0-9.]/g,'')).toLocaleString()}` : '')
+             + (appDate ? ` · Approved ${appDate}` : '')
+             + (bank ? ` · Lender: ${bank}` : ''),
+      })
+    }
+    log('SBADefaults', `${naicsMatches} NAICS 531130 loans -> ${leads.length} charged-off in target states`)
+  } catch (err) { log('SBADefaults', `Parse error: ${err.message}`) }
+
+  log('SBADefaults', `Found ${leads.length} leads`)
+  return leads
+}
+
+// ─── 7d. OpenCorporates — dissolved / inactive self-storage entities ──────────
+const OC_JURISDICTIONS = [
+  { code: 'us_fl', abbr: 'FL' }, { code: 'us_tx', abbr: 'TX' },
+  { code: 'us_ga', abbr: 'GA' }, { code: 'us_sc', abbr: 'SC' },
+  { code: 'us_tn', abbr: 'TN' }, { code: 'us_az', abbr: 'AZ' },
+  { code: 'us_al', abbr: 'AL' }, { code: 'us_ms', abbr: 'MS' },
+  { code: 'us_nc', abbr: 'NC' }, { code: 'us_oh', abbr: 'OH' },
+  { code: 'us_wi', abbr: 'WI' }, { code: 'us_in', abbr: 'IN' },
+]
+
+async function scanOpenCorporates() {
+  const token = process.env.OPENCORPORATES_TOKEN
+  if (!token) { log('OpenCorporates', 'OPENCORPORATES_TOKEN not set — skipping'); return [] }
+
+  log('OpenCorporates', `Starting — ${OC_JURISDICTIONS.length} jurisdictions...`)
+  const leads = []
+
+  for (const { code, abbr } of OC_JURISDICTIONS) {
+    try {
+      const params = new URLSearchParams({
+        q: 'self storage',
+        jurisdiction_code: code,
+        inactive: 'true',
+        per_page: '100',
+        api_token: token,
+      })
+      const res = await safeFetch(
+        `https://api.opencorporates.com/v0.4/companies/search?${params}`,
+        { headers: { 'Accept': 'application/json' }, timeout: 20000 }
+      )
+      if (!res.ok) { log('OpenCorporates', `${code}: HTTP ${res.status}`); await new Promise(r => setTimeout(r, 2000)); continue }
+      const json = await res.json().catch(() => null)
+      const companies = json?.results?.companies || []
+      const beforeCount = leads.length
+      for (const wrapper of companies) {
+        const c = wrapper.company || wrapper
+        const name = c.name || ''
+        if (!name) continue
+        if (!isSelfStorage(name)) continue
+        const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: name.substring(0, 120),
+          businessName: name.substring(0, 120),
+          address: c.registered_address_in_full || '',
+          city: c.registered_address?.locality || '',
+          state: c.registered_address?.region || abbr,
+          askingPrice: null,
+          ownerName: c.agent_name || name.substring(0, 120),
+          contactInfo: {},
+          source: 'opencorporates',
+          sourceUrl: c.opencorporates_url || `https://opencorporates.com/companies/${code}/${c.company_number || ''}`,
+          distressSignals: signals,
+          score: scoreLead(signals),
+          signals: {},
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: `OpenCorporates ${abbr} · Status: ${c.current_status || 'Inactive'}`
+               + (c.company_number ? ` · No: ${c.company_number}` : '')
+               + (c.incorporation_date ? ` · Inc: ${c.incorporation_date}` : '')
+               + (c.dissolution_date ? ` · Dissolved: ${c.dissolution_date}` : ''),
+        })
+      }
+      log('OpenCorporates', `${code}: ${companies.length} companies -> ${leads.length - beforeCount} storage matches`)
+    } catch (err) { log('OpenCorporates', `${code} error: ${err.message}`) }
+    await new Promise(r => setTimeout(r, 2000))
+  }
+
+  log('OpenCorporates', `Found ${leads.length} total leads`)
+  return leads
 }
 
 // ─── 7b. PACER RSS — unauthenticated per-court bankruptcy feeds ────────────────
@@ -1961,7 +2184,9 @@ async function main() {
     log('Runner', 'Running API + fetch-based scrapers in parallel...')
     const fetchResults = await Promise.allSettled([
       Promise.race([scanCourtListener(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('CourtListener hard timeout')),90000))]),
-      Promise.race([scanPACERRSS(),      new Promise((_,rej)=>setTimeout(()=>rej(new Error('PACERRSS hard timeout')),   120000))]),
+      Promise.race([scanPACERRSS(),        new Promise((_,rej)=>setTimeout(()=>rej(new Error('PACERRSS hard timeout')),       120000))]),
+      Promise.race([scanSBADefaults(),     new Promise((_,rej)=>setTimeout(()=>rej(new Error('SBADefaults hard timeout')),     60000))]),
+      Promise.race([scanOpenCorporates(),  new Promise((_,rej)=>setTimeout(()=>rej(new Error('OpenCorporates hard timeout')),  90000))]),
       scanMiamiDadeAPI(),
       // scanBizBuySell moved to browser block
       scanBizQuest(),
