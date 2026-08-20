@@ -37,3 +37,6 @@ yarn-debug.log*
 yarn-error.log*
 
 .vercel
+
+# SBA FOIA CSV cache (large, regenerated weekly)
+scripts/.sba-foia-cache.csv
