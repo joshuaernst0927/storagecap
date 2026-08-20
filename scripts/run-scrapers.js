@@ -672,7 +672,7 @@ const SBA_CACHE_TTL  = 7 * 24 * 60 * 60 * 1000
 const SBA_STATES     = ['FL','TX','GA','SC','TN','AZ','AL','MS','NC','OH','WI','IN']
 
 const SBA_CSV_URLS = [
-  'https://data.sba.gov/dataset/0ff8e8e9-b967-4f4e-987c-6ac78c575087/resource/6f558b9f-a7d4-4e0b-b5ee-0ee6e70a4dd8/download/foia-7afy2010-present-asof-241231.csv',
+  'https://data.sba.gov/sites/default/files/uploaded_resources/FOIA_7a_FY2020_Present_asof_260630.csv',
 ]
 
 function parseCsvLine(line) {
@@ -794,7 +794,7 @@ async function scanSBADefaults() {
         ownerName: name.substring(0, 120),
         contactInfo: {},
         source: 'sba_default',
-        sourceUrl: 'https://data.sba.gov/dataset/7-a-504-foia',
+        sourceUrl: 'https://data.sba.gov/en/dataset/0ff8e8e9-b967-4f4e-987c-6ac78c575087',
         distressSignals: signals,
         score: scoreLead(signals),
         signals: {},
