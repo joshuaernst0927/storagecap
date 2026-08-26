@@ -40,3 +40,4 @@ yarn-error.log*
 
 # SBA FOIA CSV cache (large, regenerated weekly)
 scripts/.sba-foia-cache.csv
+scripts/.sunbiz-cordata-cache.txt

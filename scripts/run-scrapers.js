@@ -899,6 +899,132 @@ const PACER_COURTS = [
   { id: 'ohnb', state: 'OH', city: 'Cleveland' },
   { id: 'insb', state: 'IN', city: 'Indianapolis' },
 ]
+// --- 7e. Sunbiz Bulk - FL corporate data via SFTP, inactive self-storage LLCs ---
+const SUNBIZ_SFTP_CONFIG = {
+  host: 'sftp.floridados.gov',
+  username: 'Public',
+  password: 'PubAccess1845!',
+  port: 22,
+}
+const SUNBIZ_REMOTE_PATH = '/Public/doc/quarterly/cor/cordata.zip'
+const SUNBIZ_CACHE_FILE  = path.join(__dirname, '.sunbiz-cordata-cache.txt')
+const SUNBIZ_CACHE_TTL   = 24 * 60 * 60 * 1000
+const SUNBIZ_RECORD_LEN  = 1440
+const SUNBIZ_NAME_START   = 12
+const SUNBIZ_NAME_END     = 204
+const SUNBIZ_STATUS_START = 204
+const SUNBIZ_STATUS_END   = 205
+function splitSunbizRecords(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.length > 0)
+  const looksLineDelimited = lines.length > 0 &&
+    lines.slice(0, 20).every(l => l.length >= SUNBIZ_STATUS_END)
+  if (looksLineDelimited) return lines
+  const records = []
+  for (let i = 0; i + SUNBIZ_RECORD_LEN <= text.length; i += SUNBIZ_RECORD_LEN) {
+    records.push(text.slice(i, i + SUNBIZ_RECORD_LEN))
+  }
+  return records
+}
+async function downloadSunbizCordata() {
+  try {
+    if (fs.existsSync(SUNBIZ_CACHE_FILE)) {
+      const age = Date.now() - fs.statSync(SUNBIZ_CACHE_FILE).mtimeMs
+      if (age < SUNBIZ_CACHE_TTL) {
+        log('SunbizBulk', `Using cached extract (${Math.round(age / 3600000)}h old)`)
+        return true
+      }
+      log('SunbizBulk', 'Cache stale - re-downloading')
+    }
+  } catch (e) { log('SunbizBulk', `Cache read error: ${e.message}`) }
+  let SftpClient, AdmZip
+  try {
+    SftpClient = require('ssh2-sftp-client')
+    AdmZip = require('adm-zip')
+  } catch (e) {
+    log('SunbizBulk', `Missing dependency - run: npm install ssh2-sftp-client adm-zip (${e.message})`)
+    return false
+  }
+  const sftp = new SftpClient()
+  try {
+    log('SunbizBulk', `Connecting to ${SUNBIZ_SFTP_CONFIG.host}...`)
+    await sftp.connect(SUNBIZ_SFTP_CONFIG)
+    log('SunbizBulk', `Downloading ${SUNBIZ_REMOTE_PATH}...`)
+    const zipBuffer = await sftp.get(SUNBIZ_REMOTE_PATH)
+    log('SunbizBulk', `Downloaded ${Math.round(zipBuffer.length / 1048576)}MB zip`)
+    const zip = new AdmZip(zipBuffer)
+    const entries = zip.getEntries()
+    if (entries.length === 0) {
+      log('SunbizBulk', 'Zip contained no entries - skipping')
+      return false
+    }
+    const entry = entries.find(e => /cordata/i.test(e.entryName))
+      || entries.find(e => /\.txt$/i.test(e.entryName))
+      || entries[0]
+    log('SunbizBulk', `Extracting ${entry.entryName}...`)
+    const text = entry.getData().toString('latin1')
+    fs.writeFileSync(SUNBIZ_CACHE_FILE, text, 'latin1')
+    log('SunbizBulk', 'Cached extract to disk')
+    return true
+  } catch (e) {
+    log('SunbizBulk', `SFTP/download error: ${e.message}`)
+    return false
+  } finally {
+    try { await sftp.end() } catch (e) {}
+  }
+}
+function parseSunbizRecord(line) {
+  if (!line || line.length < SUNBIZ_STATUS_END) return null
+  const name = line.slice(SUNBIZ_NAME_START, SUNBIZ_NAME_END).trim()
+  const statusCode = line.slice(SUNBIZ_STATUS_START, SUNBIZ_STATUS_END).trim().toUpperCase()
+  return { name, statusCode }
+}
+async function scanSunbizBulk() {
+  log('SunbizBulk', 'Starting - FL Sunbiz bulk corporate data (inactive self-storage entities)...')
+  const leads = []
+  const ready = await downloadSunbizCordata()
+  if (!ready || !fs.existsSync(SUNBIZ_CACHE_FILE)) {
+    log('SunbizBulk', 'No data available - skipping')
+    return leads
+  }
+  try {
+    const text = fs.readFileSync(SUNBIZ_CACHE_FILE, 'latin1')
+    const records = splitSunbizRecords(text)
+    log('SunbizBulk', `Parsed ${records.length} total records`)
+    let inactiveMatches = 0
+    for (const rec of records) {
+      const parsed = parseSunbizRecord(rec)
+      if (!parsed || !parsed.name) continue
+      if (parsed.statusCode !== 'I') continue
+      if (!isSelfStorage(parsed.name)) continue
+      inactiveMatches++
+      const { name } = parsed
+      const signals = { sosInactive: true, occupancyPct: null, rentBelowMarket: false }
+      leads.push({
+        id: generateLeadId(),
+        facilityName: name.substring(0, 120),
+        businessName: name.substring(0, 120),
+        address: null,
+        city: null,
+        state: 'FL',
+        askingPrice: null,
+        ownerName: null,
+        contactInfo: null,
+        source: 'sunbiz',
+        sourceUrl: `https://search.sunbiz.org/Inquiry/CorporationSearch/SearchResults?inquiryType=EntityName&inquiryDirectionType=ForwardList&searchNameOrder=${encodeURIComponent(name.toUpperCase())}`,
+        distressSignals: signals,
+        score: scoreLead(signals),
+        signals: {},
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: '',
+      })
+    }
+    log('SunbizBulk', `${inactiveMatches} inactive storage-keyword matches -> ${leads.length} leads`)
+  } catch (err) { log('SunbizBulk', `Parse error: ${err.message}`) }
+  log('SunbizBulk', `Found ${leads.length} leads`)
+  return leads
+}
 
 async function scanPACERRSS() {
   log('PACERRSS', `Starting — polling ${PACER_COURTS.length} courts...`)
@@ -2187,6 +2313,7 @@ async function main() {
       Promise.race([scanPACERRSS(),        new Promise((_,rej)=>setTimeout(()=>rej(new Error('PACERRSS hard timeout')),       120000))]),
       Promise.race([scanSBADefaults(),     new Promise((_,rej)=>setTimeout(()=>rej(new Error('SBADefaults hard timeout')),     60000))]),
       Promise.race([scanOpenCorporates(),  new Promise((_,rej)=>setTimeout(()=>rej(new Error('OpenCorporates hard timeout')),  90000))]),
+      Promise.race([scanSunbizBulk(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('SunbizBulk hard timeout')), 300000))]),
       scanMiamiDadeAPI(),
       // scanBizBuySell moved to browser block
       scanBizQuest(),
