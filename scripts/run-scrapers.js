@@ -2313,7 +2313,7 @@ async function main() {
       Promise.race([scanPACERRSS(),        new Promise((_,rej)=>setTimeout(()=>rej(new Error('PACERRSS hard timeout')),       120000))]),
       Promise.race([scanSBADefaults(),     new Promise((_,rej)=>setTimeout(()=>rej(new Error('SBADefaults hard timeout')),     60000))]),
       Promise.race([scanOpenCorporates(),  new Promise((_,rej)=>setTimeout(()=>rej(new Error('OpenCorporates hard timeout')),  90000))]),
-      Promise.race([scanSunbizBulk(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('SunbizBulk hard timeout')), 300000))]),
+      Promise.race([scanSunbizBulk(), new Promise((_,rej)=>setTimeout(()=>rej(new Error('SunbizBulk hard timeout')), 1800000))]),
       scanMiamiDadeAPI(),
       // scanBizBuySell moved to browser block
       scanBizQuest(),
