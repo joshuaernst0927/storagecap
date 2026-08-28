@@ -2094,117 +2094,88 @@ const LOOPNET_STATES = [
   { slug: 'indiana',        abbr: 'IN' },
 ]
 
-async function scanLoopNet(browser) {
-  log('LoopNet', 'Starting (Puppeteer stealth, response sniffing)...')
+async function scanLoopNet() {
+  log('LoopNet', 'Starting — ScraperAPI fetch (self-storage for sale)...')
   const leads = []
-  if (!browser) { log('LoopNet', 'No browser — skipping'); return leads }
+  const SCRAPER_KEY = process.env.SCRAPERAPI_KEY
+  if (!SCRAPER_KEY) { log('LoopNet', 'SCRAPERAPI_KEY not set — skipping'); return leads }
 
-  const randDelay = (min = 2000, max = 5000) => new Promise(r => setTimeout(r, min + Math.floor(Math.random() * (max - min))))
+  const STATES = ['florida','texas','georgia','south-carolina','tennessee','arizona','alabama','mississippi','north-carolina','ohio']
+  const https  = require('https')
 
-  const randomViewport = () => ({
-    width:  1200 + Math.floor(Math.random() * 320),
-    height: 800  + Math.floor(Math.random() * 200),
-    deviceScaleFactor: 1,
-  })
-
-  const stealthMouseMove = async (page) => {
-    const vp = page.viewport() || { width: 1280, height: 900 }
-    const steps = 3 + Math.floor(Math.random() * 4)
-    for (let s = 0; s < steps; s++) {
-      const x = 100 + Math.floor(Math.random() * (vp.width  - 200))
-      const y = 100 + Math.floor(Math.random() * (vp.height - 200))
-      await page.mouse.move(x, y, { steps: 10 + Math.floor(Math.random() * 10) })
-      await new Promise(r => setTimeout(r, 80 + Math.floor(Math.random() * 150)))
-    }
-  }
-
-  for (const { slug, abbr } of LOOPNET_STATES) {
-    let page
-    try {
-      page = await browser.newPage()
-      await page.setViewport(randomViewport())
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-
-      const apiResults = []
-
-      // Attach response listener BEFORE navigation — no setRequestInterception
-      page.on('response', async res => {
-        try {
-          const u = res.url()
-          const ct = res.headers()['content-type'] || ''
-          if (!ct.includes('json')) return
-          if (!u.includes('loopnet.com')) return
-          if (u.includes('/api/') || u.includes('/search') || u.includes('/listings') || u.includes('/graphql')) {
-            const json = await res.json().catch(() => null)
-            if (!json) return
-            const items =
-              json.data?.listings ||
-              json.data?.properties ||
-              json.data?.results ||
-              json.data?.searchListings?.listings ||
-              json.listings ||
-              json.properties ||
-              json.results ||
-              []
-            if (Array.isArray(items) && items.length > 0) apiResults.push(...items)
-          }
-        } catch (e) {}
+  function scraperGet(url) {
+    return new Promise((resolve, reject) => {
+      const api = 'https://api.scraperapi.com/?api_key=' + SCRAPER_KEY + '&url=' + encodeURIComponent(url)
+      const req = https.get(api, r => {
+        let d = ''
+        r.on('data', c => d += c)
+        r.on('end', () => resolve(d))
       })
-
-      await stealthMouseMove(page)
-      const url = `https://www.loopnet.com/search/self-storage-facilities/${slug}/for-sale/`
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 35000 })
-      await randDelay(2000, 4000)
-
-      if (apiResults.length > 0) {
-        for (const p of apiResults.slice(0, 25)) {
-          const name = p.name || p.title || p.propertyName || p.listingName || ''
-          const addr = p.address || p.street || p.streetAddress || ''
-          if (!name && !addr) continue
-          const priceRaw = p.price || p.askingPrice || p.listPrice || p.salePrice || null
-          const askingPrice = priceRaw ? Math.round(Number(String(priceRaw).replace(/[^0-9.]/g, ''))) : undefined
-          const addrM = addr.match(/^([^,]+)/)
-          leads.push({
-            id: generateLeadId(),
-            facilityName: (name || addr).slice(0, 80),
-            address: addr || 'See LoopNet listing',
-            city: p.city || addrM?.[1]?.trim() || abbr,
-            state: p.state || p.stateCode || abbr,
-            askingPrice,
-            ownerName: p.brokerName || p.contactName || p.agentName || 'LoopNet Listing',
-            contactInfo: {
-              phone: p.brokerPhone || p.phone || null,
-              email: p.brokerEmail || p.email || null,
-            },
-            source: 'loopnet',
-            sourceUrl: p.url ? (p.url.startsWith('http') ? p.url : `https://www.loopnet.com${p.url}`)
-              : (p.id ? `https://www.loopnet.com/listing/${p.id}/` : url),
-            distressSignals: { occupancyPct: null, rentBelowMarket: false },
-            score: scoreLead({ occupancyPct: null, rentBelowMarket: false }),
-            signals: {},
-            status: 'new',
-            foundAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-            notes: `LoopNet self-storage listing — ${abbr}`,
-          })
-        }
-      }
-      log('LoopNet', `${slug}: ${apiResults.length} API results → ${leads.length} total leads so far`)
-    } catch (err) {
-      log('LoopNet', `${slug} error: ${err.message}`)
-    } finally {
-      if (page) await page.close().catch(() => {})
-    }
-    await randDelay(2000, 5000)
+      req.on('error', reject)
+      req.setTimeout(60000, () => { req.destroy(); reject(new Error('timeout')) })
+    })
   }
 
-  log('LoopNet', `Total: ${leads.length} leads`)
+  for (const state of STATES) {
+    try {
+      const url  = 'https://www.loopnet.com/search/self-storage-facilities/' + state + '/for-sale/'
+      const html = await scraperGet(url)
+      if (!html || html.includes('Access Denied')) {
+        log('LoopNet', state + ': blocked')
+        continue
+      }
+
+      const listingRe = /href="(https:\/\/www\.loopnet\.com\/Listing\/[^"]+)"[^>]*title="More details for ([^"]+)"/g
+      const seen = new Set()
+      let m
+      while ((m = listingRe.exec(html)) !== null) {
+        const sourceUrl = m[1]
+        const titleText = m[2]
+        if (seen.has(sourceUrl)) continue
+        seen.add(sourceUrl)
+
+        const titleMatch = titleText.match(/^(.+?),\s*(.+?),\s*([A-Z]{2})\s*-/)
+        const address    = titleMatch ? titleMatch[1].trim() : null
+        const city       = titleMatch ? titleMatch[2].trim() : null
+        const stateCode  = titleMatch ? titleMatch[3].trim() : state.slice(0,2).toUpperCase()
+
+        const priceMatch  = html.slice(html.indexOf(sourceUrl)).match(/\$([\d,]+)/)
+        const askingPrice = priceMatch ? parseInt(priceMatch[1].replace(/,/g,''), 10) : null
+
+        if (!isSelfStorage(titleText)) continue
+
+        const signals = { listedForSale: true, occupancyPct: null, rentBelowMarket: false }
+        leads.push({
+          id: generateLeadId(),
+          facilityName: address,
+          businessName: address,
+          address,
+          city,
+          state: stateCode,
+          askingPrice,
+          ownerName: null,
+          contactInfo: null,
+          source: 'loopnet',
+          sourceUrl,
+          distressSignals: signals,
+          score: scoreLead(signals),
+          signals: {},
+          status: 'new',
+          foundAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+          notes: '',
+        })
+      }
+      log('LoopNet', state + ': ' + leads.length + ' leads so far')
+      await new Promise(r => setTimeout(r, 2000))
+    } catch(e) {
+      log('LoopNet', state + ': error — ' + e.message)
+    }
+  }
+  log('LoopNet', 'Found ' + leads.length + ' leads')
   return leads
 }
 
-
-// ─── 13. Facebook Marketplace — Puppeteer (requires session cookies) ───────────
 async function scanFacebook(browser) {
   log('Facebook', 'Skipped — add FB session cookies to scripts/fb-cookies.json to enable')
   /*
@@ -2318,6 +2289,7 @@ async function main() {
       scanShowcase(),
       scanBrevitas(),
       scanFSBO(),
+      scanLoopNet(),
       scanOutOfStateOwners(),
       scanFireMarshal(),
     ])
