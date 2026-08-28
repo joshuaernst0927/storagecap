@@ -2289,7 +2289,6 @@ async function main() {
 
   const executablePath = CHROME_PATHS.find(p => { try { return fs.existsSync(p) } catch { return false } })
   let browser = null
-
   if (executablePath) {
     try {
       browser = await puppeteerExtra.launch({
