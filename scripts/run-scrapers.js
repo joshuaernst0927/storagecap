@@ -2100,7 +2100,7 @@ async function scanLoopNet() {
   const SCRAPER_KEY = process.env.SCRAPERAPI_KEY
   if (!SCRAPER_KEY) { log('LoopNet', 'SCRAPERAPI_KEY not set — skipping'); return leads }
 
-  const STATES = ['florida','texas','georgia','south-carolina','tennessee','arizona','alabama','mississippi','north-carolina','ohio']
+  const STATES = ['fl','tx','ga','sc','tn','az','al','ms','nc','oh']
   const https  = require('https')
 
   function scraperGet(url) {
