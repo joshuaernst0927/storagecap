@@ -565,94 +565,61 @@ async function scanFSBO() {
 }
 
 // ─── 6. Crexi — Puppeteer stealth, response sniffing only (no interception) ────
-async function scanCrexi(browser) {
-  log('Crexi', 'Starting (Puppeteer stealth, response sniffing)...')
+async function scanCrexi(_browser) {
+  log('Crexi', 'Starting (ScraperAPI ultra_premium render)...')
   const leads = []
-  if (!browser) { log('Crexi', 'No browser — skipping'); return leads }
-
+  const SCRAPER_KEY = process.env.SCRAPERAPI_KEY
+  if (!SCRAPER_KEY) { log('Crexi', 'SCRAPERAPI_KEY not set - skipping'); return leads }
+  const https = require('https')
   const TARGET_STATES_CREXI = ['TX','GA','SC','TN','AZ','FL','AL','MS','NC','OH','WI','IN']
-
-  const randDelay = (min = 2000, max = 4000) => new Promise(r => setTimeout(r, min + Math.floor(Math.random() * (max - min))))
-
-  const randomViewport = () => ({
-    width:  1200 + Math.floor(Math.random() * 320),
-    height: 800  + Math.floor(Math.random() * 200),
-    deviceScaleFactor: 1,
-  })
-
-  const stealthMouseMove = async (page) => {
-    const vp = page.viewport() || { width: 1280, height: 900 }
-    const steps = 3 + Math.floor(Math.random() * 4)
-    for (let s = 0; s < steps; s++) {
-      const x = 100 + Math.floor(Math.random() * (vp.width  - 200))
-      const y = 100 + Math.floor(Math.random() * (vp.height - 200))
-      await page.mouse.move(x, y, { steps: 10 + Math.floor(Math.random() * 10) })
-      await new Promise(r => setTimeout(r, 80 + Math.floor(Math.random() * 150)))
-    }
+  const STORAGE_KEYWORDS = /storage/i
+  function scraperGetCrexi(url) {
+    return new Promise((resolve, reject) => {
+      const api = 'https://api.scraperapi.com/?api_key=' + SCRAPER_KEY + '&render=true&ultra_premium=true&country_code=us&url=' + encodeURIComponent(url)
+      const req = https.get(api, r => { let d = ''; r.on('data', c => d += c); r.on('end', () => resolve({ status: r.statusCode, body: d })) })
+      req.on('error', reject)
+      req.setTimeout(90000, () => { req.destroy(); reject(new Error('timeout')) })
+    })
   }
-
   for (const state of TARGET_STATES_CREXI) {
-    let page
     try {
-      page = await browser.newPage()
-      await page.setViewport(randomViewport())
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-
-      const apiResults = []
-
-      page.on('response', async res => {
-        try {
-          const u = res.url()
-          if (u.includes('crexi.com') && (u.includes('/search') || u.includes('/properties') || u.includes('/api/')) && (res.headers()['content-type'] || '').includes('json')) {
-            const json = await res.json().catch(() => null)
-            if (json) {
-              const items = json.data || json.results || json.properties || json.listings || []
-              if (Array.isArray(items) && items.length > 0) apiResults.push(...items)
-            }
-          }
-        } catch (e) {}
-      })
-
-      await stealthMouseMove(page)
       const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale&states=${state}`
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 35000 })
-      await randDelay(2000, 4000)
-
-      if (apiResults.length > 0) {
-        for (const p of apiResults.slice(0, 25)) {
-          const addr = p.address || p.location || p.street || p.fullAddress || ''
-          leads.push({
-            id: generateLeadId(),
-            facilityName: p.name || p.title || (typeof addr === 'string' ? addr : '') || 'Crexi Listing',
-            businessName: p.name || p.title || 'Crexi Listing',
-            address: typeof addr === 'string' ? addr : 'See Crexi listing',
-            city: p.city || p.municipality || '',
-            state: p.state || p.stateCode || state,
-            askingPrice: (p.price || p.askingPrice) ? `$${Number(p.price || p.askingPrice).toLocaleString()}` : null,
-            ownerName: p.brokerName || p.contactName || p.agentName || 'Crexi Listing',
-            contactInfo: {
-              phone: p.brokerPhone || p.contactPhone || p.phone || null,
-              email: p.brokerEmail || p.contactEmail || p.email || null,
-            },
-            source: 'crexi',
-            sourceUrl: p.url ? `https://www.crexi.com${p.url}` : `https://www.crexi.com/properties/${p.id || p.slug || ''}`,
-            distressSignals: { bankruptcy: false, occupancyPct: null, rentBelowMarket: false },
-            score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
-            signals: {},
-            status: 'new',
-            foundAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-            notes: `Crexi self-storage listing — ${state}`,
-          })
-        }
+      const { status, body: html } = await scraperGetCrexi(url)
+      if (status !== 200 || !html) { log('Crexi', `${state}: HTTP ${status}`); continue }
+      const cardRe = /<cui-card(?:\s[^>]*)?>/g
+      const positions = []
+      let m
+      while ((m = cardRe.exec(html))) positions.push(m.index)
+      let stateCount = 0
+      for (let i = 0; i < positions.length; i++) {
+        const start = positions[i]
+        const end2 = i + 1 < positions.length ? positions[i + 1] : Math.min(html.length, start + 12000)
+        const chunk = html.slice(start, end2)
+        const croppedTexts = [...chunk.matchAll(/<cui-cropped-text[^>]*>([\s\S]*?)<\/cui-cropped-text>/g)].map(x => x[1].replace(/<[^>]+>/g, '').trim()).filter(Boolean)
+        if (croppedTexts.length < 4) continue
+        const [priceRaw, name, subtitle, address] = croppedTexts
+        const searchable = `${name} ${subtitle}`
+        if (!STORAGE_KEYWORDS.test(searchable)) continue
+        const detailMatch = chunk.match(/href="(\/properties\/\d+[^"]*)"/)
+        const assetIdMatch = chunk.match(/\/assets\/(\d+)\//) || chunk.match(/\/properties\/(\d+)\//)
+        const priceNum = priceRaw ? priceRaw.replace(/[^0-9]/g, '') : ''
+        leads.push({
+          id: generateLeadId(), facilityName: name || 'Crexi Listing', businessName: name || 'Crexi Listing',
+          address: address || 'See Crexi listing', city: '', state,
+          askingPrice: priceNum ? `$${Number(priceNum).toLocaleString()}` : null,
+          ownerName: 'Crexi Listing', contactInfo: { phone: null, email: null }, source: 'crexi',
+          sourceUrl: detailMatch ? `https://www.crexi.com${detailMatch[1]}` : (assetIdMatch ? `https://www.crexi.com/properties/${assetIdMatch[1]}` : url),
+          distressSignals: { bankruptcy: false, occupancyPct: null, rentBelowMarket: false },
+          score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
+          signals: {}, status: 'new', foundAt: new Date().toISOString(), lastUpdated: new Date().toISOString(),
+          notes: `Crexi self-storage listing - ${state} (subtitle: ${subtitle || ''})`,
+        })
+        stateCount++
       }
-      log('Crexi', `${state}: ${apiResults.length} API results`)
+      log('Crexi', `${state}: ${positions.length} cards scanned, ${stateCount} storage matches`)
     } catch (err) { log('Crexi', `${state} error: ${err.message}`) }
-    finally { if (page) await page.close().catch(() => {}) }
-    await randDelay(2000, 4000)
+    await new Promise(r => setTimeout(r, 1500 + Math.floor(Math.random() * 1500)))
   }
-
   log('Crexi', `Found ${leads.length} total leads`)
   return leads
 }
