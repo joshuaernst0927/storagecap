@@ -620,7 +620,29 @@ async function scanCrexi(_browser) {
     } catch (err) { log('Crexi', `${state} error: ${err.message}`) }
     await new Promise(r => setTimeout(r, 1500 + Math.floor(Math.random() * 1500)))
   }
-  log('Crexi', `Found ${leads.length} total leads`)
+      log('Crexi', `Enriching ${leads.length} leads with detail-page broker info...`)
+    for (const lead of leads) {
+      try {
+        const { status, body: detailHtml } = await scraperGetCrexi(lead.sourceUrl)
+        if (status !== 200 || !detailHtml) { log('Crexi', `detail fetch failed for ${lead.sourceUrl}`); continue }
+        const titleMatch = detailHtml.match(/<title>([^<,]+),\s*([^,]+),\s*([A-Z]{2})\s+\d{5}/)
+        if (titleMatch) lead.city = titleMatch[2].trim()
+        const tableMatch = detailHtml.match(/Name<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
+        if (tableMatch) lead.ownerName = tableMatch[1].trim()
+        const brokerageMatch = detailHtml.match(/Brokerage<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
+        const phoneMatch = detailHtml.match(/Brokerage Phone<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
+        const addressMatch = detailHtml.match(/Brokerage Address<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
+        lead.contactInfo = {
+          phone: phoneMatch ? phoneMatch[1].trim() : null,
+          email: null,
+          brokerage: brokerageMatch ? brokerageMatch[1].trim() : null,
+          brokerageAddress: addressMatch ? addressMatch[1].trim() : null,
+        }
+      } catch (err) {
+        log('Crexi', `detail enrichment error for ${lead.sourceUrl}: ${err.message}`)
+      }
+      await new Promise(r => setTimeout(r, 1500 + Math.floor(Math.random() * 1500)))
+    }
   return leads
 }
 
