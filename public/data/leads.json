@@ -1,5 +1,3315 @@
 [
   {
+    "id": "lead_1788367243400_n7624",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "Whitney",
+    "state": "IN",
+    "askingPrice": "$525,000",
+    "ownerName": "Brian Brockman",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "Bang Realty - Texas Inc.",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=bd61d1875e8d074332823e22d77808cc",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T16:40:43.400Z",
+    "lastUpdated": "2026-09-02T16:40:43.400Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity)"
+  },
+  {
+    "id": "lead_1788367243400_l8pve",
+    "facilityName": "6215 Airpark Dr",
+    "businessName": "6215 Airpark Dr",
+    "address": "6215 Airpark Dr",
+    "city": "Chattanooga",
+    "state": "IN",
+    "askingPrice": "$999,000",
+    "ownerName": "Gabe Cartwright",
+    "contactInfo": {
+      "phone": "4234782332",
+      "email": null,
+      "brokerage": "Century 21 1st Choice Realtors",
+      "brokerageAddress": "2075 North Ocoee Street"
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2258012/tennessee-6215-airpark-dr?recommId=bd61d1875e8d074332823e22d77808cc",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T16:40:43.400Z",
+    "lastUpdated": "2026-09-02T16:40:43.400Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Self Storage)"
+  },
+  {
+    "id": "lead_1788367187088_sxhke",
+    "facilityName": "Storage Unit Facility With 117 Units",
+    "businessName": "Storage Unit Facility With 117 Units",
+    "address": "112 Shoreline Avenue Northwest",
+    "city": "Canton",
+    "state": "OH",
+    "askingPrice": "$899,900",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2453331/storage-unit-facility-with-117-units?recommId=3e64f9a3e0e9cbb229dc4e1867dfddb8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T16:39:47.088Z",
+    "lastUpdated": "2026-09-02T16:39:47.088Z",
+    "notes": "Crexi self-storage listing - OH (subtitle: Self Storage • 8,220 SF)"
+  },
+  {
+    "id": "lead_1788349475310_80zqq",
+    "facilityName": "Nederland Premier Storage",
+    "businessName": "Nederland Premier Storage",
+    "address": "1420 S 21st St",
+    "city": "Nederland",
+    "state": "IN",
+    "askingPrice": "$630,000",
+    "ownerName": "Craig Rice",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "CSD Realty Company",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1916752/texas-nederland-premier-storage?recommId=c1507048fa24f0258317bbc62761cef4",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:44:35.310Z",
+    "lastUpdated": "2026-09-02T11:44:35.310Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Self Storage | 96% Occupied)"
+  },
+  {
+    "id": "lead_1788349475310_cx1gq",
+    "facilityName": "6215 Airpark Dr",
+    "businessName": "6215 Airpark Dr",
+    "address": "6215 Airpark Dr",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$999,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2258012/tennessee-6215-airpark-dr?recommId=c1507048fa24f0258317bbc62761cef4",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:44:35.310Z",
+    "lastUpdated": "2026-09-02T11:44:35.310Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Self Storage)"
+  },
+  {
+    "id": "lead_1788349475309_p6ahc",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$525,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=c1507048fa24f0258317bbc62761cef4",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:44:35.309Z",
+    "lastUpdated": "2026-09-02T11:44:35.310Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity)"
+  },
+  {
+    "id": "lead_1788349352180_1z60y",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$525,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=61df447b4bc26492a7f1917fc33876b6",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:42:32.180Z",
+    "lastUpdated": "2026-09-02T11:42:32.180Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity)"
+  },
+  {
+    "id": "lead_1788349352180_c768o",
+    "facilityName": "6215 Airpark Dr",
+    "businessName": "6215 Airpark Dr",
+    "address": "6215 Airpark Dr",
+    "city": "Chattanooga",
+    "state": "MS",
+    "askingPrice": "$999,000",
+    "ownerName": "Gabe Cartwright",
+    "contactInfo": {
+      "phone": "4234782332",
+      "email": null,
+      "brokerage": "Century 21 1st Choice Realtors",
+      "brokerageAddress": "2075 North Ocoee Street"
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2258012/tennessee-6215-airpark-dr?recommId=61df447b4bc26492a7f1917fc33876b6",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:42:32.180Z",
+    "lastUpdated": "2026-09-02T11:42:32.180Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: Self Storage)"
+  },
+  {
+    "id": "lead_1788349352180_os8q7",
+    "facilityName": "Nederland Premier Storage",
+    "businessName": "Nederland Premier Storage",
+    "address": "1420 S 21st St",
+    "city": "Nederland",
+    "state": "MS",
+    "askingPrice": "$630,000",
+    "ownerName": "Craig Rice",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "CSD Realty Company",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1916752/texas-nederland-premier-storage?recommId=61df447b4bc26492a7f1917fc33876b6",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:42:32.180Z",
+    "lastUpdated": "2026-09-02T11:42:32.180Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: Self Storage | 96% Occupied)"
+  },
+  {
+    "id": "lead_1788349287882_0u0ys",
+    "facilityName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "businessName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "address": "1920 Sherman Ave",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$75,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2593337/florida-auction---gulf-coast-self-storage-63-drive-up-units?recommId=bd2f06ff62564bb2bb01c3aa0aafc301",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:41:27.882Z",
+    "lastUpdated": "2026-09-02T11:41:27.882Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: STARTING BID $75,000 | Gulf Coast Self Storage | Florida Panhandle Value-Add | 63 Drive-Up Units)"
+  },
+  {
+    "id": "lead_1788349274110_xptwo",
+    "facilityName": "50-unit self-storage facility at North T Street",
+    "businessName": "50-unit self-storage facility at North T Street",
+    "address": "1300 N T St",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$350,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2357674/florida-50-unit-self-storage-facility-at-north-t-street?recommId=1c9d81c6d3b5ac270d4abf0b34701ba8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:41:14.110Z",
+    "lastUpdated": "2026-09-02T11:41:14.110Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Self Storage | 50 Units | $7,000/unit)"
+  },
+  {
+    "id": "lead_1788349274109_2hmpj",
+    "facilityName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "businessName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "address": "1920 Sherman Ave",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$75,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2593337/florida-auction---gulf-coast-self-storage-63-drive-up-units?recommId=1c9d81c6d3b5ac270d4abf0b34701ba8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:41:14.109Z",
+    "lastUpdated": "2026-09-02T11:41:14.110Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: STARTING BID $75,000 | Gulf Coast Self Storage | Florida Panhandle Value-Add | 63 Drive-Up Units)"
+  },
+  {
+    "id": "lead_1788349186591_gmf1s",
+    "facilityName": "20 Unit MHP + Duplex + Storage; Value Add Space",
+    "businessName": "20 Unit MHP + Duplex + Storage; Value Add Space",
+    "address": "923 West Lee Road",
+    "city": "",
+    "state": "SC",
+    "askingPrice": "$1,950,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2528765/south-carolina-20-unit-mhp-duplex-storage-value-add-space?recommId=40f563a7e1ba794eec03c4576910ea22",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:39:46.591Z",
+    "lastUpdated": "2026-09-02T11:39:46.591Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: 923 W Lee Rd Taylors SC 29687)"
+  },
+  {
+    "id": "lead_1788349186591_3umr3",
+    "facilityName": "408 S MAIN ST BISHOPVILLE SC 29010-1518",
+    "businessName": "408 S MAIN ST BISHOPVILLE SC 29010-1518",
+    "address": "408 S Main St",
+    "city": "BISHOPVILLE",
+    "state": "SC",
+    "askingPrice": "$200,000",
+    "ownerName": "Stephen DesChamps, CCIM",
+    "contactInfo": {
+      "phone": "8037781139",
+      "email": null,
+      "brokerage": "Coldwell Banker Commercial Cornerstone",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2490540/south-carolina-408-s-main-st-bishopville-sc-29010-1518?recommId=40f563a7e1ba794eec03c4576910ea22",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:39:46.591Z",
+    "lastUpdated": "2026-09-02T11:39:46.591Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: Office,Self Storage • 2,222 SF)"
+  },
+  {
+    "id": "lead_1788349180563_h4t5a",
+    "facilityName": "Summerville Flex Warehouse/Office/Storage Condo",
+    "businessName": "Summerville Flex Warehouse/Office/Storage Condo",
+    "address": "1449 Orangeburg Rd",
+    "city": "Summerville",
+    "state": "SC",
+    "askingPrice": "$295,000",
+    "ownerName": "Jennings Smith",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2174017/south-carolina-summerville-flex-warehouseofficestorage-condo?recommId=7bbbea1d6c05e2633073b783ae9e9c3a",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:39:40.563Z",
+    "lastUpdated": "2026-09-02T11:39:40.563Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: Flex Warehouse/Office/Storage Condos | 1,100 SqFt)"
+  },
+  {
+    "id": "lead_1788349180562_dy1tu",
+    "facilityName": "408 S MAIN ST BISHOPVILLE SC 29010-1518",
+    "businessName": "408 S MAIN ST BISHOPVILLE SC 29010-1518",
+    "address": "408 S Main St",
+    "city": "BISHOPVILLE",
+    "state": "SC",
+    "askingPrice": "$200,000",
+    "ownerName": "Stephen DesChamps, CCIM",
+    "contactInfo": {
+      "phone": "8037781139",
+      "email": null,
+      "brokerage": "Coldwell Banker Commercial Cornerstone",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2490540/south-carolina-408-s-main-st-bishopville-sc-29010-1518?recommId=7bbbea1d6c05e2633073b783ae9e9c3a",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:39:40.562Z",
+    "lastUpdated": "2026-09-02T11:39:40.562Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: Office,Self Storage • 2,222 SF)"
+  },
+  {
+    "id": "lead_1788349180562_fb71x",
+    "facilityName": "406 W Bobo Newsome Hwy, Hartsville, SC 29550",
+    "businessName": "406 W Bobo Newsome Hwy, Hartsville, SC 29550",
+    "address": "406 W Bobo Newsom Hwy",
+    "city": "Hartsville",
+    "state": "SC",
+    "askingPrice": "$150,000",
+    "ownerName": "Erika McNew",
+    "contactInfo": {
+      "phone": "(888) 407-2410",
+      "email": null,
+      "brokerage": "The Virtual Realty Group",
+      "brokerageAddress": "15105 John J Delaney Drive"
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2445765/south-carolina-406-w-bobo-newsome-hwy-hartsville-sc-29550?recommId=7bbbea1d6c05e2633073b783ae9e9c3a",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:39:40.562Z",
+    "lastUpdated": "2026-09-02T11:39:40.562Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: 22-Unit Self Storage Facility | Value-Add Opportunity | $8,409/Unit)"
+  },
+  {
+    "id": "lead_1788349156195_a0twd",
+    "facilityName": "Luxury Storage Warehouse",
+    "businessName": "Luxury Storage Warehouse",
+    "address": "4115 Kreinhop Rd",
+    "city": "Spring",
+    "state": "TX",
+    "askingPrice": "$175,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1090392/texas-luxury-storage-warehouse?recommId=bdf2f02025b483263953b2bdd7f21179",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:39:16.196Z",
+    "lastUpdated": "2026-09-02T11:39:16.196Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: +/- 1,100 sf units now available in Phase 2)"
+  },
+  {
+    "id": "lead_1788349156196_sw42u",
+    "facilityName": "US Storage Centers (Managed)",
+    "businessName": "US Storage Centers (Managed)",
+    "address": "2601 Willowbrook Rd",
+    "city": "",
+    "state": "TX",
+    "askingPrice": "$2,850,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2317945/texas-us-storage-centers-managed?recommId=bdf2f02025b483263953b2bdd7f21179",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:39:16.196Z",
+    "lastUpdated": "2026-09-02T11:39:16.196Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: 41,610 NRSF | 280 Units | $68.49/NRSF)"
+  },
+  {
+    "id": "lead_1788349151550_okmls",
+    "facilityName": "GRAY LINE STORAGE",
+    "businessName": "GRAY LINE STORAGE",
+    "address": "5410 Hawkinsville Road",
+    "city": "",
+    "state": "GA",
+    "askingPrice": "$725,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2528814/georgia-gray-line-storage?recommId=fe0af37a89282b709e9794967d887602",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:39:11.550Z",
+    "lastUpdated": "2026-09-02T11:39:11.550Z",
+    "notes": "Crexi self-storage listing - GA (subtitle: Self Storage | 150 Units | 22,425 NRSF)"
+  },
+  {
+    "id": "lead_1788349127151_maeqo",
+    "facilityName": "US Storage Centers (Managed)",
+    "businessName": "US Storage Centers (Managed)",
+    "address": "2601 Willowbrook Rd",
+    "city": "Dallas",
+    "state": "TX",
+    "askingPrice": "$2,850,000",
+    "ownerName": "Ryan Bohls",
+    "contactInfo": {
+      "phone": "813.839.7300",
+      "email": null,
+      "brokerage": "Franklin Street",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2317945/texas-us-storage-centers-managed?recommId=4bcaf68870f295b371d50cf642efa9e0",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T11:38:47.151Z",
+    "lastUpdated": "2026-09-02T11:38:47.151Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: 41,610 NRSF | 280 Units | $68.49/NRSF)"
+  },
+  {
+    "id": "lead_1788348622531_d1tiv",
+    "businessName": "33-Unit Self-Storage Facility in Center, TX with Owner Financing",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$27,000,000",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/convenient-storage-and-moving-support-service-with-scalable-model/BW2529080/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-09-02T11:30:22.531Z",
+    "lastUpdated": "2026-09-02T11:30:22.531Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1788348633959_6wdsn",
+    "facilityName": "26-30300 Kenneth Earl Turner and QUION INVESTORS, INC.",
+    "businessName": "26-30300 Kenneth Earl Turner and QUION INVESTORS, INC.",
+    "address": "",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "26-30300 Kenneth Earl Turner and QUION INVESTORS, INC.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?491069",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T22:02:00.000Z",
+    "lastUpdated": "2026-09-02T11:30:33.959Z",
+    "notes": "PACER RSS filing — TXSB · Tue, 01 Sep 2026 22:02:00 GMT"
+  },
+  {
+    "id": "lead_1788293356208_cgaeu",
+    "facilityName": "Self Storage Complex Bolivar, MO",
+    "businessName": "Self Storage Complex Bolivar, MO",
+    "address": "4880 S 139th Rd",
+    "city": "Bolivar",
+    "state": "IN",
+    "askingPrice": "$689,900",
+    "ownerName": "Sam Craft",
+    "contactInfo": {
+      "phone": "417.882.5710",
+      "email": null,
+      "brokerage": "Reece Commercial",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1526623/missouri-self-storage-bolivar-mo?recommId=fc4a1e184348975f8d4164b215ed3dee",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T20:09:16.209Z",
+    "lastUpdated": "2026-09-01T20:09:16.209Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: High Visibility Property)"
+  },
+  {
+    "id": "lead_1788293234167_eq2nt",
+    "facilityName": "104 S. Commercial Street",
+    "businessName": "104 S. Commercial Street",
+    "address": "104 S Commercial St",
+    "city": "Bells",
+    "state": "MS",
+    "askingPrice": "$189,000",
+    "ownerName": "Noel Cobb",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2195253/texas-104-s-commercial-street?recommId=55f0960c4c435189e3a26940fee72305",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T20:07:14.167Z",
+    "lastUpdated": "2026-09-01T20:07:14.167Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: Value-Add Self Storage Opportunity in Bells, Texas)"
+  },
+  {
+    "id": "lead_1788293169534_1u9ds",
+    "facilityName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "businessName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "address": "1920 Sherman Ave",
+    "city": "PANAMA CITY",
+    "state": "FL",
+    "askingPrice": "$75,000",
+    "ownerName": "Ryan Nee",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "Marcus &amp; Millichap",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2593337/florida-auction---gulf-coast-self-storage-63-drive-up-units?recommId=377fe20a62c44e81bd1ccd26bf0b5072",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T20:06:09.534Z",
+    "lastUpdated": "2026-09-01T20:06:09.534Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: STARTING BID $75,000 | Gulf Coast Self Storage | Florida Panhandle Value-Add | 63 Drive-Up Units)"
+  },
+  {
+    "id": "lead_1788293169534_7ud64",
+    "facilityName": "Signature Storage Suites",
+    "businessName": "Signature Storage Suites",
+    "address": "16255 Pine Ridge Rd",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$525,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1229009/florida-signature-storage-suites?recommId=377fe20a62c44e81bd1ccd26bf0b5072",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T20:06:09.534Z",
+    "lastUpdated": "2026-09-01T20:06:09.534Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Signature Storage Suites | 2 Units Remaining)"
+  },
+  {
+    "id": "lead_1788293056022_o567b",
+    "facilityName": "Cannon Secure Storage",
+    "businessName": "Cannon Secure Storage",
+    "address": "939 N Logan St",
+    "city": "Gaffney",
+    "state": "SC",
+    "askingPrice": "$780,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2324314/south-carolina-cannon-secure-storage?recommId=da387f0ea86d3b0073331cd688530457",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T20:04:16.022Z",
+    "lastUpdated": "2026-09-01T20:04:16.022Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: Growing population, occupancy, and rates!)"
+  },
+  {
+    "id": "lead_1788292997084_k2hmc",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "Whitney",
+    "state": "TX",
+    "askingPrice": "$525,000",
+    "ownerName": "Brian Brockman",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "Bang Realty - Texas Inc.",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=b2216c70649a02bc1055f135320f8fcc",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T20:03:17.084Z",
+    "lastUpdated": "2026-09-01T20:03:17.084Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity)"
+  },
+  {
+    "id": "lead_1788292997083_rkx48",
+    "facilityName": "104 S. Commercial Street",
+    "businessName": "104 S. Commercial Street",
+    "address": "104 S Commercial St",
+    "city": "Bells",
+    "state": "TX",
+    "askingPrice": "$189,000",
+    "ownerName": "Noel Cobb",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2195253/texas-104-s-commercial-street?recommId=b2216c70649a02bc1055f135320f8fcc",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T20:03:17.083Z",
+    "lastUpdated": "2026-09-01T20:03:17.083Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: Value-Add Self Storage Opportunity in Bells, Texas)"
+  },
+  {
+    "id": "lead_1788288914858_c49ov",
+    "facilityName": "6215 Airpark Dr",
+    "businessName": "6215 Airpark Dr",
+    "address": "6215 Airpark Dr",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$999,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2258012/tennessee-6215-airpark-dr?recommId=a00a9f8905cfcbdfeffcbdc8e94973b8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T18:55:14.858Z",
+    "lastUpdated": "2026-09-01T18:55:14.858Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Self Storage)"
+  },
+  {
+    "id": "lead_1788288914857_cgpjk",
+    "facilityName": "Brindlee Mountain Self Storage",
+    "businessName": "Brindlee Mountain Self Storage",
+    "address": "9582 Heart Of Dixie Hwy",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$549,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2456275/alabama-brindlee-mountain-self-storage?recommId=a00a9f8905cfcbdfeffcbdc8e94973b8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T18:55:14.857Z",
+    "lastUpdated": "2026-09-01T18:55:14.857Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Well-located, value-add storage facility.)"
+  },
+  {
+    "id": "lead_1788288914857_rg347",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$525,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=a00a9f8905cfcbdfeffcbdc8e94973b8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T18:55:14.857Z",
+    "lastUpdated": "2026-09-01T18:55:14.857Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity)"
+  },
+  {
+    "id": "lead_1788288875233_rbphj",
+    "facilityName": "Packer Storage of Ashland",
+    "businessName": "Packer Storage of Ashland",
+    "address": "1800 Third St W",
+    "city": "",
+    "state": "WI",
+    "askingPrice": "$1,500,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2556594/wisconsin-1800-3rd-st-w-ashland-wi-54806?recommId=4c0ee530e234b016bed747f9e06804d6",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T18:54:35.233Z",
+    "lastUpdated": "2026-09-01T18:54:35.233Z",
+    "notes": "Crexi self-storage listing - WI (subtitle: Ashland, WI Self Storage Portfolio | 30,897 RSF | 158 Units)"
+  },
+  {
+    "id": "lead_1788288875233_wwoqw",
+    "facilityName": "2285 Northern Road",
+    "businessName": "2285 Northern Road",
+    "address": "2285 Northern Road",
+    "city": "",
+    "state": "WI",
+    "askingPrice": "$699,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2554126/wisconsin-2285-northern-road?recommId=4c0ee530e234b016bed747f9e06804d6",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T18:54:35.233Z",
+    "lastUpdated": "2026-09-01T18:54:35.233Z",
+    "notes": "Crexi self-storage listing - WI (subtitle: Excellent opportunity to own a well-located self-storage facility just off 1-41.)"
+  },
+  {
+    "id": "lead_1788288761533_mk5uu",
+    "facilityName": "104 S. Commercial Street",
+    "businessName": "104 S. Commercial Street",
+    "address": "104 S Commercial St",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$189,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2195253/texas-104-s-commercial-street?recommId=6e2c69a71314159d5d1f0eb33a78d182",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T18:52:41.533Z",
+    "lastUpdated": "2026-09-01T18:52:41.533Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: Value-Add Self Storage Opportunity in Bells, Texas)"
+  },
+  {
+    "id": "lead_1788288674052_k6a5d",
+    "facilityName": "Flagstaff RV / Boat Storage Condos: Dark Sky Storage",
+    "businessName": "Flagstaff RV / Boat Storage Condos: Dark Sky Storage",
+    "address": "5590 Dark Sky Drive",
+    "city": "",
+    "state": "AZ",
+    "askingPrice": "$305,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/679435/arizona-flagstaff-rv-condos-dark-sky-storage?recommId=24bc65d59a4e38852fa0b58002ba7c06",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T18:51:14.052Z",
+    "lastUpdated": "2026-09-01T18:51:14.052Z",
+    "notes": "Crexi self-storage listing - AZ (subtitle: Own your own private luxury RV / Boat storage CONDO in Northern Arizona)"
+  },
+  {
+    "id": "lead_1788288029315_oqq8b",
+    "facilityName": "23-15395- Chad Everett Storz and Kimberly Sue Storz",
+    "businessName": "23-15395- Chad Everett Storz and Kimberly Sue Storz",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "23-15395- Chad Everett Storz and Kimberly Sue Storz",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?804933",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T12:23:32.000Z",
+    "lastUpdated": "2026-09-01T18:40:29.315Z",
+    "notes": "PACER RSS filing — FLSB · Tue, 01 Sep 2026 12:23:32 GMT"
+  },
+  {
+    "id": "lead_1788288029315_55rot",
+    "facilityName": "23-15395- Chad Everett Storz and Kimberly Sue Storz",
+    "businessName": "23-15395- Chad Everett Storz and Kimberly Sue Storz",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "23-15395- Chad Everett Storz and Kimberly Sue Storz",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?804933",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T12:23:01.000Z",
+    "lastUpdated": "2026-09-01T18:40:29.315Z",
+    "notes": "PACER RSS filing — FLSB · Tue, 01 Sep 2026 12:23:01 GMT"
+  },
+  {
+    "id": "lead_1788263345391_hbiyw",
+    "facilityName": "104 S. Commercial Street",
+    "businessName": "104 S. Commercial Street",
+    "address": "104 S Commercial St",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$189,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2195253/texas-104-s-commercial-street?recommId=3121f46c938f7189b20c7020bbfa8b11",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:49:05.391Z",
+    "lastUpdated": "2026-09-01T11:49:05.391Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Value-Add Self Storage Opportunity in Bells, Texas)"
+  },
+  {
+    "id": "lead_1788263338164_px83d",
+    "facilityName": "104 S. Commercial Street",
+    "businessName": "104 S. Commercial Street",
+    "address": "104 S Commercial St",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$189,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2195253/texas-104-s-commercial-street?recommId=10a8af5bd2c969ccef8d818ff2db41a8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:48:58.164Z",
+    "lastUpdated": "2026-09-01T11:48:58.164Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Value-Add Self Storage Opportunity in Bells, Texas)"
+  },
+  {
+    "id": "lead_1788263338164_4e250",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$525,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=10a8af5bd2c969ccef8d818ff2db41a8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:48:58.164Z",
+    "lastUpdated": "2026-09-01T11:48:58.164Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity)"
+  },
+  {
+    "id": "lead_1788263338164_nrjr6",
+    "facilityName": "Brindlee Mountain Self Storage",
+    "businessName": "Brindlee Mountain Self Storage",
+    "address": "9582 Heart Of Dixie Hwy",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$549,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2456275/alabama-brindlee-mountain-self-storage?recommId=10a8af5bd2c969ccef8d818ff2db41a8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:48:58.164Z",
+    "lastUpdated": "2026-09-01T11:48:58.164Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Well-located, value-add storage facility.)"
+  },
+  {
+    "id": "lead_1788263292833_hbdnv",
+    "facilityName": "Packer Storage of Ashland",
+    "businessName": "Packer Storage of Ashland",
+    "address": "1800 Third St W",
+    "city": "",
+    "state": "WI",
+    "askingPrice": "$1,500,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2556594/wisconsin-1800-3rd-st-w-ashland-wi-54806?recommId=c6982ca59a531fc885c7d361a0ed8c3a",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:48:12.833Z",
+    "lastUpdated": "2026-09-01T11:48:12.833Z",
+    "notes": "Crexi self-storage listing - WI (subtitle: Ashland, WI Self Storage Portfolio | 30,897 RSF | 158 Units)"
+  },
+  {
+    "id": "lead_1788263246833_amv2k",
+    "facilityName": "Blue Water Self Storage",
+    "businessName": "Blue Water Self Storage",
+    "address": "3512 Roosevelt Ave NE",
+    "city": "",
+    "state": "OH",
+    "askingPrice": "$1,349,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2256070/ohio-blue-water-self-storage?recommId=e040d446e87918bad942b6ef14639167",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:47:26.833Z",
+    "lastUpdated": "2026-09-01T11:47:26.833Z",
+    "notes": "Crexi self-storage listing - OH (subtitle: Self Storage | 166 Units | $8,127/unit)"
+  },
+  {
+    "id": "lead_1788263192788_mjx93",
+    "facilityName": "Wadesboro Self Storage Portfolio",
+    "businessName": "Wadesboro Self Storage Portfolio",
+    "address": "21 NC-742",
+    "city": "",
+    "state": "NC",
+    "askingPrice": null,
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2023865/north-carolina-wadesboro-self-storage-portfolio?recommId=f2e12b917592f421034baf7fe4c282c9",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:46:32.788Z",
+    "lastUpdated": "2026-09-01T11:46:32.788Z",
+    "notes": "Crexi self-storage listing - NC (subtitle: Industrial | 49,960 SqFt)"
+  },
+  {
+    "id": "lead_1788263148007_8lid2",
+    "facilityName": "US Storage Centers (Managed)",
+    "businessName": "US Storage Centers (Managed)",
+    "address": "2601 Willowbrook Rd",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$2,850,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2317945/texas-us-storage-centers-managed?recommId=03452ecddd36868a30b0c7f86de6c502",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:45:48.008Z",
+    "lastUpdated": "2026-09-01T11:45:48.008Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: 41,610 NRSF | 280 Units | $68.49/NRSF)"
+  },
+  {
+    "id": "lead_1788263148008_7o1f6",
+    "facilityName": "Seymour Storage Co.",
+    "businessName": "Seymour Storage Co.",
+    "address": "1907 N Ewing St",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$750,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2296283/indiana-seymour-storage-co?recommId=03452ecddd36868a30b0c7f86de6c502",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:45:48.008Z",
+    "lastUpdated": "2026-09-01T11:45:48.008Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: Only 1 Hour from Indianpolis!)"
+  },
+  {
+    "id": "lead_1788263148008_q8suk",
+    "facilityName": "SunCo Storage - Spring Hill",
+    "businessName": "SunCo Storage - Spring Hill",
+    "address": "9832 Osceola Drive",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2316560/florida-sunco-storage---spring-hill?recommId=03452ecddd36868a30b0c7f86de6c502",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:45:48.008Z",
+    "lastUpdated": "2026-09-01T11:45:48.008Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: Self-Storage Opportunity in the Highly Desirable Tampa MSA)"
+  },
+  {
+    "id": "lead_1788263148008_0uwgo",
+    "facilityName": "13,525 SF Self Storage Investment Opportunity",
+    "businessName": "13,525 SF Self Storage Investment Opportunity",
+    "address": "3272 Stephens Ave",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$1,175,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2528537/utah-3272-stephens-ave-ogden-ut-84401?recommId=03452ecddd36868a30b0c7f86de6c502",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:45:48.008Z",
+    "lastUpdated": "2026-09-01T11:45:48.008Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: 86-Unit Facility at 90% Occupancy | 4 Buildings | 13,525 SF | Ogden)"
+  },
+  {
+    "id": "lead_1788263103609_vavr8",
+    "facilityName": "11017 County Line Road",
+    "businessName": "11017 County Line Road",
+    "address": "11017 County Line Road",
+    "city": "",
+    "state": "AL",
+    "askingPrice": "$7,950,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2586201/alabama-11017-county-line-road?recommId=77f13800de8e04a0a470ad87cb03a1ed",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:45:03.609Z",
+    "lastUpdated": "2026-09-01T11:45:03.609Z",
+    "notes": "Crexi self-storage listing - AL (subtitle: Self Storage For Sale in Madison, AL)"
+  },
+  {
+    "id": "lead_1788263103609_1qb1n",
+    "facilityName": "Brindlee Mountain Self Storage",
+    "businessName": "Brindlee Mountain Self Storage",
+    "address": "9582 Heart Of Dixie Hwy",
+    "city": "",
+    "state": "AL",
+    "askingPrice": "$549,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2456275/alabama-brindlee-mountain-self-storage?recommId=77f13800de8e04a0a470ad87cb03a1ed",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:45:03.609Z",
+    "lastUpdated": "2026-09-01T11:45:03.609Z",
+    "notes": "Crexi self-storage listing - AL (subtitle: Well-located, value-add storage facility.)"
+  },
+  {
+    "id": "lead_1788263057455_dubr3",
+    "facilityName": "SunCo Storage - Spring Hill",
+    "businessName": "SunCo Storage - Spring Hill",
+    "address": "9832 Osceola Drive",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2316560/florida-sunco-storage---spring-hill?recommId=a4506bb56e08dbf8de086bad5ba3cc83",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:44:17.455Z",
+    "lastUpdated": "2026-09-01T11:44:17.455Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Self-Storage Opportunity in the Highly Desirable Tampa MSA)"
+  },
+  {
+    "id": "lead_1788263057455_w5qk4",
+    "facilityName": "Signature Storage Suites",
+    "businessName": "Signature Storage Suites",
+    "address": "16255 Pine Ridge Rd",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$525,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1229009/florida-signature-storage-suites?recommId=a4506bb56e08dbf8de086bad5ba3cc83",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:44:17.455Z",
+    "lastUpdated": "2026-09-01T11:44:17.455Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Signature Storage Suites | 2 Units Remaining)"
+  },
+  {
+    "id": "lead_1788263054546_zveq5",
+    "facilityName": "SunCo Storage - Spring Hill",
+    "businessName": "SunCo Storage - Spring Hill",
+    "address": "9832 Osceola Drive",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2316560/florida-sunco-storage---spring-hill?recommId=1a491c14af1ce3101ce95cb166d0b859",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:44:14.546Z",
+    "lastUpdated": "2026-09-01T11:44:14.546Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Self-Storage Opportunity in the Highly Desirable Tampa MSA)"
+  },
+  {
+    "id": "lead_1788263009138_k7bgi",
+    "facilityName": "RV and Boat Storage Portfolio",
+    "businessName": "RV and Boat Storage Portfolio",
+    "address": "22611 N 159th Ave",
+    "city": "",
+    "state": "AZ",
+    "askingPrice": null,
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2186451/arizona-rv-and-boat-storage-portfolio?recommId=4da0e9485aae1ea6f57231794ed086f8",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:43:29.138Z",
+    "lastUpdated": "2026-09-01T11:43:29.138Z",
+    "notes": "Crexi self-storage listing - AZ (subtitle: Premier 2-Property RV &amp; Boat Storage Portfolio – 1,500 Spaces | 40+ Acres in Peoria &amp; Surprise AZ)"
+  },
+  {
+    "id": "lead_1788262907012_rcl0e",
+    "facilityName": "Cannon Secure Storage",
+    "businessName": "Cannon Secure Storage",
+    "address": "939 N Logan St",
+    "city": "",
+    "state": "SC",
+    "askingPrice": "$780,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2324314/south-carolina-cannon-secure-storage?recommId=ff74d068fec694ffa71ea4f7c19c33d7",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:41:47.012Z",
+    "lastUpdated": "2026-09-01T11:41:47.012Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: Growing population, occupancy, and rates!)"
+  },
+  {
+    "id": "lead_1788262855349_ha3u0",
+    "facilityName": "GRAY LINE STORAGE",
+    "businessName": "GRAY LINE STORAGE",
+    "address": "5410 Hawkinsville Road",
+    "city": "",
+    "state": "GA",
+    "askingPrice": "$725,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2528814/georgia-gray-line-storage?recommId=b21968bb3bf1114c5c8186a66060569e",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:40:55.349Z",
+    "lastUpdated": "2026-09-01T11:40:55.349Z",
+    "notes": "Crexi self-storage listing - GA (subtitle: Self Storage | 150 Units | 22,425 NRSF)"
+  },
+  {
+    "id": "lead_1788262799106_0op8o",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "",
+    "state": "TX",
+    "askingPrice": "$525,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=2ffb98315146b65d45d57118cd6d248f",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:39:59.107Z",
+    "lastUpdated": "2026-09-01T11:39:59.107Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity)"
+  },
+  {
+    "id": "lead_1788262799107_hfydu",
+    "facilityName": "104 S. Commercial Street",
+    "businessName": "104 S. Commercial Street",
+    "address": "104 S Commercial St",
+    "city": "",
+    "state": "TX",
+    "askingPrice": "$189,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2195253",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:39:59.107Z",
+    "lastUpdated": "2026-09-01T11:39:59.107Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: Value-Add Self Storage Opportunity in Bells, Texas)"
+  },
+  {
+    "id": "lead_1788262791856_ys450",
+    "facilityName": "Luxury Storage Warehouse",
+    "businessName": "Luxury Storage Warehouse",
+    "address": "4115 Kreinhop Rd",
+    "city": "",
+    "state": "TX",
+    "askingPrice": "$175,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1090392/texas-luxury-storage-warehouse?recommId=050d486a20b4c5ae7901b1241dd27275",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:39:51.857Z",
+    "lastUpdated": "2026-09-01T11:39:51.857Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: +/- 1,100 sf units now available in Phase 2)"
+  },
+  {
+    "id": "lead_1788262791857_2g3pt",
+    "facilityName": "US Storage Centers (Managed)",
+    "businessName": "US Storage Centers (Managed)",
+    "address": "2601 Willowbrook Rd",
+    "city": "",
+    "state": "TX",
+    "askingPrice": "$2,850,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2317945/texas-us-storage-centers-managed?recommId=050d486a20b4c5ae7901b1241dd27275",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T11:39:51.857Z",
+    "lastUpdated": "2026-09-01T11:39:51.857Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: 41,610 NRSF | 280 Units | $68.49/NRSF)"
+  },
+  {
+    "id": "lead_1788262221110_v5kto",
+    "facilityName": "26-17280- Home Value Store II, LLC",
+    "businessName": "26-17280- Home Value Store II, LLC",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "26-17280- Home Value Store II, LLC",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?848261",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-01T02:01:30.000Z",
+    "lastUpdated": "2026-09-01T11:30:21.110Z",
+    "notes": "PACER RSS filing — FLSB · Tue, 01 Sep 2026 02:01:30 GMT"
+  },
+  {
+    "id": "lead_1788262239459_x6us3",
+    "facilityName": "26-34011-sgj7 Nestor Cervantes",
+    "businessName": "26-34011-sgj7 Nestor Cervantes",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-34011-sgj7 Nestor Cervantes",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?546899",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T23:26:10.000Z",
+    "lastUpdated": "2026-09-01T11:30:39.459Z",
+    "notes": "PACER RSS filing — TXNB · Mon, 31 Aug 2026 23:26:10 GMT"
+  },
+  {
+    "id": "lead_1788262239459_9rs8l",
+    "facilityName": "26-34011-sgj7 Nestor Cervantes",
+    "businessName": "26-34011-sgj7 Nestor Cervantes",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-34011-sgj7 Nestor Cervantes",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?546899",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T23:25:20.000Z",
+    "lastUpdated": "2026-09-01T11:30:39.459Z",
+    "notes": "PACER RSS filing — TXNB · Mon, 31 Aug 2026 23:25:20 GMT"
+  },
+  {
+    "id": "lead_1788262239459_mk8qh",
+    "facilityName": "26-34011-sgj7 Nestor Cervantes",
+    "businessName": "26-34011-sgj7 Nestor Cervantes",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-34011-sgj7 Nestor Cervantes",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?546899",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T23:20:53.000Z",
+    "lastUpdated": "2026-09-01T11:30:39.459Z",
+    "notes": "PACER RSS filing — TXNB · Mon, 31 Aug 2026 23:20:53 GMT"
+  },
+  {
+    "id": "lead_1788262239459_81tke",
+    "facilityName": "26-34011-sgj7 Nestor Cervantes",
+    "businessName": "26-34011-sgj7 Nestor Cervantes",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-34011-sgj7 Nestor Cervantes",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?546899",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T23:20:18.000Z",
+    "lastUpdated": "2026-09-01T11:30:39.459Z",
+    "notes": "PACER RSS filing — TXNB · Mon, 31 Aug 2026 23:20:18 GMT"
+  },
+  {
+    "id": "lead_1788262239459_hujo7",
+    "facilityName": "26-34011-sgj7 Nestor Cervantes",
+    "businessName": "26-34011-sgj7 Nestor Cervantes",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-34011-sgj7 Nestor Cervantes",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?546899",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T23:20:13.000Z",
+    "lastUpdated": "2026-09-01T11:30:39.459Z",
+    "notes": "PACER RSS filing — TXNB · Mon, 31 Aug 2026 23:20:13 GMT"
+  },
+  {
+    "id": "lead_1788262243378_pzscu",
+    "facilityName": "26-58399-pmb Edwin Nestor",
+    "businessName": "26-58399-pmb Edwin Nestor",
+    "address": "",
+    "city": "Atlanta",
+    "state": "GA",
+    "ownerName": "26-58399-pmb Edwin Nestor",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.ganb.uscourts.gov/cgi-bin/DktRpt.pl?1299724",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T20:06:35.000Z",
+    "lastUpdated": "2026-09-01T11:30:43.378Z",
+    "notes": "PACER RSS filing — GANB · Mon, 31 Aug 2026 20:06:35 GMT"
+  },
+  {
+    "id": "lead_1788204360112_w94wr",
+    "facilityName": "Self Storage Complex Bolivar, MO",
+    "businessName": "Self Storage Complex Bolivar, MO",
+    "address": "4880 S 139th Rd",
+    "city": "",
+    "state": "IN",
+    "askingPrice": "$689,900",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1526623/missouri-self-storage-bolivar-mo?recommId=6de32599d3f52fc04b014306267c87e7",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:26:00.112Z",
+    "lastUpdated": "2026-08-31T19:26:00.112Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: High Visibility Property)"
+  },
+  {
+    "id": "lead_1788204273894_hxf1i",
+    "facilityName": "Beach Road Storage",
+    "businessName": "Beach Road Storage",
+    "address": "4603 Long Beach Road Se",
+    "city": "",
+    "state": "NC",
+    "askingPrice": "$1,347,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2599264/north-carolina-beach-road-storage?recommId=53640cbfe2bea6da0eb7ad03fff47bc1",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:24:33.894Z",
+    "lastUpdated": "2026-08-31T19:24:33.894Z",
+    "notes": "Crexi self-storage listing - NC (subtitle: Self Storage | 6.00% CAP | 143 Units)"
+  },
+  {
+    "id": "lead_1788204244107_mzc2m",
+    "facilityName": "Self Storage Complex Bolivar, MO",
+    "businessName": "Self Storage Complex Bolivar, MO",
+    "address": "4880 S 139th Rd",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$689,900",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1526623/missouri-self-storage-bolivar-mo?recommId=c390b1e62d2287f3b5fa97427e3f4bfa",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:24:04.107Z",
+    "lastUpdated": "2026-08-31T19:24:04.107Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: High Visibility Property)"
+  },
+  {
+    "id": "lead_1788204244107_1hnrc",
+    "facilityName": "Seymour Storage Co.",
+    "businessName": "Seymour Storage Co.",
+    "address": "1907 N Ewing St",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$750,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2296283/indiana-seymour-storage-co?recommId=c390b1e62d2287f3b5fa97427e3f4bfa",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:24:04.107Z",
+    "lastUpdated": "2026-08-31T19:24:04.107Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: Only 1 Hour from Indianpolis!)"
+  },
+  {
+    "id": "lead_1788204244107_73eq2",
+    "facilityName": "Luxury Storage Warehouse",
+    "businessName": "Luxury Storage Warehouse",
+    "address": "4115 Kreinhop Rd",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$175,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1090392/texas-luxury-storage-warehouse?recommId=c390b1e62d2287f3b5fa97427e3f4bfa",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:24:04.107Z",
+    "lastUpdated": "2026-08-31T19:24:04.107Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: +/- 1,100 sf units now available in Phase 2)"
+  },
+  {
+    "id": "lead_1788204189378_j97qc",
+    "facilityName": "SunCo Storage - Spring Hill",
+    "businessName": "SunCo Storage - Spring Hill",
+    "address": "9832 Osceola Drive",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2316560/florida-sunco-storage---spring-hill?recommId=66041863fafa2918a69c0c0902da0492",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:23:09.379Z",
+    "lastUpdated": "2026-08-31T19:23:09.379Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Self-Storage Opportunity in the Highly Desirable Tampa MSA)"
+  },
+  {
+    "id": "lead_1788204162522_p4rqu",
+    "facilityName": "RV and Boat Storage Portfolio",
+    "businessName": "RV and Boat Storage Portfolio",
+    "address": "22611 N 159th Ave",
+    "city": "",
+    "state": "AZ",
+    "askingPrice": null,
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2186451/arizona-rv-and-boat-storage-portfolio?recommId=76ab5b307762f7860be1630f3d4c971e",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:22:42.522Z",
+    "lastUpdated": "2026-08-31T19:22:42.522Z",
+    "notes": "Crexi self-storage listing - AZ (subtitle: Premier 2-Property RV &amp; Boat Storage Portfolio – 1,500 Spaces | 40+ Acres in Peoria &amp; Surprise AZ)"
+  },
+  {
+    "id": "lead_1788204124298_isc1e",
+    "facilityName": "6215 Airpark Dr",
+    "businessName": "6215 Airpark Dr",
+    "address": "6215 Airpark Dr",
+    "city": "",
+    "state": "TN",
+    "askingPrice": "$999,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2258012/tennessee-6215-airpark-dr?recommId=fefbe42d3242b81ff88ad49695a5091d",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:22:04.298Z",
+    "lastUpdated": "2026-08-31T19:22:04.298Z",
+    "notes": "Crexi self-storage listing - TN (subtitle: Self Storage)"
+  },
+  {
+    "id": "lead_1788204124297_2sby0",
+    "facilityName": "CALL FOR OFFERS!!! Creekside Storage - Maryville",
+    "businessName": "CALL FOR OFFERS!!! Creekside Storage - Maryville",
+    "address": "3832 Morganton Rd",
+    "city": "",
+    "state": "TN",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2418421/tennessee-creekside-storage---maryville?recommId=fefbe42d3242b81ff88ad49695a5091d",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:22:04.297Z",
+    "lastUpdated": "2026-08-31T19:22:04.297Z",
+    "notes": "Crexi self-storage listing - TN (subtitle: Self Storage &amp; Commercial Mixed Use - ACT NOW!!)"
+  },
+  {
+    "id": "lead_1788204096322_t3h6w",
+    "facilityName": "Out O Space Self Storage - Easley, SC",
+    "businessName": "Out O Space Self Storage - Easley, SC",
+    "address": "3110 Saluda Dam Rd",
+    "city": "",
+    "state": "SC",
+    "askingPrice": "$1,300,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2445727/south-carolina-out-o-space-self-storage---easley-sc?recommId=7d49d2ca64e2f7344514e04da0032e1d",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:21:36.322Z",
+    "lastUpdated": "2026-08-31T19:21:36.322Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: Self Storage | 95 Units | $13,684/unit)"
+  },
+  {
+    "id": "lead_1788204069710_tcx52",
+    "facilityName": "GRAY LINE STORAGE",
+    "businessName": "GRAY LINE STORAGE",
+    "address": "5410 Hawkinsville Road",
+    "city": "",
+    "state": "GA",
+    "askingPrice": "$725,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2528814/georgia-gray-line-storage?recommId=9629f07c63723a410d7760e8fb286629",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:21:09.711Z",
+    "lastUpdated": "2026-08-31T19:21:09.711Z",
+    "notes": "Crexi self-storage listing - GA (subtitle: Self Storage | 150 Units | 22,425 NRSF)"
+  },
+  {
+    "id": "lead_1788204069711_2e18t",
+    "facilityName": "Stor South",
+    "businessName": "Stor South",
+    "address": "711 South Tennille Avenue",
+    "city": "",
+    "state": "GA",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2475838/georgia-stor-south?recommId=9629f07c63723a410d7760e8fb286629",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T19:21:09.711Z",
+    "lastUpdated": "2026-08-31T19:21:09.711Z",
+    "notes": "Crexi self-storage listing - GA (subtitle: 203-Unit Self Storage Facility | Low SF Per Capita | Limited Competition with Value-Add Upside)"
+  },
+  {
+    "id": "lead_1788192636250_3p16f",
+    "facilityName": null,
+    "businessName": null,
+    "address": null,
+    "city": null,
+    "state": "NC",
+    "askingPrice": 1295000,
+    "ownerName": null,
+    "contactInfo": null,
+    "source": "loopnet",
+    "sourceUrl": "https://www.loopnet.com/Listing/MyPlace-Self-Storage-Durham-Asheboro/39148983/",
+    "distressSignals": {
+      "listedForSale": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T16:10:36.250Z",
+    "lastUpdated": "2026-08-31T16:10:36.250Z",
+    "notes": ""
+  },
+  {
+    "id": "lead_1788192636250_vcq9i",
+    "facilityName": null,
+    "businessName": null,
+    "address": null,
+    "city": null,
+    "state": "NC",
+    "askingPrice": 1295000,
+    "ownerName": null,
+    "contactInfo": null,
+    "source": "loopnet",
+    "sourceUrl": "https://www.loopnet.com/Listing/MyPlace-Self-Storage-Charlotte-MSA/39148734/",
+    "distressSignals": {
+      "listedForSale": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T16:10:36.250Z",
+    "lastUpdated": "2026-08-31T16:10:36.250Z",
+    "notes": ""
+  },
+  {
+    "id": "lead_1788192579186_uwd41",
+    "facilityName": null,
+    "businessName": null,
+    "address": null,
+    "city": null,
+    "state": "SC",
+    "askingPrice": 489000,
+    "ownerName": null,
+    "contactInfo": null,
+    "source": "loopnet",
+    "sourceUrl": "https://www.loopnet.com/Listing/MyPlace-Self-Storage-Charlotte-MSA/39148734/",
+    "distressSignals": {
+      "listedForSale": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T16:09:39.186Z",
+    "lastUpdated": "2026-08-31T16:09:39.187Z",
+    "notes": ""
+  },
+  {
+    "id": "lead_1788192549166_b777f",
+    "facilityName": "8:26-bk-05969- Nestor A Velasco and Diane C Velasco",
+    "businessName": "8:26-bk-05969- Nestor A Velasco and Diane C Velasco",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-05969- Nestor A Velasco and Diane C Velasco",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1434902",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T15:14:38.000Z",
+    "lastUpdated": "2026-08-31T16:09:09.166Z",
+    "notes": "PACER RSS filing — FLMB · Mon, 31 Aug 2026 15:14:38 GMT"
+  },
+  {
+    "id": "lead_1788186047933_re4pi",
+    "businessName": "Self-Storage Investment Opportunity – Fully Operational, Ready for New",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$25,500,000",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/value-add-self-storage-facility-321-units-65-occupied/BW2515504/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-08-31T14:20:47.933Z",
+    "lastUpdated": "2026-08-31T14:20:47.933Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1788186047933_j7n27",
+    "businessName": "33-Unit Self-Storage Facility in Center, TX with Owner Financing",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$1,850,000",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/high-occupancy-self-storage-and-parking-facility-strong-cash-tenant-base/BW2438927/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-08-31T14:20:47.933Z",
+    "lastUpdated": "2026-08-31T14:20:47.933Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1788186047932_f7ixh",
+    "businessName": "Self-Storage Facility",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$350,500",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/self-storage-investment-opportunity-fully-operational-ready-for-new/BW2547425/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-08-31T14:20:47.932Z",
+    "lastUpdated": "2026-08-31T14:20:47.932Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1788186059159_djqwe",
+    "facilityName": "23-31479 Tallis Storage Management, LLC",
+    "businessName": "23-31479 Tallis Storage Management, LLC",
+    "address": "",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "23-31479 Tallis Storage Management, LLC",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?462703",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T12:59:23.000Z",
+    "lastUpdated": "2026-08-31T14:20:59.159Z",
+    "notes": "PACER RSS filing — TXSB · Mon, 31 Aug 2026 12:59:23 GMT"
+  },
+  {
+    "id": "lead_1788186059159_2e8xo",
+    "facilityName": "23-31479 Tallis Storage Management, LLC",
+    "businessName": "23-31479 Tallis Storage Management, LLC",
+    "address": "",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "23-31479 Tallis Storage Management, LLC",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?462703",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T12:59:23.000Z",
+    "lastUpdated": "2026-08-31T14:20:59.159Z",
+    "notes": "PACER RSS filing — TXSB · Mon, 31 Aug 2026 12:59:23 GMT"
+  },
+  {
+    "id": "lead_1787933959967_ocjio",
+    "businessName": "Boat &amp; RV Storage",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$195k",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/boat-rv-dealership-storage-yard-repair-facility-3-5-acres-for-sale/BW2259135/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-08-28T16:19:19.967Z",
+    "lastUpdated": "2026-08-28T16:19:19.967Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1787933973784_3jq46",
+    "facilityName": "8:26-bk-04220- Grace Story",
+    "businessName": "8:26-bk-04220- Grace Story",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-04220- Grace Story",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1430122",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-28T04:34:28.000Z",
+    "lastUpdated": "2026-08-28T16:19:33.784Z",
+    "notes": "PACER RSS filing — FLMB · Fri, 28 Aug 2026 04:34:28 GMT"
+  },
+  {
+    "id": "lead_1787933995692_wjj2d",
+    "facilityName": "26-32362-swe13 Nestor Perez Osorio",
+    "businessName": "26-32362-swe13 Nestor Perez Osorio",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-32362-swe13 Nestor Perez Osorio",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?542966",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-28T04:26:34.000Z",
+    "lastUpdated": "2026-08-28T16:19:55.693Z",
+    "notes": "PACER RSS filing — TXNB · Fri, 28 Aug 2026 04:26:34 GMT"
+  },
+  {
+    "id": "lead_1787933973786_ce9c1",
+    "facilityName": "3:26-bk-03219- Nestor Enrique Villafranca Melendez",
+    "businessName": "3:26-bk-03219- Nestor Enrique Villafranca Melendez",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "3:26-bk-03219- Nestor Enrique Villafranca Melendez",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1435750",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-27T18:00:07.000Z",
+    "lastUpdated": "2026-08-28T16:19:33.787Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 27 Aug 2026 18:00:07 GMT"
+  },
+  {
+    "id": "lead_1787933966710_br6eq",
+    "facilityName": "26-12782- Nestor Ricardo Trujillo",
+    "businessName": "26-12782- Nestor Ricardo Trujillo",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "26-12782- Nestor Ricardo Trujillo",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?843641",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-27T17:04:33.000Z",
+    "lastUpdated": "2026-08-28T16:19:26.710Z",
+    "notes": "PACER RSS filing — FLSB · Thu, 27 Aug 2026 17:04:33 GMT"
+  },
+  {
+    "id": "lead_1787933966710_ovjc5",
+    "facilityName": "25-13336- Nestor A Martinez",
+    "businessName": "25-13336- Nestor A Martinez",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "25-13336- Nestor A Martinez",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?828282",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-27T16:37:06.000Z",
+    "lastUpdated": "2026-08-28T16:19:26.710Z",
+    "notes": "PACER RSS filing — FLSB · Thu, 27 Aug 2026 16:37:06 GMT"
+  },
+  {
+    "id": "lead_1787933966710_vger4",
+    "facilityName": "26-15222- Nestor Wilfredo Castellon",
+    "businessName": "26-15222- Nestor Wilfredo Castellon",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "26-15222- Nestor Wilfredo Castellon",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?846145",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-27T16:36:35.000Z",
+    "lastUpdated": "2026-08-28T16:19:26.710Z",
+    "notes": "PACER RSS filing — FLSB · Thu, 27 Aug 2026 16:36:35 GMT"
+  },
+  {
+    "id": "lead_1787830225580_522bp",
+    "businessName": "Boat &amp; RV Storage",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$20k",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/self-storage-businesses-for-sale/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-08-27T11:30:25.580Z",
+    "lastUpdated": "2026-08-27T11:30:25.580Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1787830238199_ukec8",
+    "facilityName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "businessName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "address": "",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?464693",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-26T20:21:16.000Z",
+    "lastUpdated": "2026-08-27T11:30:38.199Z",
+    "notes": "PACER RSS filing — TXSB · Wed, 26 Aug 2026 20:21:16 GMT"
+  },
+  {
+    "id": "lead_1787830238199_pi5w1",
+    "facilityName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "businessName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "address": "",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?464693",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-26T20:21:16.000Z",
+    "lastUpdated": "2026-08-27T11:30:38.199Z",
+    "notes": "PACER RSS filing — TXSB · Wed, 26 Aug 2026 20:21:16 GMT"
+  },
+  {
+    "id": "lead_1787830238199_6gmlw",
+    "facilityName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "businessName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "address": "",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "23-90739 Alpine Summit Energy Partners, Inc. and Alpine Summit Energy Investors, Inc.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?464693",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-26T20:21:16.000Z",
+    "lastUpdated": "2026-08-27T11:30:38.199Z",
+    "notes": "PACER RSS filing — TXSB · Wed, 26 Aug 2026 20:21:16 GMT"
+  },
+  {
+    "id": "lead_1787830230498_y5vd4",
+    "facilityName": "2:26-bk-00867- Karen Sue Storm",
+    "businessName": "2:26-bk-00867- Karen Sue Storm",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "2:26-bk-00867- Karen Sue Storm",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1427224",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-26T19:28:08.000Z",
+    "lastUpdated": "2026-08-27T11:30:30.498Z",
+    "notes": "PACER RSS filing — FLMB · Wed, 26 Aug 2026 19:28:08 GMT"
+  },
+  {
+    "id": "lead_1787759233853_j4pdu",
+    "facilityName": "26-90165-elm11 Tacara Weiss Ranch Investors GP, LLC",
+    "businessName": "26-90165-elm11 Tacara Weiss Ranch Investors GP, LLC",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-90165-elm11 Tacara Weiss Ranch Investors GP, LLC",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?538626",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-26T14:16:51.000Z",
+    "lastUpdated": "2026-08-26T15:47:13.853Z",
+    "notes": "PACER RSS filing — TXNB · Wed, 26 Aug 2026 14:16:51 GMT"
+  },
+  {
+    "id": "lead_1787759233853_sz55g",
+    "facilityName": "26-40515-elm11 C-5 Investors Mezz, LLC",
+    "businessName": "26-40515-elm11 C-5 Investors Mezz, LLC",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-40515-elm11 C-5 Investors Mezz, LLC",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?538444",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-26T12:54:38.000Z",
+    "lastUpdated": "2026-08-26T15:47:13.853Z",
+    "notes": "PACER RSS filing — TXNB · Wed, 26 Aug 2026 12:54:38 GMT"
+  },
+  {
+    "id": "lead_1787759218641_rzduk",
+    "facilityName": "26-19162- Stephanie Story Arnold",
+    "businessName": "26-19162- Stephanie Story Arnold",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "26-19162- Stephanie Story Arnold",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?850294",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-26T12:37:13.000Z",
+    "lastUpdated": "2026-08-26T15:46:58.641Z",
+    "notes": "PACER RSS filing — FLSB · Wed, 26 Aug 2026 12:37:13 GMT"
+  },
+  {
+    "id": "lead_1787759218643_c1eiv",
+    "facilityName": "26-16442- Nestor Perez",
+    "businessName": "26-16442- Nestor Perez",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "26-16442- Nestor Perez",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?847388",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-25T17:53:52.000Z",
+    "lastUpdated": "2026-08-26T15:46:58.643Z",
+    "notes": "PACER RSS filing — FLSB · Tue, 25 Aug 2026 17:53:52 GMT"
+  },
+  {
+    "id": "lead_1787759237829_qot6u",
+    "facilityName": "26-59111-bem Nestor Aurelio DeJesus",
+    "businessName": "26-59111-bem Nestor Aurelio DeJesus",
+    "address": "",
+    "city": "Atlanta",
+    "state": "GA",
+    "ownerName": "26-59111-bem Nestor Aurelio DeJesus",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.ganb.uscourts.gov/cgi-bin/DktRpt.pl?1300716",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-25T16:49:57.000Z",
+    "lastUpdated": "2026-08-26T15:47:17.829Z",
+    "notes": "PACER RSS filing — GANB · Tue, 25 Aug 2026 16:49:57 GMT"
+  },
+  {
+    "id": "lead_1787759218643_4e6f4",
+    "facilityName": "26-19114- Galileo Administracao de Recursos Educacionais SA and Galileo Gestora de Recebiveis SPE",
+    "businessName": "26-19114- Galileo Administracao de Recursos Educacionais SA and Galileo Gestora de Recebiveis SPE",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "26-19114- Galileo Administracao de Recursos Educacionais SA and Galileo Gestora de Recebiveis SPE",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?850244",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-25T16:36:44.000Z",
+    "lastUpdated": "2026-08-26T15:46:58.643Z",
+    "notes": "PACER RSS filing — FLSB · Tue, 25 Aug 2026 16:36:44 GMT"
+  },
+  {
+    "id": "lead_1787759237829_tget5",
+    "facilityName": "26-59111-bem Nestor Aurelio DeJesus",
+    "businessName": "26-59111-bem Nestor Aurelio DeJesus",
+    "address": "",
+    "city": "Atlanta",
+    "state": "GA",
+    "ownerName": "26-59111-bem Nestor Aurelio DeJesus",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.ganb.uscourts.gov/cgi-bin/DktRpt.pl?1300716",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-25T16:35:18.000Z",
+    "lastUpdated": "2026-08-26T15:47:17.829Z",
+    "notes": "PACER RSS filing — GANB · Tue, 25 Aug 2026 16:35:18 GMT"
+  },
+  {
+    "id": "lead_1787577627277_1uf1v",
+    "businessName": "Self-Storage Facility 321 Units, ~65% Occupied",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$1,850,000",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/dual-concept-auto-repair-members-club-car-storage/BW2522829/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-08-24T13:20:27.277Z",
+    "lastUpdated": "2026-08-24T13:20:27.277Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1787577627277_8hkzq",
+    "businessName": "Price Reduced Income Opportunity for Indoor Self Storage",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$20k",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/15-unit-boat-storage-self-storage-facility/BW2518615/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-08-24T13:20:27.277Z",
+    "lastUpdated": "2026-08-24T13:20:27.277Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1787577627276_0hqn8",
+    "businessName": "33-Unit Self-Storage Facility in Center, TX with Owner Financing",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$795,000",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/moving-and-mobile-storage-company/BW2124065/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-08-24T13:20:27.276Z",
+    "lastUpdated": "2026-08-24T13:20:27.276Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1787577649998_8ohdr",
+    "facilityName": "26-40011-tnap Cheryl L. Nestor",
+    "businessName": "26-40011-tnap Cheryl L. Nestor",
+    "address": "",
+    "city": "Cleveland",
+    "state": "OH",
+    "ownerName": "26-40011-tnap Cheryl L. Nestor",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.ohnb.uscourts.gov/cgi-bin/DktRpt.pl?1146314",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-24T10:34:17.000Z",
+    "lastUpdated": "2026-08-24T13:20:49.998Z",
+    "notes": "PACER RSS filing — OHNB · Mon, 24 Aug 2026 10:34:17 GMT"
+  },
+  {
+    "id": "lead_1787398241547_vy4st",
+    "facilityName": "8:26-bk-07052- Richard Allan Kestory",
+    "businessName": "8:26-bk-07052- Richard Allan Kestory",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-07052- Richard Allan Kestory",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1437792",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-21T20:58:37.000Z",
+    "lastUpdated": "2026-08-22T11:30:41.547Z",
+    "notes": "PACER RSS filing — FLMB · Fri, 21 Aug 2026 20:58:37 GMT"
+  },
+  {
+    "id": "lead_1787398246979_fgnjm",
+    "facilityName": "20-32564 Stage Stores, Inc.",
+    "businessName": "20-32564 Stage Stores, Inc.",
+    "address": "",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "20-32564 Stage Stores, Inc.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?442302",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-21T19:17:18.000Z",
+    "lastUpdated": "2026-08-22T11:30:46.979Z",
+    "notes": "PACER RSS filing — TXSB · Fri, 21 Aug 2026 19:17:18 GMT"
+  },
+  {
+    "id": "lead_1787311868435_owzac",
+    "facilityName": "25-02028--13 Jennifer Sue Storm-Day",
+    "businessName": "25-02028--13 Jennifer Sue Storm-Day",
+    "address": "",
+    "city": "Indianapolis",
+    "state": "IN",
+    "ownerName": "25-02028--13 Jennifer Sue Storm-Day",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.insb.uscourts.gov/cgi-bin/DktRpt.pl?766950",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-21T10:01:41.000Z",
+    "lastUpdated": "2026-08-21T11:31:08.435Z",
+    "notes": "PACER RSS filing — INSB · Fri, 21 Aug 2026 10:01:41 GMT"
+  },
+  {
+    "id": "lead_1787311850907_sh60q",
+    "facilityName": "26-42326-mxm13 Nestor Gonzalez",
+    "businessName": "26-42326-mxm13 Nestor Gonzalez",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-42326-mxm13 Nestor Gonzalez",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?542927",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-21T04:29:58.000Z",
+    "lastUpdated": "2026-08-21T11:30:50.907Z",
+    "notes": "PACER RSS filing — TXNB · Fri, 21 Aug 2026 04:29:58 GMT"
+  },
+  {
+    "id": "lead_1787311850907_hmy3k",
+    "facilityName": "26-42326-mxm13 Nestor Gonzalez",
+    "businessName": "26-42326-mxm13 Nestor Gonzalez",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-42326-mxm13 Nestor Gonzalez",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?542927",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T21:57:43.000Z",
+    "lastUpdated": "2026-08-21T11:30:50.907Z",
+    "notes": "PACER RSS filing — TXNB · Thu, 20 Aug 2026 21:57:43 GMT"
+  },
+  {
+    "id": "lead_1787259032668_llhxr",
+    "facilityName": "Hard Assets Jumbo Storage LLC",
+    "businessName": "Hard Assets Jumbo Storage LLC",
+    "address": "4931 Allen Genoa Road",
+    "city": "Pasadena",
+    "state": "TX",
+    "askingPrice": null,
+    "ownerName": "Hard Assets Jumbo Storage LLC",
+    "contactInfo": {},
+    "source": "sba_default",
+    "sourceUrl": "https://data.sba.gov/en/dataset/0ff8e8e9-b967-4f4e-987c-6ac78c575087",
+    "distressSignals": {
+      "loanDefault": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 35,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T20:50:32.668Z",
+    "lastUpdated": "2026-08-20T20:50:32.668Z",
+    "notes": "SBA loan CHARGED OFF (default) · NAICS 531130 · Approved $1,130,000 · Charged off $119,308.03 · Approved 2021-06-28 · Lender: Bank Five Nine"
+  },
+  {
+    "id": "lead_1787258984736_phddn",
+    "facilityName": "6:26-bk-06449 Kylie Louise Story",
+    "businessName": "6:26-bk-06449 Kylie Louise Story",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "6:26-bk-06449 Kylie Louise Story",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1438931",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T20:02:55.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.736Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 20:02:55 GMT"
+  },
+  {
+    "id": "lead_1787258984736_bfg1v",
+    "facilityName": "6:26-bk-06449 Kylie Louise Story",
+    "businessName": "6:26-bk-06449 Kylie Louise Story",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "6:26-bk-06449 Kylie Louise Story",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1438931",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T20:02:24.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.736Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 20:02:24 GMT"
+  },
+  {
+    "id": "lead_1787258984736_j9wiz",
+    "facilityName": "6:26-bk-06449 Kylie Louise Story",
+    "businessName": "6:26-bk-06449 Kylie Louise Story",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "6:26-bk-06449 Kylie Louise Story",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1438931",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T20:01:38.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.736Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 20:01:38 GMT"
+  },
+  {
+    "id": "lead_1787258984737_k78nh",
+    "facilityName": "8:26-bk-06326- William Anthony Neistorowich",
+    "businessName": "8:26-bk-06326- William Anthony Neistorowich",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-06326- William Anthony Neistorowich",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1435851",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T15:55:20.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.737Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 15:55:20 GMT"
+  },
+  {
+    "id": "lead_1787258984737_pgyfh",
+    "facilityName": "8:26-bk-06326- William Anthony Neistorowich",
+    "businessName": "8:26-bk-06326- William Anthony Neistorowich",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-06326- William Anthony Neistorowich",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1435851",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T15:25:00.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.737Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 15:25:00 GMT"
+  },
+  {
+    "id": "lead_1787258984738_e8n40",
+    "facilityName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "businessName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1436646",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T14:20:50.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.738Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 14:20:50 GMT"
+  },
+  {
+    "id": "lead_1787258984738_q1zxz",
+    "facilityName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "businessName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1436646",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T14:19:18.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.738Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 14:19:18 GMT"
+  },
+  {
+    "id": "lead_1787258978730_wswo7",
+    "facilityName": "26-19997- Christoria Denise Sherrod",
+    "businessName": "26-19997- Christoria Denise Sherrod",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "26-19997- Christoria Denise Sherrod",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?851147",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T13:54:16.000Z",
+    "lastUpdated": "2026-08-20T20:49:38.730Z",
+    "notes": "PACER RSS filing — FLSB · Thu, 20 Aug 2026 13:54:16 GMT"
+  },
+  {
+    "id": "lead_1787258984741_dwplg",
+    "facilityName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "businessName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1436646",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T13:53:39.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.741Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 13:53:39 GMT"
+  },
+  {
+    "id": "lead_1787258984741_j1150",
+    "facilityName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "businessName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1436646",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T13:52:46.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.741Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 13:52:46 GMT"
+  },
+  {
+    "id": "lead_1787258984741_ss2m3",
+    "facilityName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "businessName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "8:26-bk-06621- Nestor Alejandro Cardenas",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1436646",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-20T13:42:27.000Z",
+    "lastUpdated": "2026-08-20T20:49:44.741Z",
+    "notes": "PACER RSS filing — FLMB · Thu, 20 Aug 2026 13:42:27 GMT"
+  },
+  {
     "id": "lead_1787229015757_wqt8w",
     "businessName": "Self-Storage Facility",
     "address": "",
