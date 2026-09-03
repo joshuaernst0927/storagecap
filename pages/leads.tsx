@@ -4,24 +4,70 @@ import AuthGate from '@/components/AuthGate'
 import {
   Lead, LeadSource, LeadStatus, ContactInfo, EmailRecord,
   SOURCE_LABELS, STATUS_LABELS, getLeadTier, generateLeadId, scoreLead,
+  calculateStage1Score, formatAskingPrice, Stage1Component, AvailabilityStatus,
 } from '@/lib/leadsData'
 import { loadLeads, upsertLeads, updateLeadStatus, deleteLead } from '@/lib/leadsStore'
 import DealScoreBadge from '@/components/DealScoreBadge'
 
 // ─── Small badges / chips ──────────────────────────────────────────────────────
 
-function ScoreBadge({ score }: { score: number }) {
-  const tier = getLeadTier(score)
+function ScoreBadge({ lead }: { lead: Lead }) {
+  const { stage1Score, tier, priority } = calculateStage1Score(lead)
   const cls = tier === 'HOT'
     ? 'bg-red-50 text-red-700 border-red-200'
     : tier === 'WARM'
     ? 'bg-amber-50 text-amber-700 border-amber-200'
     : 'bg-gray-100 text-gray-500 border-gray-200'
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold font-mono border ${cls}`}>
+    <span
+      title={`Stage 1 lead score — ${priority} (prioritization only, not an investment conclusion)`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold font-mono border ${cls}`}
+    >
       <span className={`w-1.5 h-1.5 rounded-full ${tier === 'HOT' ? 'bg-red-500' : tier === 'WARM' ? 'bg-amber-500' : 'bg-gray-400'}`} />
-      {score} · {tier}
+      {stage1Score}/100 · {tier}
     </span>
+  )
+}
+
+// Stage 1 component breakdown. The framework requires every factor to display
+// its points, the exact source field used, and its availability status.
+function Stage1Breakdown({ lead }: { lead: Lead }) {
+  const { stage1Score, components, priority } = calculateStage1Score(lead)
+  const availabilityChip = (a: AvailabilityStatus) => {
+    if (a === 'available') return <span className="text-[0.6rem] uppercase tracking-wider text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded">Verified field</span>
+    if (a === 'assumption') return <span className="text-[0.6rem] uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">Partial / inferred</span>
+    return <span className="text-[0.6rem] uppercase tracking-wider text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">Unavailable</span>
+  }
+  return (
+    <div className="border border-dark-border bg-white">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-dark-border bg-dark-surface">
+        <div>
+          <div className="text-xs uppercase tracking-widest text-dark-muted font-semibold">Stage 1 — Pre-Underwriting Lead Score</div>
+          <div className="text-[0.65rem] text-dark-muted mt-0.5">Prioritization only. Not an investment conclusion.</div>
+        </div>
+        <div className="text-right">
+          <div className="font-serif text-2xl font-light text-[#1B2B5E] leading-none">{stage1Score}<span className="text-sm text-dark-muted">/100</span></div>
+          <div className="text-[0.65rem] uppercase tracking-widest text-dark-muted mt-1">{priority}</div>
+        </div>
+      </div>
+      <div className="divide-y divide-dark-border">
+        {components.map(c => (
+          <div key={c.label} className="px-4 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-medium text-[#1a1a18]">{c.label}</div>
+              <div className="font-mono text-sm text-[#1B2B5E] whitespace-nowrap">{c.points}<span className="text-dark-muted">/{c.maxPoints}</span></div>
+            </div>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {availabilityChip(c.availability)}
+              <span className="text-xs text-dark-muted">{c.source}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="px-4 py-2 border-t border-dark-border bg-dark-surface text-[0.65rem] text-dark-muted">
+        Stage 2 (documented property score) requires an OM, rent roll, or underwriting model. Not yet available for this lead.
+      </div>
+    </div>
   )
 }
 
@@ -440,7 +486,7 @@ function LeadDetailModal({
         <div className="flex items-start justify-between p-6 border-b border-dark-border bg-dark-surface">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <ScoreBadge score={lead.score} />
+              <ScoreBadge lead={lead} />
               {lead.dealScore != null && <DealScoreBadge score={lead.dealScore} dealType={lead.dealType} />}
               <StatusBadge status={lead.status} />
               <SourceChip source={lead.source} />
@@ -478,7 +524,7 @@ function LeadDetailModal({
                 {([
                   ['Owner', lead.ownerName],
                   ['Units', lead.unitCount?.toLocaleString() ?? '—'],
-                  ['Asking Price', lead.askingPrice ? `$${lead.askingPrice.toLocaleString()}` : '—'],
+                  ['Asking Price', formatAskingPrice(lead.askingPrice)],
                   ['Found', new Date(lead.foundAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })],
                   ['Contacted', lead.contactedAt ? new Date(lead.contactedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'],
                   ['Emails Sent', String(lead.emailHistory?.length ?? 0)],
@@ -489,6 +535,8 @@ function LeadDetailModal({
                   </div>
                 ))}
               </div>
+
+              <Stage1Breakdown lead={lead} />
 
               {signals.length > 0 && (
                 <div>
@@ -930,7 +978,7 @@ function LeadsContent() {
   const filtered = leads
     .filter(l => {
       if (filterStatus !== 'all' && l.status !== filterStatus) return false
-      if (filterTier !== 'all' && getLeadTier(l.score) !== filterTier) return false
+      if (filterTier !== 'all' && calculateStage1Score(l).tier !== filterTier) return false
       if (filterSource !== 'all' && l.source !== filterSource) return false
       if (filterState !== 'all' && l.state !== filterState) return false
       if (search) {
@@ -945,7 +993,7 @@ function LeadsContent() {
       return true
     })
     .sort((a, b) => {
-      if (sortBy === 'score') return b.score - a.score
+      if (sortBy === 'score') return calculateStage1Score(b).stage1Score - calculateStage1Score(a).stage1Score
       if (sortBy === 'foundAt') return new Date(b.foundAt).getTime() - new Date(a.foundAt).getTime()
       return a.city.localeCompare(b.city)
     })
@@ -959,8 +1007,8 @@ function LeadsContent() {
     }
   }
 
-  const hotCount = leads.filter(l => getLeadTier(l.score) === 'HOT').length
-  const warmCount = leads.filter(l => getLeadTier(l.score) === 'WARM').length
+  const hotCount = leads.filter(l => calculateStage1Score(l).tier === 'HOT').length
+  const warmCount = leads.filter(l => calculateStage1Score(l).tier === 'WARM').length
   const totalNew = leads.filter(l => l.status === 'new').length
   const states = Array.from(new Set(leads.map(l => l.state))).sort()
   const sources = Array.from(new Set(leads.map(l => l.source))) as LeadSource[]
@@ -1179,7 +1227,7 @@ function LeadsContent() {
                       </td>
                       <td className="px-4 py-3"><SourceChip source={lead.source} /></td>
                       <td className="px-4 py-3">
-                        <ScoreBadge score={lead.score} />
+                        <ScoreBadge lead={lead} />
                         {lead.dealScore != null && (
                           <div className="mt-1"><DealScoreBadge score={lead.dealScore} dealType={lead.dealType} /></div>
                         )}
