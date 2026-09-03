@@ -1,5 +1,339 @@
 [
   {
+    "id": "lead_1788464843324_0tfw0",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "Whitney",
+    "state": "TX",
+    "askingPrice": "$525,000",
+    "ownerName": "Brian Brockman",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "Bang Realty - Texas Inc.",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=904c2da87c5e12a41b1546f8243f7202",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:47:23.324Z",
+    "lastUpdated": "2026-09-03T19:47:23.324Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity) [state corrected from IN to TX via detail page]"
+  },
+  {
+    "id": "lead_1788464843324_bt02j",
+    "facilityName": "6215 Airpark Dr",
+    "businessName": "6215 Airpark Dr",
+    "address": "6215 Airpark Dr",
+    "city": "Chattanooga",
+    "state": "TN",
+    "askingPrice": "$999,000",
+    "ownerName": "Gabe Cartwright",
+    "contactInfo": {
+      "phone": "4234782332",
+      "email": null,
+      "brokerage": "Century 21 1st Choice Realtors",
+      "brokerageAddress": "2075 North Ocoee Street"
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2258012/tennessee-6215-airpark-dr?recommId=904c2da87c5e12a41b1546f8243f7202",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:47:23.324Z",
+    "lastUpdated": "2026-09-03T19:47:23.324Z",
+    "notes": "Crexi self-storage listing - IN (subtitle: Self Storage) [state corrected from IN to TN via detail page]"
+  },
+  {
+    "id": "lead_1788464800953_p8fis",
+    "facilityName": "Packer Storage of Ashland",
+    "businessName": "Packer Storage of Ashland",
+    "address": "1800 Third St W",
+    "city": "",
+    "state": "WI",
+    "askingPrice": "$1,500,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2556594/wisconsin-1800-3rd-st-w-ashland-wi-54806?recommId=dc0ad0e23ddb4a3eccfa7451052f7654",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:46:40.953Z",
+    "lastUpdated": "2026-09-03T19:46:40.953Z",
+    "notes": "Crexi self-storage listing - WI (subtitle: Ashland, WI Self Storage Portfolio | 30,897 RSF | 158 Units)"
+  },
+  {
+    "id": "lead_1788464800953_09n1r",
+    "facilityName": "The Box Self Storage",
+    "businessName": "The Box Self Storage",
+    "address": "1655 Van Buren Road",
+    "city": "Mukwonago",
+    "state": "WI",
+    "askingPrice": null,
+    "ownerName": "Scott Reid",
+    "contactInfo": {
+      "phone": "(949) 942-6578",
+      "email": null,
+      "brokerage": "ParaSell, Inc.",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2640038/wisconsin-the-box-self-storage?recommId=dc0ad0e23ddb4a3eccfa7451052f7654",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:46:40.953Z",
+    "lastUpdated": "2026-09-03T19:46:40.953Z",
+    "notes": "Crexi self-storage listing - WI (subtitle: Self Storage • 50,520 SF)"
+  },
+  {
+    "id": "lead_1788464741097_5xi0v",
+    "facilityName": "Beach Road Storage",
+    "businessName": "Beach Road Storage",
+    "address": "4603 Long Beach Road Se",
+    "city": "Southport",
+    "state": "NC",
+    "askingPrice": "$1,347,000",
+    "ownerName": "Darron Kattan",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2599264/north-carolina-beach-road-storage?recommId=aed66bd38c3ea23215d82d60d0bc0bd2",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:45:41.097Z",
+    "lastUpdated": "2026-09-03T19:45:41.097Z",
+    "notes": "Crexi self-storage listing - NC (subtitle: Self Storage | 6.00% CAP | 143 Units)"
+  },
+  {
+    "id": "lead_1788464741096_it02u",
+    "facilityName": "3400 Latrobe Drive",
+    "businessName": "3400 Latrobe Drive",
+    "address": "3400 Latrobe Dr",
+    "city": "",
+    "state": "NC",
+    "askingPrice": null,
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2417128/north-carolina-3400-latrobe-drive?recommId=aed66bd38c3ea23215d82d60d0bc0bd2",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:45:41.096Z",
+    "lastUpdated": "2026-09-03T19:45:41.096Z",
+    "notes": "Crexi self-storage listing - NC (subtitle: 15,200 SF Industrial Flex Building with Office, Warehouse &amp; Cold Storage Space)"
+  },
+  {
+    "id": "lead_1788464653143_cp13o",
+    "facilityName": "50-unit self-storage facility at North T Street",
+    "businessName": "50-unit self-storage facility at North T Street",
+    "address": "1300 N T St",
+    "city": "",
+    "state": "FL",
+    "askingPrice": "$350,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2357674/florida-50-unit-self-storage-facility-at-north-t-street?recommId=bd6c3649ae64649b6f2c23454d8a046d",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:44:13.143Z",
+    "lastUpdated": "2026-09-03T19:44:13.143Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Self Storage | 50 Units | $7,000/unit)"
+  },
+  {
+    "id": "lead_1788464653142_qz9p0",
+    "facilityName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "businessName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "address": "1920 Sherman Ave",
+    "city": "PANAMA CITY",
+    "state": "FL",
+    "askingPrice": "$75,000",
+    "ownerName": "Ryan Nee",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "Marcus &amp; Millichap",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2593337/florida-auction---gulf-coast-self-storage-63-drive-up-units?recommId=bd6c3649ae64649b6f2c23454d8a046d",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:44:13.142Z",
+    "lastUpdated": "2026-09-03T19:44:13.142Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: STARTING BID $75,000 | Gulf Coast Self Storage | Florida Panhandle Value-Add | 63 Drive-Up Units)"
+  },
+  {
+    "id": "lead_1788464478305_1h1iy",
+    "facilityName": "Luxury Storage Warehouse",
+    "businessName": "Luxury Storage Warehouse",
+    "address": "4115 Kreinhop Rd",
+    "city": "",
+    "state": "TX",
+    "askingPrice": "$175,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1090392/texas-luxury-storage-warehouse?recommId=c29cc01ed56c889243fda7bb9d34948b",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:41:18.305Z",
+    "lastUpdated": "2026-09-03T19:41:18.305Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: +/- 1,100 sf units now available in Phase 2)"
+  },
+  {
+    "id": "lead_1788464478305_h1xhq",
+    "facilityName": "US Storage Centers (Managed)",
+    "businessName": "US Storage Centers (Managed)",
+    "address": "2601 Willowbrook Rd",
+    "city": "",
+    "state": "TX",
+    "askingPrice": "$2,850,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2317945/texas-us-storage-centers-managed?recommId=c29cc01ed56c889243fda7bb9d34948b",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T19:41:18.305Z",
+    "lastUpdated": "2026-09-03T19:41:18.305Z",
+    "notes": "Crexi self-storage listing - TX (subtitle: 41,610 NRSF | 280 Units | $68.49/NRSF)"
+  },
+  {
+    "id": "lead_1788435040179_gbalp",
+    "facilityName": "26-51851-sms Investor Warehouse Group LLC",
+    "businessName": "26-51851-sms Investor Warehouse Group LLC",
+    "address": "",
+    "city": "Atlanta",
+    "state": "GA",
+    "ownerName": "26-51851-sms Investor Warehouse Group LLC",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.ganb.uscourts.gov/cgi-bin/DktRpt.pl?1290491",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T18:37:39.000Z",
+    "lastUpdated": "2026-09-03T11:30:40.179Z",
+    "notes": "PACER RSS filing — GANB · Wed, 02 Sep 2026 18:37:39 GMT"
+  },
+  {
+    "id": "lead_1788435040179_p24sl",
+    "facilityName": "26-51851-sms Investor Warehouse Group LLC",
+    "businessName": "26-51851-sms Investor Warehouse Group LLC",
+    "address": "",
+    "city": "Atlanta",
+    "state": "GA",
+    "ownerName": "26-51851-sms Investor Warehouse Group LLC",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.ganb.uscourts.gov/cgi-bin/DktRpt.pl?1290491",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-02T18:36:19.000Z",
+    "lastUpdated": "2026-09-03T11:30:40.179Z",
+    "notes": "PACER RSS filing — GANB · Wed, 02 Sep 2026 18:36:19 GMT"
+  },
+  {
     "id": "lead_1788367243400_n7624",
     "facilityName": "Whitney Self-Storage",
     "businessName": "Whitney Self-Storage",
