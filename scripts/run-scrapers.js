@@ -620,13 +620,42 @@ async function scanCrexi(_browser) {
     } catch (err) { log('Crexi', `${state} error: ${err.message}`) }
     await new Promise(r => setTimeout(r, 1500 + Math.floor(Math.random() * 1500)))
   }
+  // Crexi's states= URL filter does not actually filter, so every state loop
+  // returns the same national result set. Collapse duplicates by listing URL
+  // before enrichment - each detail fetch costs ScraperAPI credits.
+  const seenCrexiUrls = new Set()
+  const uniqueLeads = []
+  for (const l of leads) {
+    const key = l.sourceUrl
+    if (seenCrexiUrls.has(key)) continue
+    seenCrexiUrls.add(key)
+    uniqueLeads.push(l)
+  }
+  if (uniqueLeads.length !== leads.length) {
+    log('Crexi', `Deduped ${leads.length} raw cards to ${uniqueLeads.length} unique listings`)
+  }
+  leads.length = 0
+  leads.push(...uniqueLeads)
+
       log('Crexi', `Enriching ${leads.length} leads with detail-page broker info...`)
     for (const lead of leads) {
       try {
         const { status, body: detailHtml } = await scraperGetCrexi(lead.sourceUrl)
         if (status !== 200 || !detailHtml) { log('Crexi', `detail fetch failed for ${lead.sourceUrl}`); continue }
         const titleMatch = detailHtml.match(/<title>([^<,]+),\s*([^,]+),\s*([A-Z]{2})\s+\d{5}/)
-        if (titleMatch) lead.city = titleMatch[2].trim()
+        if (titleMatch) {
+          lead.city = titleMatch[2].trim()
+          // titleMatch[3] is the property's ACTUAL state. The value set during
+          // the card loop is only the state being searched, which is wrong
+          // whenever Crexi returns out-of-state results (it usually does).
+          const realState = titleMatch[3].trim().toUpperCase()
+          if (/^[A-Z]{2}$/.test(realState)) {
+            if (realState !== lead.state) {
+              lead.notes = `${lead.notes} [state corrected from ${lead.state} to ${realState} via detail page]`
+            }
+            lead.state = realState
+          }
+        }
         const tableMatch = detailHtml.match(/Name<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
         if (tableMatch) lead.ownerName = tableMatch[1].trim()
         const brokerageMatch = detailHtml.match(/Brokerage<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
