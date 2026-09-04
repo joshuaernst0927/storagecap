@@ -564,6 +564,8 @@ async function scanFSBO() {
   return leads
 }
 
+const { matchCollegeTown } = require('./collegeTowns.js')
+
 // ─── 6. Crexi — Puppeteer stealth, response sniffing only (no interception) ────
 async function scanCrexi(_browser) {
   log('Crexi', 'Starting (ScraperAPI ultra_premium render)...')
@@ -656,6 +658,12 @@ async function scanCrexi(_browser) {
             lead.state = realState
           }
         }
+        // College-town tag — lookup only, never a filter. A null match here
+        // does NOT remove or skip the lead; it just ranks lower downstream.
+        const townMatch = matchCollegeTown(lead.city, lead.state)
+        lead.collegeTownMatch = !!townMatch
+        lead.collegeTownStudents = townMatch ? townMatch.students : null
+        lead.collegeTownInstitution = townMatch ? townMatch.institution : null
         const tableMatch = detailHtml.match(/Name<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
         if (tableMatch) lead.ownerName = tableMatch[1].trim()
         const brokerageMatch = detailHtml.match(/Brokerage<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
@@ -2163,6 +2171,9 @@ async function scanLoopNet() {
         if (!isSelfStorage(titleText)) continue
 
         const signals = { listedForSale: true, occupancyPct: null, rentBelowMarket: false }
+        // College-town tag — lookup only, never a filter. A null match here
+        // does NOT remove or skip the lead; it just ranks lower downstream.
+        const townMatch = matchCollegeTown(city, stateCode)
         leads.push({
           id: generateLeadId(),
           facilityName: address,
@@ -2182,6 +2193,9 @@ async function scanLoopNet() {
           foundAt: new Date().toISOString(),
           lastUpdated: new Date().toISOString(),
           notes: '',
+          collegeTownMatch: !!townMatch,
+          collegeTownStudents: townMatch ? townMatch.students : null,
+          collegeTownInstitution: townMatch ? townMatch.institution : null,
         })
       }
       log('LoopNet', state + ': ' + leads.length + ' leads so far')

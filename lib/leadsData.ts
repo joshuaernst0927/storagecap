@@ -1,3 +1,5 @@
+import { matchCollegeTown } from './collegeTowns'
+
 export type LeadSource =
   | 'county-tax'
   | 'fire-marshal'
@@ -221,62 +223,18 @@ export function formatAskingPrice(raw: number | string | null | undefined): stri
 }
 
 // ── 2.1 Geographic fit — 45 points (framework 50, rescaled) ───────────────────
-// Fixed lookup table per framework: "Do not ask the model to independently infer
-// population growth or market quality at upload." Scoped to the 11 states YEM
-// targets: NC FL TX OK SC GA AL OH IN KY TN.
-
-const TIER_A_TARGET_MARKETS = new Set([
-  // Named in the framework document itself.
-  'charlotte,nc', 'raleigh,nc', 'durham,nc', 'cary,nc', 'apex,nc', 'concord,nc',
-  'jacksonville,fl',
-  'columbus,oh', 'cincinnati,oh',
-  'madison,wi',
-  // Suburban Nashville (framework names "suburban Nashville", not core).
-  'brentwood,tn', 'franklin,tn', 'hendersonville,tn', 'mount juliet,tn',
-  'smyrna,tn', 'murfreesboro,tn', 'gallatin,tn', 'spring hill,tn',
-])
-
-const TIER_B_CONNECTED_SECONDARY = new Set([
-  'greensboro,nc', 'winston-salem,nc', 'fayetteville,nc', 'wilmington,nc',
-  'high point,nc', 'asheville,nc', 'gastonia,nc', 'huntersville,nc',
-  'columbia,sc', 'savannah,ga', 'augusta,ga',
-  'cleveland,oh', 'dayton,oh', 'akron,oh', 'toledo,oh',
-  'indianapolis,in', 'carmel,in', 'fishers,in',
-  'louisville,ky',
-  'knoxville,tn', 'chattanooga,tn', 'clarksville,tn',
-])
-
-const TIER_C_OTHER_SECONDARY = new Set([
-  'charleston,sc', 'greenville,sc', 'north charleston,sc', 'rock hill,sc',
-  'spartanburg,sc', 'myrtle beach,sc', 'summerville,sc',
-  'birmingham,al', 'huntsville,al', 'montgomery,al', 'mobile,al', 'auburn,al',
-  'tulsa,ok', 'oklahoma city,ok', 'norman,ok', 'broken arrow,ok', 'edmond,ok',
-  'fort wayne,in', 'evansville,in', 'south bend,in', 'bloomington,in',
-  'lexington,ky', 'bowling green,ky', 'owensboro,ky',
-  'memphis,tn', 'johnson city,tn', 'kingsport,tn',
-  'macon,ga', 'columbus,ga', 'athens,ga', 'warner robins,ga',
-  'ocala,fl', 'gainesville,fl', 'lakeland,fl', 'pensacola,fl', 'tallahassee,fl',
-  'fort myers,fl', 'sarasota,fl', 'port st. lucie,fl', 'daytona beach,fl',
-  'waco,tx', 'killeen,tx', 'tyler,tx', 'lubbock,tx', 'amarillo,tx',
-  'college station,tx', 'mcallen,tx', 'corpus christi,tx', 'abilene,tx',
-  'canton,oh', 'youngstown,oh',
-])
-
-// Primary metros inside target regions — deprioritized per YEM's secondary-market thesis.
-const TIER_D_PRIMARY_METROS = new Set([
-  'atlanta,ga',
-  'tampa,fl', 'orlando,fl', 'miami,fl', 'fort lauderdale,fl', 'st. petersburg,fl',
-  'saint petersburg,fl', 'hialeah,fl', 'west palm beach,fl',
-  'dallas,tx', 'houston,tx', 'fort worth,tx', 'arlington,tx', 'plano,tx',
-  'austin,tx', 'san antonio,tx', 'el paso,tx',
-  'nashville,tn',
-])
-
-const TARGET_STATES = new Set(['nc', 'fl', 'tx', 'ok', 'sc', 'ga', 'al', 'oh', 'in', 'ky', 'tn', 'wi'])
-
-function normalizeCityKey(city: string, state: string): string {
-  return `${city.trim().toLowerCase().replace(/\s+/g, ' ')},${state.trim().toLowerCase()}`
-}
+// Geography scoring, replaced Sept 4, 2026: the old 12-state hand table is
+// gone. Footprint is now all 50 states, screened by proximity to a real
+// college-town anchor (matchCollegeTown, lib/collegeTowns.ts — 617 towns,
+// U.S. Dept. of Education enrollment data, gateway markets excluded by
+// design since gateway cap rates are too compressed for the value-add/land
+// thesis to pencil). This is a lookup for RANKING, never a filter — a
+// non-match still scores and is never discarded (max-intake, rank-hard).
+//
+// No local-population figure is captured per town, so enrollment size alone
+// stands in for anchor scale rather than a true student-to-market ratio.
+// Student-to-market ratio was explicitly decided NOT to be a hard gate
+// (Sept 4, 2026).
 
 function scoreGeography(lead: Lead): Stage1Component {
   const label = 'Geographic fit'
@@ -288,28 +246,35 @@ function scoreGeography(lead: Lead): Stage1Component {
     return { label, points: 4, maxPoints, source: 'No location on lead record', availability: 'unavailable' }
   }
 
-  const stateKey = state.toLowerCase()
-
   if (!city) {
-    // State known, city missing — score the state band only, flagged as partial.
-    const points = TARGET_STATES.has(stateKey) ? 14 : 4
+    // State known, city missing — can't check the anchor table without a
+    // city, so this is a data gap, not a geography failure.
     return {
-      label, points, maxPoints,
-      source: `State: ${state} (city not provided)`,
+      label, points: 6, maxPoints,
+      source: `State: ${state} (city not provided — cannot check college-town anchor)`,
       availability: 'assumption',
     }
   }
 
-  const key = normalizeCityKey(city, state)
-  let points: number
-  if (TIER_A_TARGET_MARKETS.has(key)) points = 45
-  else if (TIER_B_CONNECTED_SECONDARY.has(key)) points = 40
-  else if (TIER_C_OTHER_SECONDARY.has(key)) points = 32
-  else if (TIER_D_PRIMARY_METROS.has(key)) points = 22
-  else if (TARGET_STATES.has(stateKey)) points = 14
-  else points = 4
+  const match = matchCollegeTown(city, state)
+  if (!match) {
+    return {
+      label, points: 10, maxPoints,
+      source: `${city}, ${state} — no college-town anchor on record`,
+      availability: 'available',
+    }
+  }
 
-  return { label, points, maxPoints, source: `${city}, ${state}`, availability: 'available' }
+  let points: number
+  if (match.students >= 25_000) points = 45
+  else if (match.students >= 10_000) points = 36
+  else points = 27
+
+  return {
+    label, points, maxPoints,
+    source: `${city}, ${state} — ${match.institution} (${match.students.toLocaleString()} students)`,
+    availability: 'available',
+  }
 }
 
 // ── 2.2 Deal-size / facility-scale fit — 15 points (framework 20, rescaled) ───
@@ -321,12 +286,15 @@ function scoreDealSize(lead: Lead): Stage1Component {
   const maxPoints = 15
   const price = parseAskingPrice(lead.askingPrice)
 
+  // Mandate band confirmed Sept 4, 2026: floor $1.5M, no hard ceiling
+  // ("$1.5M-$20M+"). $20M is a soft marker, not a cutoff — anything at or
+  // above it still scores at the top of the band. Below $1.5M scores low
+  // but is never discarded; ranking handles the rest.
   if (price !== null) {
     let points: number
-    if (price >= 3_000_000 && price <= 15_000_000) points = 15
-    else if (price >= 1_500_000 && price < 3_000_000) points = 9
-    else if (price > 15_000_000 && price <= 22_500_000) points = 9
-    else points = 2
+    if (price >= 1_500_000) points = 15
+    else if (price >= 900_000) points = 9
+    else points = 3
     return {
       label, points, maxPoints,
       source: `Asking price: $${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
