@@ -573,7 +573,6 @@ async function scanCrexi(_browser) {
   const SCRAPER_KEY = process.env.SCRAPERAPI_KEY
   if (!SCRAPER_KEY) { log('Crexi', 'SCRAPERAPI_KEY not set - skipping'); return leads }
   const https = require('https')
-  const TARGET_STATES_CREXI = ['TX','GA','SC','TN','AZ','FL','AL','MS','NC','OH','WI','IN']
   const STORAGE_KEYWORDS = /storage/i
   function scraperGetCrexi(url) {
     return new Promise((resolve, reject) => {
@@ -583,16 +582,25 @@ async function scanCrexi(_browser) {
       req.setTimeout(90000, () => { req.destroy(); reject(new Error('timeout')) })
     })
   }
-  for (const state of TARGET_STATES_CREXI) {
-    try {
-      const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale&states=${state}`
-      const { status, body: html } = await scraperGetCrexi(url)
-      if (status !== 200 || !html) { log('Crexi', `${state}: HTTP ${status}`); continue }
+  // Single national fetch, Sept 4 2026 — replaces the old 12-state loop.
+  // Confirmed (commit 053ec10, and independently by two third-party Crexi
+  // scraper vendors): Crexi's states= URL param does not filter results at
+  // all; every state in the old loop returned the identical national feed,
+  // so looping 12 times just spent 12x the ScraperAPI credits for 1x the
+  // data. One fetch here is strictly equivalent in leads found, cheaper to
+  // run. Per-listing state is unknown until detail-page enrichment below
+  // resolves it from the property's own title (same as before).
+  try {
+    const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale`
+    const { status, body: html } = await scraperGetCrexi(url)
+    if (status !== 200 || !html) {
+      log('Crexi', `national fetch: HTTP ${status}`)
+    } else {
       const cardRe = /<cui-card(?:\s[^>]*)?>/g
       const positions = []
       let m
       while ((m = cardRe.exec(html))) positions.push(m.index)
-      let stateCount = 0
+      let matchCount = 0
       for (let i = 0; i < positions.length; i++) {
         const start = positions[i]
         const end2 = i + 1 < positions.length ? positions[i + 1] : Math.min(html.length, start + 12000)
@@ -607,24 +615,25 @@ async function scanCrexi(_browser) {
         const priceNum = priceRaw ? priceRaw.replace(/[^0-9]/g, '') : ''
         leads.push({
           id: generateLeadId(), facilityName: name || 'Crexi Listing', businessName: name || 'Crexi Listing',
-          address: address || 'See Crexi listing', city: '', state,
+          address: address || 'See Crexi listing', city: '', state: '',
           askingPrice: priceNum ? `$${Number(priceNum).toLocaleString()}` : null,
           ownerName: 'Crexi Listing', contactInfo: { phone: null, email: null }, source: 'crexi',
           sourceUrl: detailMatch ? `https://www.crexi.com${detailMatch[1]}` : (assetIdMatch ? `https://www.crexi.com/properties/${assetIdMatch[1]}` : url),
           distressSignals: { bankruptcy: false, occupancyPct: null, rentBelowMarket: false },
           score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
           signals: {}, status: 'new', foundAt: new Date().toISOString(), lastUpdated: new Date().toISOString(),
-          notes: `Crexi self-storage listing - ${state} (subtitle: ${subtitle || ''})`,
+          notes: `Crexi self-storage listing (state pending detail-page fetch) (subtitle: ${subtitle || ''})`,
         })
-        stateCount++
+        matchCount++
       }
-      log('Crexi', `${state}: ${positions.length} cards scanned, ${stateCount} storage matches`)
-    } catch (err) { log('Crexi', `${state} error: ${err.message}`) }
-    await new Promise(r => setTimeout(r, 1500 + Math.floor(Math.random() * 1500)))
-  }
-  // Crexi's states= URL filter does not actually filter, so every state loop
-  // returns the same national result set. Collapse duplicates by listing URL
-  // before enrichment - each detail fetch costs ScraperAPI credits.
+      log('Crexi', `national fetch: ${positions.length} cards scanned, ${matchCount} storage matches`)
+    }
+  } catch (err) { log('Crexi', `national fetch error: ${err.message}`) }
+  // Safety-net dedupe by listing URL. No longer needed to correct for the
+  // old per-state loop (removed above — that loop was hitting the same
+  // national feed 12 times), but kept in case Crexi's own page ever repeats
+  // a card. Each detail fetch below costs ScraperAPI credits, so cheap
+  // insurance either way.
   const seenCrexiUrls = new Set()
   const uniqueLeads = []
   for (const l of leads) {
@@ -647,12 +656,13 @@ async function scanCrexi(_browser) {
         const titleMatch = detailHtml.match(/<title>([^<,]+),\s*([^,]+),\s*([A-Z]{2})\s+\d{5}/)
         if (titleMatch) {
           lead.city = titleMatch[2].trim()
-          // titleMatch[3] is the property's ACTUAL state. The value set during
-          // the card loop is only the state being searched, which is wrong
-          // whenever Crexi returns out-of-state results (it usually does).
+          // titleMatch[3] is the property's ACTUAL state, resolved via detail
+          // page fetch. Since the card loop no longer searches by state
+          // (single national fetch, Sept 4 2026), lead.state starts empty —
+          // this is the FIRST assignment for most leads, not a correction.
           const realState = titleMatch[3].trim().toUpperCase()
           if (/^[A-Z]{2}$/.test(realState)) {
-            if (realState !== lead.state) {
+            if (lead.state && realState !== lead.state) {
               lead.notes = `${lead.notes} [state corrected from ${lead.state} to ${realState} via detail page]`
             }
             lead.state = realState
@@ -2126,7 +2136,11 @@ async function scanLoopNet() {
   const SCRAPER_KEY = process.env.SCRAPERAPI_KEY
   if (!SCRAPER_KEY) { log('LoopNet', 'SCRAPERAPI_KEY not set — skipping'); return leads }
 
-  const STATES = ['fl','tx','ga','sc','tn','az','al','ms','nc','oh']
+  // Footprint expanded to all 50 states, Sept 4 2026 — was 10 states.
+  // 2-letter codes confirmed live against loopnet.com/search/self-storage-facilities/{code}/for-sale/
+  const STATES = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks',
+    'ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','oh',
+    'ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy']
   const https  = require('https')
 
   function scraperGet(url) {
