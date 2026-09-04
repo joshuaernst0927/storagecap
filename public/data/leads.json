@@ -1,5 +1,640 @@
 [
   {
+    "id": "lead_1788522210684_19usp",
+    "facilityName": "Packer Storage of Ashland",
+    "businessName": "Packer Storage of Ashland",
+    "address": "1800 Third St W",
+    "city": "",
+    "state": "WI",
+    "askingPrice": "$1,500,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2556594/wisconsin-1800-3rd-st-w-ashland-wi-54806?recommId=d5ade99a31a4ee5399dca3c90169f570",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:43:30.684Z",
+    "lastUpdated": "2026-09-04T11:43:30.684Z",
+    "notes": "Crexi self-storage listing - WI (subtitle: Ashland, WI Self Storage Portfolio | 30,897 RSF | 158 Units)"
+  },
+  {
+    "id": "lead_1788522210684_hb2u6",
+    "facilityName": "The Box Self Storage",
+    "businessName": "The Box Self Storage",
+    "address": "1655 Van Buren Road",
+    "city": "Mukwonago",
+    "state": "WI",
+    "askingPrice": null,
+    "ownerName": "Scott Reid",
+    "contactInfo": {
+      "phone": "(949) 942-6578",
+      "email": null,
+      "brokerage": "ParaSell, Inc.",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2640038/wisconsin-the-box-self-storage?recommId=d5ade99a31a4ee5399dca3c90169f570",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:43:30.684Z",
+    "lastUpdated": "2026-09-04T11:43:30.684Z",
+    "notes": "Crexi self-storage listing - WI (subtitle: Self Storage • 50,520 SF)"
+  },
+  {
+    "id": "lead_1788522173479_8vtzr",
+    "facilityName": "Blue Water Self Storage",
+    "businessName": "Blue Water Self Storage",
+    "address": "3512 Roosevelt Ave NE",
+    "city": "Canton",
+    "state": "OH",
+    "askingPrice": "$1,349,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2256070/ohio-blue-water-self-storage?recommId=b147b2676af3fa8c03466a0d34895945",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:42:53.479Z",
+    "lastUpdated": "2026-09-04T11:42:53.479Z",
+    "notes": "Crexi self-storage listing - OH (subtitle: Self Storage | 166 Units | $8,127/unit)"
+  },
+  {
+    "id": "lead_1788522136052_7nxvp",
+    "facilityName": "3400 Latrobe Drive",
+    "businessName": "3400 Latrobe Drive",
+    "address": "3400 Latrobe Dr",
+    "city": "Charlotte",
+    "state": "NC",
+    "askingPrice": null,
+    "ownerName": "Bryan Butler",
+    "contactInfo": {
+      "phone": "7049537119",
+      "email": null,
+      "brokerage": "MECA Commercial",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2417128/north-carolina-3400-latrobe-drive?recommId=022c7c157e0b365a5d5da77433396e14",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:42:16.052Z",
+    "lastUpdated": "2026-09-04T11:42:16.052Z",
+    "notes": "Crexi self-storage listing - NC (subtitle: 15,200 SF Industrial Flex Building with Office, Warehouse &amp; Cold Storage Space)"
+  },
+  {
+    "id": "lead_1788522136052_rthgk",
+    "facilityName": "Beach Road Storage",
+    "businessName": "Beach Road Storage",
+    "address": "4603 Long Beach Road Se",
+    "city": "Southport",
+    "state": "NC",
+    "askingPrice": "$1,347,000",
+    "ownerName": "Darron Kattan",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2599264/north-carolina-beach-road-storage?recommId=022c7c157e0b365a5d5da77433396e14",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:42:16.052Z",
+    "lastUpdated": "2026-09-04T11:42:16.052Z",
+    "notes": "Crexi self-storage listing - NC (subtitle: Self Storage | 6.00% CAP | 143 Units)"
+  },
+  {
+    "id": "lead_1788522136052_t1qnf",
+    "facilityName": "Newport Mini Storage",
+    "businessName": "Newport Mini Storage",
+    "address": "457 Tom Mann Rd",
+    "city": "NEWPORT",
+    "state": "NC",
+    "askingPrice": "$1,600,000",
+    "ownerName": "Dale Eisenman",
+    "contactInfo": {
+      "phone": "843-342-7650",
+      "email": null,
+      "brokerage": "Midcoast Properties, Inc.",
+      "brokerageAddress": "7 Heyward Place, Hilton Head Island, SC 29928"
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2501281/north-carolina-newport-mini-storage?recommId=022c7c157e0b365a5d5da77433396e14",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:42:16.052Z",
+    "lastUpdated": "2026-09-04T11:42:16.052Z",
+    "notes": "Crexi self-storage listing - NC (subtitle: Well-Positioned Storage Asset with Acreage for Expansion in Rapidly Growing Coastal Market)"
+  },
+  {
+    "id": "lead_1788522088731_ld1em",
+    "facilityName": "Whitney Self-Storage",
+    "businessName": "Whitney Self-Storage",
+    "address": "1424 Texas 22",
+    "city": "Whitney",
+    "state": "TX",
+    "askingPrice": "$525,000",
+    "ownerName": "Brian Brockman",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "Bang Realty - Texas Inc.",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2560671/texas-whitney-self-storage?recommId=f301dd5e0eaa07de33a640f3cddca320",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:41:28.731Z",
+    "lastUpdated": "2026-09-04T11:41:28.731Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: PRICE REDUCTION | Well-Maintained Turnkey Self-Storage Investment with Upside Opportunity) [state corrected from MS to TX via detail page]"
+  },
+  {
+    "id": "lead_1788522088731_h3avh",
+    "facilityName": "6215 Airpark Dr",
+    "businessName": "6215 Airpark Dr",
+    "address": "6215 Airpark Dr",
+    "city": "",
+    "state": "MS",
+    "askingPrice": "$999,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2258012/tennessee-6215-airpark-dr?recommId=f301dd5e0eaa07de33a640f3cddca320",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:41:28.731Z",
+    "lastUpdated": "2026-09-04T11:41:28.731Z",
+    "notes": "Crexi self-storage listing - MS (subtitle: Self Storage)"
+  },
+  {
+    "id": "lead_1788522079635_z1hmq",
+    "facilityName": "WAXAHATCHEE MARINA &amp; GRILL / RV / Dry Storage &amp; AirB&amp;B’s",
+    "businessName": "WAXAHATCHEE MARINA &amp; GRILL / RV / Dry Storage &amp; AirB&amp;B’s",
+    "address": "265 Waxahatchee Rd",
+    "city": "Shelby",
+    "state": "AL",
+    "askingPrice": "$875,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2169684/alabama-waxahatchee-marina-grill-rv-dry-storage-airbbs?recommId=9757216e689c8606d0a4e58f6c0e90cb",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:41:19.635Z",
+    "lastUpdated": "2026-09-04T11:41:19.635Z",
+    "notes": "Crexi self-storage listing - AL (subtitle: Special Purpose | 2,100 SqFt)"
+  },
+  {
+    "id": "lead_1788522079634_m9oxv",
+    "facilityName": "11017 County Line Road",
+    "businessName": "11017 County Line Road",
+    "address": "11017 County Line Road",
+    "city": "Madison",
+    "state": "AL",
+    "askingPrice": "$7,950,000",
+    "ownerName": "Russ Russell",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "Russ Russell Commercial Real Estate",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2586201/alabama-11017-county-line-road?recommId=9757216e689c8606d0a4e58f6c0e90cb",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:41:19.634Z",
+    "lastUpdated": "2026-09-04T11:41:19.635Z",
+    "notes": "Crexi self-storage listing - AL (subtitle: Self Storage For Sale in Madison, AL)"
+  },
+  {
+    "id": "lead_1788522050097_g27rx",
+    "facilityName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "businessName": "Auction - Gulf Coast Self Storage | 63 Drive-Up Units",
+    "address": "1920 Sherman Ave",
+    "city": "PANAMA CITY",
+    "state": "FL",
+    "askingPrice": "$75,000",
+    "ownerName": "Ryan Nee",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "Marcus &amp; Millichap",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2593337/florida-auction---gulf-coast-self-storage-63-drive-up-units?recommId=415802d1fdac62fd3c4c0ab0591d5bce",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:40:50.097Z",
+    "lastUpdated": "2026-09-04T11:40:50.097Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: STARTING BID $75,000 | Gulf Coast Self Storage | Florida Panhandle Value-Add | 63 Drive-Up Units)"
+  },
+  {
+    "id": "lead_1788522050097_xkr1t",
+    "facilityName": "Live Oak Freedom Storage",
+    "businessName": "Live Oak Freedom Storage",
+    "address": "13346 Us Highway 90",
+    "city": "Live Oak",
+    "state": "FL",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Kateleigh Calloway",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2559658/florida-live-oak-freedom-storage?recommId=415802d1fdac62fd3c4c0ab0591d5bce",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:40:50.097Z",
+    "lastUpdated": "2026-09-04T11:40:50.097Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: 9% Cap Rate - 90% Occupied - New Roofs and Siding!)"
+  },
+  {
+    "id": "lead_1788522050097_a4evf",
+    "facilityName": "State Ave Plaza",
+    "businessName": "State Ave Plaza",
+    "address": "703 S State St",
+    "city": "Bunnell",
+    "state": "FL",
+    "askingPrice": "$1,600,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2247180/florida-state-ave-plaza?recommId=415802d1fdac62fd3c4c0ab0591d5bce",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:40:50.097Z",
+    "lastUpdated": "2026-09-04T11:40:50.097Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Shopping plaza with Storage)"
+  },
+  {
+    "id": "lead_1788522050097_6gg8h",
+    "facilityName": "50-unit self-storage facility at North T Street",
+    "businessName": "50-unit self-storage facility at North T Street",
+    "address": "1300 N T St",
+    "city": "Pensacola",
+    "state": "FL",
+    "askingPrice": "$350,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2357674/florida-50-unit-self-storage-facility-at-north-t-street?recommId=415802d1fdac62fd3c4c0ab0591d5bce",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:40:50.097Z",
+    "lastUpdated": "2026-09-04T11:40:50.097Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Self Storage | 50 Units | $7,000/unit)"
+  },
+  {
+    "id": "lead_1788522032117_kfr4b",
+    "facilityName": "SunCo Storage - Spring Hill",
+    "businessName": "SunCo Storage - Spring Hill",
+    "address": "9832 Osceola Drive",
+    "city": "Spring Hill",
+    "state": "FL",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Jack Kaiser",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "RIPCO",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2316560/florida-sunco-storage---spring-hill?recommId=75789b5ef62ebb814f4949c77d402bc5",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:40:32.117Z",
+    "lastUpdated": "2026-09-04T11:40:32.117Z",
+    "notes": "Crexi self-storage listing - FL (subtitle: Self-Storage Opportunity in the Highly Desirable Tampa MSA)"
+  },
+  {
+    "id": "lead_1788522002871_1xk20",
+    "facilityName": "Value-Add Self-Storage | 82 Units | Payson, AZ",
+    "businessName": "Value-Add Self-Storage | 82 Units | Payson, AZ",
+    "address": "113 West Cedar Lane",
+    "city": "Payson",
+    "state": "AZ",
+    "askingPrice": "$1,550,000",
+    "ownerName": "Robert Clarfield",
+    "contactInfo": {
+      "phone": "4802397793",
+      "email": null,
+      "brokerage": "AM/PM Realty Group",
+      "brokerageAddress": "21640 N 19TH AVENUE PHOENIX AZ 85027"
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2554648/arizona-value-add-self-storage-82-units-payson-az?recommId=735cbc38969a265aaded0cd307eb7f46",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:40:02.871Z",
+    "lastUpdated": "2026-09-04T11:40:02.871Z",
+    "notes": "Crexi self-storage listing - AZ (subtitle: Operator-Driven Vacancy | Proven $20K/Mo Income | Upside Ready)"
+  },
+  {
+    "id": "lead_1788521973792_d3ic5",
+    "facilityName": "1550 State Highway 58 S",
+    "businessName": "1550 State Highway 58 S",
+    "address": "1550 TN-58",
+    "city": "",
+    "state": "TN",
+    "askingPrice": "$599,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2319549/tennessee-1550-state-highway-58-s?recommId=23b82b62862be9b95e6ac0d2781b74aa",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:39:33.793Z",
+    "lastUpdated": "2026-09-04T11:39:33.793Z",
+    "notes": "Crexi self-storage listing - TN (subtitle: Self Storage)"
+  },
+  {
+    "id": "lead_1788521941112_4dggf",
+    "facilityName": "Cannon Secure Storage",
+    "businessName": "Cannon Secure Storage",
+    "address": "939 N Logan St",
+    "city": "Gaffney",
+    "state": "SC",
+    "askingPrice": "$780,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2324314/south-carolina-cannon-secure-storage?recommId=c2589233b27edc90f5e2be32b062a025",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:39:01.112Z",
+    "lastUpdated": "2026-09-04T11:39:01.112Z",
+    "notes": "Crexi self-storage listing - SC (subtitle: Growing population, occupancy, and rates!)"
+  },
+  {
+    "id": "lead_1788521907923_kbvsb",
+    "facilityName": "Ms. Lillian's Self Storage Fayetteville",
+    "businessName": "Ms. Lillian's Self Storage Fayetteville",
+    "address": "127 Commerce Street",
+    "city": "Fayetteville",
+    "state": "GA",
+    "askingPrice": "$550,000",
+    "ownerName": "Fesperman Real Estate",
+    "contactInfo": {
+      "phone": "9122816178",
+      "email": null,
+      "brokerage": "Fesperman Real Estate",
+      "brokerageAddress": "315 Plant Ave., Waycross, GA"
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2517359/georgia-127-commerce-street?recommId=06b4679378c229ea1b16e51ae2241655",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:38:27.924Z",
+    "lastUpdated": "2026-09-04T11:38:27.924Z",
+    "notes": "Crexi self-storage listing - GA (subtitle: Self Storage • 6,400 SF)"
+  },
+  {
+    "id": "lead_1788521907924_gwbnv",
+    "facilityName": "GRAY LINE STORAGE",
+    "businessName": "GRAY LINE STORAGE",
+    "address": "5410 Hawkinsville Road",
+    "city": "Macon",
+    "state": "GA",
+    "askingPrice": "$725,000",
+    "ownerName": "Bryan Belk",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2528814/georgia-gray-line-storage?recommId=06b4679378c229ea1b16e51ae2241655",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:38:27.924Z",
+    "lastUpdated": "2026-09-04T11:38:27.924Z",
+    "notes": "Crexi self-storage listing - GA (subtitle: Self Storage | 150 Units | 22,425 NRSF)"
+  },
+  {
+    "id": "lead_1788521907924_5gklp",
+    "facilityName": "Stor South",
+    "businessName": "Stor South",
+    "address": "711 South Tennille Avenue",
+    "city": "Donalsonville",
+    "state": "GA",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Luke Sauls",
+    "contactInfo": {
+      "phone": "770.328.2379",
+      "email": null,
+      "brokerage": "Sauls Commercial Real Estate",
+      "brokerageAddress": "402 Newnan Street"
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2475838/georgia-stor-south?recommId=06b4679378c229ea1b16e51ae2241655",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-04T11:38:27.924Z",
+    "lastUpdated": "2026-09-04T11:38:27.924Z",
+    "notes": "Crexi self-storage listing - GA (subtitle: 203-Unit Self Storage Facility | Low SF Per Capita | Limited Competition with Value-Add Upside)"
+  },
+  {
+    "id": "lead_1788521415415_geqiq",
+    "businessName": "Self-Storage Facility",
+    "address": "",
+    "city": "",
+    "state": "",
+    "askingPrice": "$2 million",
+    "ownerName": "BizQuest Listing",
+    "source": "bizquest",
+    "sourceUrl": "https://www.bizquest.com/business-for-sale/established-moving-and-storage-company-sba-pre-qualified/BW2508247/",
+    "score": 10,
+    "signals": {},
+    "distressSignals": {
+      "taxDelinquency": false,
+      "fireCodeViolations": false,
+      "lisPendens": false,
+      "decliningOccupancy": false,
+      "outOfStateOwner": false,
+      "longTermOwner": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "foundAt": "2026-09-04T11:30:15.415Z",
+    "lastUpdated": "2026-09-04T11:30:15.415Z",
+    "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
     "id": "lead_1788464843324_0tfw0",
     "facilityName": "Whitney Self-Storage",
     "businessName": "Whitney Self-Storage",
@@ -288,6 +923,28 @@
     "foundAt": "2026-09-03T19:41:18.305Z",
     "lastUpdated": "2026-09-03T19:41:18.305Z",
     "notes": "Crexi self-storage listing - TX (subtitle: 41,610 NRSF | 280 Units | $68.49/NRSF)"
+  },
+  {
+    "id": "lead_1788521433595_s50iz",
+    "facilityName": "26-42587-mxm7 Nestor Lara Gomez",
+    "businessName": "26-42587-mxm7 Nestor Lara Gomez",
+    "address": "",
+    "city": "Dallas",
+    "state": "TX",
+    "ownerName": "26-42587-mxm7 Nestor Lara Gomez",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txnb.uscourts.gov/cgi-bin/DktRpt.pl?543539",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-03T18:21:34.000Z",
+    "lastUpdated": "2026-09-04T11:30:33.595Z",
+    "notes": "PACER RSS filing — TXNB · Thu, 03 Sep 2026 18:21:34 GMT"
   },
   {
     "id": "lead_1788435040179_gbalp",
