@@ -590,8 +590,14 @@ async function scanCrexi(_browser) {
   // data. One fetch here is strictly equivalent in leads found, cheaper to
   // run. Per-listing state is unknown until detail-page enrichment below
   // resolves it from the property's own title (same as before).
+  //
+  // FIXED same night: dropping states= entirely caused Crexi to return
+  // HTTP 500 (confirmed on a live run). Restored a states= value — since
+  // it's a no-op filter anyway, any single value returns the same national
+  // feed — so the URL shape exactly matches what's already been proven
+  // working in production for months. Still ONE fetch, not the old 12.
   try {
-    const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale`
+    const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale&states=FL`
     const { status, body: html } = await scraperGetCrexi(url)
     if (status !== 200 || !html) {
       log('Crexi', `national fetch: HTTP ${status}`)
@@ -1082,9 +1088,21 @@ async function scanPACERRSS() {
       // Wider self-storage match for bankruptcy case names.
       // Case names often say "StorQuest FL LLC", "U-Stor-It Inc", "iStorage",
       // "Compass Self Storage", "Boat & RV Storage" — rarely just "storage".
+      //
+      // FIXED Sept 4 2026: the vowel-prefix branch ([iue][-\s]?stor) allowed
+      // a SPACE between the vowel and "stor", which let it match across two
+      // separate words — e.g. "Louise Story" read as "...e" + " " + "stor..."
+      // and passed, even though "Story" is a surname unrelated to storage.
+      // Measured impact before the fix: 50 of 56 pacer_rss leads in the live
+      // dataset were false positives (debtors named Nestor/Story/Storz/Storm,
+      // plus at least one unrelated company, "Stage Stores, Inc.") — only 6
+      // were genuine storage-industry filings. Fix: drop the space option
+      // (real brand names use a hyphen or nothing — "iStorage", "U-Stor-It",
+      // never "i Storage") and require a word boundary before the vowel so
+      // it can't match a vowel buried mid-word either (e.g. "InveStor").
       const STOR_INCLUDE = new RegExp(
-        'stor(?:age|all|amer|away|co|ez|house|it|lock|m(?:ax|or)|n-lock|quest|right|safe|star|tek|wise|world)' +
-        '|[iue][-\\s]?stor' +
+        '\\bstor(?:age|all|amer|away|co|ez|house|it|lock|m(?:ax|or)|n-lock|quest|right|safe|star|tek|wise|world)' +
+        '|\\b[iue]-?stor' +
         '|self[\\s-]?stor' +
         '|mini[\\s-]?stor' +
         '|boat[\\s&+]+(?:rv[\\s&+]+)?stor' +
