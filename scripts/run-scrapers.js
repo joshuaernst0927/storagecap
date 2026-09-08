@@ -573,7 +573,6 @@ async function scanCrexi(_browser) {
   const SCRAPER_KEY = process.env.SCRAPERAPI_KEY
   if (!SCRAPER_KEY) { log('Crexi', 'SCRAPERAPI_KEY not set - skipping'); return leads }
   const https = require('https')
-  const STORAGE_KEYWORDS = /storage/i
   function scraperGetCrexi(url) {
     return new Promise((resolve, reject) => {
       const api = 'https://api.scraperapi.com/?api_key=' + SCRAPER_KEY + '&render=true&ultra_premium=true&country_code=us&url=' + encodeURIComponent(url)
@@ -582,64 +581,62 @@ async function scanCrexi(_browser) {
       req.setTimeout(90000, () => { req.destroy(); reject(new Error('timeout')) })
     })
   }
-  // Single national fetch, Sept 4 2026 — replaces the old 12-state loop.
-  // Confirmed (commit 053ec10, and independently by two third-party Crexi
-  // scraper vendors): Crexi's states= URL param does not filter results at
-  // all; every state in the old loop returned the identical national feed,
-  // so looping 12 times just spent 12x the ScraperAPI credits for 1x the
-  // data. One fetch here is strictly equivalent in leads found, cheaper to
-  // run. Per-listing state is unknown until detail-page enrichment below
-  // resolves it from the property's own title (same as before).
-  //
-  // FIXED same night: dropping states= entirely caused Crexi to return
-  // HTTP 500 (confirmed on a live run). Restored a states= value — since
-  // it's a no-op filter anyway, any single value returns the same national
-  // feed — so the URL shape exactly matches what's already been proven
-  // working in production for months. Still ONE fetch, not the old 12.
+  // Rewritten Sept 8 2026 - Crexi redesigned their search results page
+  // (cui-card / data-cy="propertyTile" cards replacing the old markup this
+  // parser was built against Aug 31). Also: types=SelfStorage/states=FL
+  // params no longer filter at all - the real self-storage-only feed is at
+  // the dedicated URL below (confirmed live: 1,542 properties vs 148,388 for
+  // an unfiltered query). City/state now come directly off the card, so the
+  // detail-page fetch below is only for owner/broker enrichment, not location.
   try {
-    const url = `https://www.crexi.com/properties?types=SelfStorage&statuses=ForSale&states=FL`
+    const url = 'https://www.crexi.com/search/self-storage-properties-for-sale'
     const { status, body: html } = await scraperGetCrexi(url)
     if (status !== 200 || !html) {
       log('Crexi', `national fetch: HTTP ${status}`)
     } else {
-      const cardRe = /<cui-card(?:\s[^>]*)?>/g
+      const cardRe = /<cui-card(?=[\s>])[^>]*data-cy="propertyTile"[^>]*>/g
       const positions = []
       let m
       while ((m = cardRe.exec(html))) positions.push(m.index)
       let matchCount = 0
       for (let i = 0; i < positions.length; i++) {
         const start = positions[i]
-        const end2 = i + 1 < positions.length ? positions[i + 1] : Math.min(html.length, start + 12000)
+        const end2 = i + 1 < positions.length ? positions[i + 1] : Math.min(html.length, start + 15000)
         const chunk = html.slice(start, end2)
-        const croppedTexts = [...chunk.matchAll(/<cui-cropped-text[^>]*>([\s\S]*?)<\/cui-cropped-text>/g)].map(x => x[1].replace(/<[^>]+>/g, '').trim()).filter(Boolean)
-        if (croppedTexts.length < 4) continue
-        const [priceRaw, name, subtitle, address] = croppedTexts
-        const searchable = `${name} ${subtitle}`
-        if (!STORAGE_KEYWORDS.test(searchable)) continue
-        const detailMatch = chunk.match(/href="(\/properties\/\d+[^"]*)"/)
-        const assetIdMatch = chunk.match(/\/assets\/(\d+)\//) || chunk.match(/\/properties\/(\d+)\//)
-        const priceNum = priceRaw ? priceRaw.replace(/[^0-9]/g, '') : ''
+
+        const priceMatch = chunk.match(/data-cy="propertyPrice"[\s\S]*?text-heading-6[^"]*"[^>]*>\s*([^<]+?)\s*<\/span>/)
+        const nameSubtitleMatches = [...chunk.matchAll(/ctw:!overflow-hidden ctw:!whitespace-nowrap ctw:mb-2 ctw:text-body-2 ctw:truncate">\s*([^<]+?)\s*<\/span>/g)].map(x => x[1].trim())
+        const name = nameSubtitleMatches[0] || null
+        const subtitle = nameSubtitleMatches[1] || ''
+        const streetMatch = chunk.match(/ctw:text-body-2 ctw:text-text-secondary ctw:truncate">\s*([^<]+?)\s*<\/span>/)
+        const cityStateMatch = chunk.match(/<div class="ctw:text-body-2 ctw:text-text-secondary">\s*([^<]+?)\s*<\/div>/)
+        const detailMatch = chunk.match(/class="cui-card-cover-link" href="([^"]+)"/)
+
+        if (!name) continue
+
+        let city = '', state = ''
+        if (cityStateMatch) {
+          const csz = cityStateMatch[1].match(/^(.+?),\s*([A-Z]{2})\s+\d{5}/)
+          if (csz) { city = csz[1].trim(); state = csz[2].trim() }
+        }
+        const priceNum = priceMatch ? priceMatch[1].replace(/[^0-9]/g, '') : ''
         leads.push({
-          id: generateLeadId(), facilityName: name || 'Crexi Listing', businessName: name || 'Crexi Listing',
-          address: address || 'See Crexi listing', city: '', state: '',
+          id: generateLeadId(), facilityName: name, businessName: name,
+          address: streetMatch ? streetMatch[1].trim() : 'See Crexi listing', city, state,
           askingPrice: priceNum ? `$${Number(priceNum).toLocaleString()}` : null,
           ownerName: 'Crexi Listing', contactInfo: { phone: null, email: null }, source: 'crexi',
-          sourceUrl: detailMatch ? `https://www.crexi.com${detailMatch[1]}` : (assetIdMatch ? `https://www.crexi.com/properties/${assetIdMatch[1]}` : url),
+          sourceUrl: detailMatch ? `https://www.crexi.com${detailMatch[1]}` : url,
           distressSignals: { bankruptcy: false, occupancyPct: null, rentBelowMarket: false },
           score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
           signals: {}, status: 'new', foundAt: new Date().toISOString(), lastUpdated: new Date().toISOString(),
-          notes: `Crexi self-storage listing (state pending detail-page fetch) (subtitle: ${subtitle || ''})`,
+          notes: `Crexi self-storage listing${subtitle ? ` (subtitle: ${subtitle})` : ''}`,
         })
         matchCount++
       }
       log('Crexi', `national fetch: ${positions.length} cards scanned, ${matchCount} storage matches`)
     }
   } catch (err) { log('Crexi', `national fetch error: ${err.message}`) }
-  // Safety-net dedupe by listing URL. No longer needed to correct for the
-  // old per-state loop (removed above — that loop was hitting the same
-  // national feed 12 times), but kept in case Crexi's own page ever repeats
-  // a card. Each detail fetch below costs ScraperAPI credits, so cheap
-  // insurance either way.
+
   const seenCrexiUrls = new Set()
   const uniqueLeads = []
   for (const l of leads) {
@@ -654,55 +651,42 @@ async function scanCrexi(_browser) {
   leads.length = 0
   leads.push(...uniqueLeads)
 
-      log('Crexi', `Enriching ${leads.length} leads with detail-page broker info...`)
-    for (const lead of leads) {
-      try {
-        const { status, body: detailHtml } = await scraperGetCrexi(lead.sourceUrl)
-        if (status !== 200 || !detailHtml) { log('Crexi', `detail fetch failed for ${lead.sourceUrl}`); continue }
+  log('Crexi', `Enriching ${leads.length} leads with detail-page broker info...`)
+  for (const lead of leads) {
+    try {
+      const { status, body: detailHtml } = await scraperGetCrexi(lead.sourceUrl)
+      if (status !== 200 || !detailHtml) { log('Crexi', `detail fetch failed for ${lead.sourceUrl}`); continue }
+      if (!lead.city || !lead.state) {
         const titleMatch = detailHtml.match(/<title>([^<,]+),\s*([^,]+),\s*([A-Z]{2})\s+\d{5}/)
         if (titleMatch) {
-          lead.city = titleMatch[2].trim()
-          // titleMatch[3] is the property's ACTUAL state, resolved via detail
-          // page fetch. Since the card loop no longer searches by state
-          // (single national fetch, Sept 4 2026), lead.state starts empty —
-          // this is the FIRST assignment for most leads, not a correction.
+          if (!lead.city) lead.city = titleMatch[2].trim()
           const realState = titleMatch[3].trim().toUpperCase()
-          if (/^[A-Z]{2}$/.test(realState)) {
-            if (lead.state && realState !== lead.state) {
-              lead.notes = `${lead.notes} [state corrected from ${lead.state} to ${realState} via detail page]`
-            }
-            lead.state = realState
-          }
+          if (!lead.state && /^[A-Z]{2}$/.test(realState)) lead.state = realState
         }
-        // College-town tag — lookup only, never a filter. A null match here
-        // does NOT remove or skip the lead; it just ranks lower downstream.
-        const townMatch = matchCollegeTown(lead.city, lead.state)
-        lead.collegeTownMatch = !!townMatch
-        lead.collegeTownStudents = townMatch ? townMatch.students : null
-        lead.collegeTownInstitution = townMatch ? townMatch.institution : null
-        const tableMatch = detailHtml.match(/Name<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
-        if (tableMatch) lead.ownerName = tableMatch[1].trim()
-        const brokerageMatch = detailHtml.match(/Brokerage<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
-        const phoneMatch = detailHtml.match(/Brokerage Phone<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
-        const addressMatch = detailHtml.match(/Brokerage Address<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
-        lead.contactInfo = {
-          phone: phoneMatch ? phoneMatch[1].trim() : null,
-          email: null,
-          brokerage: brokerageMatch ? brokerageMatch[1].trim() : null,
-          brokerageAddress: addressMatch ? addressMatch[1].trim() : null,
-        }
-      } catch (err) {
-        log('Crexi', `detail enrichment error for ${lead.sourceUrl}: ${err.message}`)
       }
-      await new Promise(r => setTimeout(r, 1500 + Math.floor(Math.random() * 1500)))
+      const townMatch = matchCollegeTown(lead.city, lead.state)
+      lead.collegeTownMatch = !!townMatch
+      lead.collegeTownStudents = townMatch ? townMatch.students : null
+      lead.collegeTownInstitution = townMatch ? townMatch.institution : null
+      const tableMatch = detailHtml.match(/Name<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
+      if (tableMatch) lead.ownerName = tableMatch[1].trim()
+      const brokerageMatch = detailHtml.match(/Brokerage<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
+      const phoneMatch = detailHtml.match(/Brokerage Phone<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
+      const addressMatch = detailHtml.match(/Brokerage Address<\/div><div data-cy="key-value-table-cell-value"[^>]*><div[^>]*><cui-cropped-text[^>]*><span[^>]*><span[^>]*>\s*([^<]+?)\s*<\/span>/)
+      lead.contactInfo = {
+        phone: phoneMatch ? phoneMatch[1].trim() : null,
+        email: null,
+        brokerage: brokerageMatch ? brokerageMatch[1].trim() : null,
+        brokerageAddress: addressMatch ? addressMatch[1].trim() : null,
+      }
+    } catch (err) {
+      log('Crexi', `detail enrichment error for ${lead.sourceUrl}: ${err.message}`)
     }
+    await new Promise(r => setTimeout(r, 1500 + Math.floor(Math.random() * 1500)))
+  }
   return leads
 }
 
-// ─── 7a. Miami-Dade API — endpoint unavailable ────────────────────────────────
-// PApublicServiceProxy returns 404. The current PA search UI is an Angular SPA
-// backed by Solr; its REST endpoint requires a session token issued by the SPA
-// shell and cannot be fetched cold. Skip gracefully rather than 404 every run.
 async function scanMiamiDadeAPI() {
   log('MiamiDadeAPI', 'endpoint unavailable — PA API requires session token (SPA); skipping')
   return []
