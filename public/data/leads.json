@@ -1,5 +1,231 @@
 [
   {
+    "id": "lead_1788868033669_a1hvx",
+    "facilityName": "Live Oak Freedom Storage",
+    "businessName": "Live Oak Freedom Storage",
+    "address": "13346 Us Highway 90",
+    "city": "Live Oak",
+    "state": "FL",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Kateleigh Calloway",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": null,
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2559658/florida-live-oak-freedom-storage?recommId=a0b65f83bec6918868812956604731af",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-08T11:47:13.670Z",
+    "lastUpdated": "2026-09-08T11:47:13.670Z",
+    "notes": "Crexi self-storage listing (state pending detail-page fetch) (subtitle: 9% Cap Rate - 90% Occupied - New Roofs and Siding!)",
+    "collegeTownMatch": false,
+    "collegeTownStudents": null,
+    "collegeTownInstitution": null
+  },
+  {
+    "id": "lead_1788695249734_lekj4",
+    "facilityName": "SunCo Storage - Spring Hill",
+    "businessName": "SunCo Storage - Spring Hill",
+    "address": "9832 Osceola Drive",
+    "city": "Spring Hill",
+    "state": "FL",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Jack Kaiser",
+    "contactInfo": {
+      "phone": null,
+      "email": null,
+      "brokerage": "RIPCO",
+      "brokerageAddress": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2316560/florida-sunco-storage---spring-hill?recommId=62983bc697c066481a2a5cee9aaae39f",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-06T11:47:29.737Z",
+    "lastUpdated": "2026-09-06T11:47:29.737Z",
+    "notes": "Crexi self-storage listing (state pending detail-page fetch) (subtitle: Self-Storage Opportunity in the Highly Desirable Tampa MSA)",
+    "collegeTownMatch": false,
+    "collegeTownStudents": null,
+    "collegeTownInstitution": null
+  },
+  {
+    "id": "lead_1788628755153_9rvm9",
+    "facilityName": "SunCo Storage - Spring Hill",
+    "businessName": "SunCo Storage - Spring Hill",
+    "address": "9832 Osceola Drive",
+    "city": "",
+    "state": "",
+    "askingPrice": "$1,200,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/2316560/florida-sunco-storage---spring-hill?recommId=577b44a7f42d27fdec1319094aecc72a",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-05T17:19:15.164Z",
+    "lastUpdated": "2026-09-05T17:19:15.164Z",
+    "notes": "Crexi self-storage listing (state pending detail-page fetch) (subtitle: Self-Storage Opportunity in the Highly Desirable Tampa MSA)"
+  },
+  {
+    "id": "lead_1788628755164_rjtcb",
+    "facilityName": "Signature Storage Suites",
+    "businessName": "Signature Storage Suites",
+    "address": "16255 Pine Ridge Rd",
+    "city": "",
+    "state": "",
+    "askingPrice": "$525,000",
+    "ownerName": "Crexi Listing",
+    "contactInfo": {
+      "phone": null,
+      "email": null
+    },
+    "source": "crexi",
+    "sourceUrl": "https://www.crexi.com/properties/1229009/florida-signature-storage-suites?recommId=577b44a7f42d27fdec1319094aecc72a",
+    "distressSignals": {
+      "bankruptcy": false,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-05T17:19:15.164Z",
+    "lastUpdated": "2026-09-05T17:19:15.164Z",
+    "notes": "Crexi self-storage listing (state pending detail-page fetch) (subtitle: Signature Storage Suites | 2 Units Remaining)"
+  },
+  {
+    "id": "lead_1788628021612_k6v8v",
+    "facilityName": null,
+    "businessName": null,
+    "address": null,
+    "city": null,
+    "state": "WV",
+    "askingPrice": 949000,
+    "ownerName": null,
+    "contactInfo": null,
+    "source": "loopnet",
+    "sourceUrl": "https://www.loopnet.com/Listing/Self-storage-Portfolio/42054378/",
+    "distressSignals": {
+      "listedForSale": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-05T17:07:01.612Z",
+    "lastUpdated": "2026-09-05T17:07:01.612Z",
+    "notes": "",
+    "collegeTownMatch": false,
+    "collegeTownStudents": null,
+    "collegeTownInstitution": null
+  },
+  {
+    "id": "lead_1788628021612_7blnn",
+    "facilityName": null,
+    "businessName": null,
+    "address": null,
+    "city": null,
+    "state": "WV",
+    "askingPrice": 949000,
+    "ownerName": null,
+    "contactInfo": null,
+    "source": "loopnet",
+    "sourceUrl": "https://www.loopnet.com/Listing/Self-Storage-Portfolio/42053377/",
+    "distressSignals": {
+      "listedForSale": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-05T17:07:01.612Z",
+    "lastUpdated": "2026-09-05T17:07:01.612Z",
+    "notes": "",
+    "collegeTownMatch": false,
+    "collegeTownStudents": null,
+    "collegeTownInstitution": null
+  },
+  {
+    "id": "lead_1788628012605_h160u",
+    "facilityName": null,
+    "businessName": null,
+    "address": null,
+    "city": null,
+    "state": "VA",
+    "askingPrice": 860000,
+    "ownerName": null,
+    "contactInfo": null,
+    "source": "loopnet",
+    "sourceUrl": "https://www.loopnet.com/Listing/MyPlace-Self-Storage-Virginia/39148911/",
+    "distressSignals": {
+      "listedForSale": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-05T17:06:52.605Z",
+    "lastUpdated": "2026-09-05T17:06:52.605Z",
+    "notes": "",
+    "collegeTownMatch": false,
+    "collegeTownStudents": null,
+    "collegeTownInstitution": null
+  },
+  {
+    "id": "lead_1788627974557_ht06m",
+    "facilityName": null,
+    "businessName": null,
+    "address": null,
+    "city": null,
+    "state": "SC",
+    "askingPrice": 489000,
+    "ownerName": null,
+    "contactInfo": null,
+    "source": "loopnet",
+    "sourceUrl": "https://www.loopnet.com/Listing/My-Place-Self-Storage-Camden-SC/39148583/",
+    "distressSignals": {
+      "listedForSale": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 10,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-09-05T17:06:14.557Z",
+    "lastUpdated": "2026-09-05T17:06:14.557Z",
+    "notes": "",
+    "collegeTownMatch": false,
+    "collegeTownStudents": null,
+    "collegeTownInstitution": null
+  },
+  {
     "id": "lead_1788552741782_cgi88",
     "facilityName": null,
     "businessName": null,
@@ -1724,6 +1950,28 @@
     "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
   },
   {
+    "id": "lead_1788186059159_djqwe",
+    "facilityName": "23-31479 Tallis Storage Management, LLC",
+    "businessName": "23-31479 Tallis Storage Management, LLC",
+    "address": "",
+    "city": "Houston",
+    "state": "TX",
+    "ownerName": "23-31479 Tallis Storage Management, LLC",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?462703",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-31T12:59:23.000Z",
+    "lastUpdated": "2026-08-31T14:20:59.159Z",
+    "notes": "PACER RSS filing — TXSB · Mon, 31 Aug 2026 12:59:23 GMT"
+  },
+  {
     "id": "lead_1787933959967_ocjio",
     "businessName": "Boat &amp; RV Storage",
     "address": "",
@@ -1928,6 +2176,50 @@
     "foundAt": "2026-08-20T12:30:15.757Z",
     "lastUpdated": "2026-08-20T12:30:15.757Z",
     "notes": "BizQuest listing — address not provided by source, see sourceUrl for details."
+  },
+  {
+    "id": "lead_1787056218318_cb1fz",
+    "facilityName": "3:25-bk-02906- Troyz Towing &#x26; Storage, Inc.",
+    "businessName": "3:25-bk-02906- Troyz Towing &#x26; Storage, Inc.",
+    "address": "",
+    "city": "Tampa",
+    "state": "FL",
+    "ownerName": "3:25-bk-02906- Troyz Towing &#x26; Storage, Inc.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1408205",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-17T19:43:22.000Z",
+    "lastUpdated": "2026-08-18T12:30:18.318Z",
+    "notes": "PACER RSS filing — FLMB · Mon, 17 Aug 2026 19:43:22 GMT"
+  },
+  {
+    "id": "lead_1786969816204_3vs4m",
+    "facilityName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "businessName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "address": "",
+    "city": "Miami",
+    "state": "FL",
+    "ownerName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
+    "source": "pacer_rss",
+    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?834392",
+    "distressSignals": {
+      "bankruptcy": true,
+      "occupancyPct": null,
+      "rentBelowMarket": false
+    },
+    "score": 28,
+    "signals": {},
+    "status": "new",
+    "foundAt": "2026-08-17T04:13:28.000Z",
+    "lastUpdated": "2026-08-17T12:30:16.205Z",
+    "notes": "PACER RSS filing — FLSB · Mon, 17 Aug 2026 04:13:28 GMT"
   },
   {
     "id": "lead_1786537815975_c5qlf",
@@ -2303,71 +2595,5 @@
     "foundAt": "2026-06-02T14:57:21.130Z",
     "lastUpdated": "2026-06-02T14:57:21.130Z",
     "notes": "Chapter 11 bankruptcy filing · Filed: Jan 28, 2026 · Court: FLNB"
-  },
-  {
-    "id": "lead_1788186059159_djqwe",
-    "facilityName": "23-31479 Tallis Storage Management, LLC",
-    "businessName": "23-31479 Tallis Storage Management, LLC",
-    "address": "",
-    "city": "Houston",
-    "state": "TX",
-    "ownerName": "23-31479 Tallis Storage Management, LLC",
-    "source": "pacer_rss",
-    "sourceUrl": "https://ecf.txsb.uscourts.gov/cgi-bin/DktRpt.pl?462703",
-    "distressSignals": {
-      "bankruptcy": true,
-      "occupancyPct": null,
-      "rentBelowMarket": false
-    },
-    "score": 28,
-    "signals": {},
-    "status": "new",
-    "foundAt": "2026-08-31T12:59:23.000Z",
-    "lastUpdated": "2026-08-31T14:20:59.159Z",
-    "notes": "PACER RSS filing — TXSB · Mon, 31 Aug 2026 12:59:23 GMT"
-  },
-  {
-    "id": "lead_1787056218318_cb1fz",
-    "facilityName": "3:25-bk-02906- Troyz Towing &#x26; Storage, Inc.",
-    "businessName": "3:25-bk-02906- Troyz Towing &#x26; Storage, Inc.",
-    "address": "",
-    "city": "Tampa",
-    "state": "FL",
-    "ownerName": "3:25-bk-02906- Troyz Towing &#x26; Storage, Inc.",
-    "source": "pacer_rss",
-    "sourceUrl": "https://ecf.flmb.uscourts.gov/cgi-bin/DktRpt.pl?1408205",
-    "distressSignals": {
-      "bankruptcy": true,
-      "occupancyPct": null,
-      "rentBelowMarket": false
-    },
-    "score": 28,
-    "signals": {},
-    "status": "new",
-    "foundAt": "2026-08-17T19:43:22.000Z",
-    "lastUpdated": "2026-08-18T12:30:18.318Z",
-    "notes": "PACER RSS filing — FLMB · Mon, 17 Aug 2026 19:43:22 GMT"
-  },
-  {
-    "id": "lead_1786969816204_3vs4m",
-    "facilityName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
-    "businessName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
-    "address": "",
-    "city": "Miami",
-    "state": "FL",
-    "ownerName": "25-01274- Yip, Trustee et al v. EXTRA SPACE STORAGE, L.P.",
-    "source": "pacer_rss",
-    "sourceUrl": "https://ecf.flsb.uscourts.gov/cgi-bin/DktRpt.pl?834392",
-    "distressSignals": {
-      "bankruptcy": true,
-      "occupancyPct": null,
-      "rentBelowMarket": false
-    },
-    "score": 28,
-    "signals": {},
-    "status": "new",
-    "foundAt": "2026-08-17T04:13:28.000Z",
-    "lastUpdated": "2026-08-17T12:30:16.205Z",
-    "notes": "PACER RSS filing — FLSB · Mon, 17 Aug 2026 04:13:28 GMT"
   }
 ]
