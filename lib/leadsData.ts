@@ -265,10 +265,20 @@ function scoreGeography(lead: Lead): Stage1Component {
     }
   }
 
+  // Bands retuned Sept 9 2026 against the rebuilt 431-town IPEDS table.
+  // The old 25k/10k/3k cutoffs were tuned on the 617-town Scorecard table and
+  // put 55% of all towns (237 of 431) into a single 27-point bucket, so the
+  // scale did almost no discriminating work where most leads land. New cutoffs
+  // are percentile-anchored against the actual distribution:
+  //   p50 = 9,001 | p75 = 18,816 | p90 = 38,798 | min 3,003 | max 117,562
+  // NOTE: match.students is the COMMUTER-WEIGHTED figure (2yr/commuter
+  // institutions counted at 0.25). studentsRaw is available if these bands
+  // ever need to be re-cut against unweighted enrollment.
   let points: number
-  if (match.students >= 25_000) points = 45
-  else if (match.students >= 10_000) points = 36
-  else points = 27
+  if (match.students >= 35_000) points = 45        // major anchor  (~p88, ~52 towns)
+  else if (match.students >= 15_000) points = 38   // strong anchor (~p70, ~87 towns)
+  else if (match.students >= 7_000) points = 30    // solid anchor  (~p42, ~115 towns)
+  else points = 23                                 // modest anchor (floor, ~177 towns)
 
   return {
     label, points, maxPoints,
