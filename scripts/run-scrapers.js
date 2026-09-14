@@ -374,58 +374,139 @@ async function scanBizBuySell(browser) {
 async function scanBizQuest() {
   log('BizQuest', 'Starting...')
   const leads = []
+
+  // JSON-LD rewrite Sept 14 2026 ─────────────────────────────────────────────
+  // The previous parser scraped three INDEPENDENT arrays off the HTML (titles,
+  // links, prices) and index-matched them: prices[i] had no relationship to
+  // titles[i]. That produced "$7" and "$8" storage facilities (stray dollar
+  // amounts from marketing copy), category index pages saved as leads, and
+  // facilityName never set at all (only businessName was), so every BizQuest
+  // lead showed as "(none)". city/state were hardcoded to '' so every one of
+  // them scored 4 pts on geography and could not be footprint-filtered.
+  //
+  // BizQuest embeds schema.org JSON-LD (data-stype="searchResultsPage") with
+  // every field cleanly nested PER LISTING: name, description, url, productId,
+  // offers.price (real integer), and offers.availableAtOrFrom.address with
+  // addressLocality / addressRegion. Confirmed live: 55 listings in the block,
+  // 42 with real locations. This removes the index-matching class of bug
+  // entirely - fields cannot cross-contaminate between listings.
+  //
+  // NOTE: BizQuest 403s a bare fetch. safeFetch's full browser header set
+  // (Sec-Fetch-*, Accept-Language, Accept-Encoding, Upgrade-Insecure-Requests)
+  // gets through - confirmed 200 / ~1MB. Do not "simplify" those headers.
+
+  // addressRegion is inconsistent: sometimes "FL", sometimes "Minnesota".
+  const STATE_NAMES = {
+    alabama:'AL',alaska:'AK',arizona:'AZ',arkansas:'AR',california:'CA',colorado:'CO',
+    connecticut:'CT',delaware:'DE',florida:'FL',georgia:'GA',hawaii:'HI',idaho:'ID',
+    illinois:'IL',indiana:'IN',iowa:'IA',kansas:'KS',kentucky:'KY',louisiana:'LA',
+    maine:'ME',maryland:'MD',massachusetts:'MA',michigan:'MI',minnesota:'MN',
+    mississippi:'MS',missouri:'MO',montana:'MT',nebraska:'NE',nevada:'NV',
+    'new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY',
+    'north carolina':'NC','north dakota':'ND',ohio:'OH',oklahoma:'OK',oregon:'OR',
+    pennsylvania:'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD',
+    tennessee:'TN',texas:'TX',utah:'UT',vermont:'VT',virginia:'VA',washington:'WA',
+    'west virginia':'WV',wisconsin:'WI',wyoming:'WY','district of columbia':'DC',
+  }
+  function normalizeState(raw) {
+    const s = String(raw || '').trim()
+    if (!s) return ''
+    if (/^[A-Za-z]{2}$/.test(s)) return s.toUpperCase()
+    return STATE_NAMES[s.toLowerCase()] || ''
+  }
+
+  // 30-state footprint (east of the Mississippi + TX, OK, LA, MN).
+  const FOOTPRINT = new Set(['AL','CT','DE','FL','GA','IL','IN','KY','LA','MA','MD','ME',
+    'MI','MN','MS','NC','NH','NJ','NY','OH','OK','PA','RI','SC','TN','TX','VA','VT','WI','WV'])
+
+  // BizQuest is a business-for-sale marketplace, so the self-storage category
+  // page still returns trucking, 3PL, freight, franchises, and unrelated
+  // service businesses. Confirmed in the live feed. Filter on the listing name.
+  const INCLUDE = /(self[\s-]?storage|mini[\s-]?storage|storage facilit|storage cent|storage unit|storage yard|storage building|boat[\s\S]{0,12}storage|rv[\s\S]{0,12}storage|secure storage|storage[\s\S]{0,12}(facility|center|units))/i
+  const EXCLUDE = /(logistic|freight|3pl|4pl|trucking|fulfillment|transportation|courier|delivery|saas|software|moving (compan|business)|portable storage|storage container|franchise|auto repair|marine service|dealership|carpet|cannabis|fine art|forklift|material handling|home services|employment|business advisor|business broker|fence|supply)/i
+
   try {
-    const urls = [
-      'https://www.bizquest.com/self-storage-businesses-for-sale/',
-    ]
-    for (const url of urls) {
-      const res = await safeFetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        }
-      })
-      if (!res.ok) { log('BizQuest', `HTTP ${res.status}`); continue }
-      const html = await res.text()
-      const titles = [...html.matchAll(/<h\d[^>]*class="[^"]*(?:title|name|listing)[^"]*"[^>]*>([\s\S]*?)<\/h\d>/gi)].map(m => m[1].replace(/<[^>]+>/g,'').trim()).filter(t => t.length > 5)
-      const links = [...html.matchAll(/href="(\/(?:buy\/)?[^"?#]+storage[^"?#]*)"/gi)].map(m => m[1]).filter((v,i,a) => a.indexOf(v) === i)
-      const prices = [...html.matchAll(/\$([\d,]+(?:\s*(?:Million|M|K))?)/gi)].map(m => m[0])
-      const INCLUDE_TERMS = /(self[\s-]?storage|mini[\s-]?storage|storage facilit|storage unit|storage yard|boat.{0,10}storage|rv.{0,10}storage|secure storage)/i
-      const EXCLUDE_TERMS = /(logistic|freight|3pl|trucking|fulfillment|warehous|saas|software|moving compan|portable storage|franchise|auto repair|marine|waterfront|dealership|flex building|transportation|delivery|courier)/i
-      for (let i = 0; i < Math.min(titles.length, 20); i++) {
-        if (!titles[i] || titles[i].length < 5) continue
-        const t = titles[i]
-        if (EXCLUDE_TERMS.test(t)) continue
-        if (!INCLUDE_TERMS.test(t)) continue
-        leads.push({
-          id: generateLeadId(),
-          businessName: t.substring(0, 100),
-          address: '',
-          city: '', state: '',
-          askingPrice: prices[i] || null,
-          ownerName: 'BizQuest Listing',
-          source: 'bizquest',
-          sourceUrl: links[i] ? `https://www.bizquest.com${links[i]}` : url,
-          score: scoreLead({ bankruptcy: false, occupancyPct: null, rentBelowMarket: false }),
-          signals: {},
-          distressSignals: {
-            taxDelinquency: false,
-            fireCodeViolations: false,
-            lisPendens: false,
-            decliningOccupancy: false,
-            outOfStateOwner: false,
-            longTermOwner: false,
-            occupancyPct: null,
-            rentBelowMarket: false,
-          },
-          foundAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notes: 'BizQuest listing — address not provided by source, see sourceUrl for details.',
-        })
+    const url = 'https://www.bizquest.com/self-storage-businesses-for-sale/'
+    const res = await safeFetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       }
-      await new Promise(r => setTimeout(r, 800))
+    })
+    if (!res.ok) { log('BizQuest', `HTTP ${res.status}`); return leads }
+    const html = await res.text()
+
+    const ldMatch = html.match(/<script type="application\/ld\+json" data-stype="searchResultsPage">([\s\S]*?)<\/script>/)
+    if (!ldMatch) { log('BizQuest', 'JSON-LD block not found - page markup may have changed'); return leads }
+
+    let parsed
+    try { parsed = JSON.parse(ldMatch[1]) }
+    catch (e) { log('BizQuest', `JSON-LD parse error: ${e.message}`); return leads }
+
+    const entries = parsed.about || []
+    let scanned = 0, kept = 0, droppedRelevance = 0, droppedFootprint = 0, droppedNoLoc = 0
+
+    for (const entry of entries) {
+      const it = entry && entry.item
+      if (!it || !it.name) continue
+      scanned++
+
+      const name = String(it.name).trim()
+      if (EXCLUDE.test(name)) { droppedRelevance++; continue }
+      if (!INCLUDE.test(name)) { droppedRelevance++; continue }
+
+      const offers = it.offers || {}
+      const addr = (offers.availableAtOrFrom && offers.availableAtOrFrom.address) || {}
+      const city = String(addr.addressLocality || '').trim()
+      const state = normalizeState(addr.addressRegion)
+
+      if (!state) { droppedNoLoc++; continue }
+      if (!FOOTPRINT.has(state)) { droppedFootprint++; continue }
+
+      const priceNum = typeof offers.price === 'number' ? offers.price : null
+      const listingUrl = it.url || offers.url || url
+
+      const signals = { listedForSale: true, occupancyPct: null, rentBelowMarket: false }
+      const townMatch = matchCollegeTown(city, state)
+
+      leads.push({
+        id: generateLeadId(),
+        facilityName: name.substring(0, 120),
+        businessName: name.substring(0, 120),
+        address: '',
+        city,
+        state,
+        askingPrice: priceNum ? `$${priceNum.toLocaleString()}` : null,
+        ownerName: null,
+        contactInfo: { phone: null, email: null },
+        source: 'bizquest',
+        sourceUrl: listingUrl,
+        distressSignals: {
+          taxDelinquency: false,
+          fireCodeViolations: false,
+          lisPendens: false,
+          decliningOccupancy: false,
+          outOfStateOwner: false,
+          longTermOwner: false,
+          occupancyPct: null,
+          rentBelowMarket: false,
+        },
+        score: scoreLead(signals),
+        signals: {},
+        status: 'new',
+        foundAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        notes: `BizQuest listing${it.description ? ` - ${String(it.description).substring(0, 160)}` : ''}`,
+        collegeTownMatch: !!townMatch,
+        collegeTownStudents: townMatch ? townMatch.students : null,
+        collegeTownInstitution: townMatch ? townMatch.institution : null,
+      })
+      kept++
     }
+
+    log('BizQuest', `${scanned} listings scanned -> ${kept} kept (dropped: ${droppedRelevance} not storage, ${droppedFootprint} out of footprint, ${droppedNoLoc} no location)`)
   } catch (err) { log('BizQuest', `Error: ${err.message}`) }
+
   log('BizQuest', `Found ${leads.length} leads`)
   return leads
 }
