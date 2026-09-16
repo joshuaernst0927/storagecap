@@ -1229,52 +1229,61 @@ async function scanCountyTax(browser) {
   const leads = []
   if (!browser) { log('CountyTax', 'No browser — skipping'); return leads }
 
-  // Harris County TX
-  let page2
+  // Harris County TX � hctax.net delinquent accounts direct JSON endpoint.
+  // FIXED Sept 15 2026: public.hcad.org/records/quicksearch.asp is dead (404) �
+  // HCAD (appraisal district) migrated to search.hcad.org (Blazor Server app
+  // behind Cloudflare) and never had delinquency data anyway; that lives at
+  // the Harris County TAX OFFICE (hctax.net). Its jTable search UI calls a
+  // plain JSON POST endpoint (Actions/DelAccountsList) directly � no browser,
+  // no Cloudflare, no rendering needed. Confirmed live Sept 15 2026: name
+  // search "storage" returns real delinquent storage-business accounts.
   try {
-    page2 = await browser.newPage()
-    await page2.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
-    await page2.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' })
-    await page2.goto(
-      'https://public.hcad.org/records/quicksearch.asp?searchtype=owner&searchval=storage&tab=0',
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
-    )
-    await new Promise(r => setTimeout(r, 2500))
-
-    const beforeCount = leads.length
-    const harrisRows = await page2.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('table tr')).slice(1, 21)
-      return rows.map(row => {
-        const cells = Array.from(row.querySelectorAll('td')).map(td => td.innerText.trim())
-        return cells
-      }).filter(cells => cells.length >= 3)
+    const https = require('https')
+    const qs = 'jtStartIndex=0&jtPageSize=100&jtSorting=Name%20ASC&colSearch=name&searchText=storage'
+    const harrisRows = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: "www.hctax.net",
+        path: '/Property/Actions/DelAccountsList',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(qs) },
+        timeout: 20000,
+      }, res => {
+        let d = ''
+        res.on('data', c => d += c)
+        res.on('end', () => {
+          try { resolve(JSON.parse(d).Records || []) } catch (e) { reject(e) }
+        })
+      })
+      req.on('error', reject)
+      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')) })
+      req.write(qs)
+      req.end()
     })
 
-    for (const cells of harrisRows) {
-      if (!isSelfStorage(cells.join(' '))) continue
+    const beforeCount = leads.length
+    for (const rec of harrisRows) {
+      const n=(rec.Name||"").toLowerCase(); if (!n.includes("storage") || (n.includes("cold storage")||n.includes("data storage")||n.includes("wine storage")||n.includes("document storage")||n.includes("file storage")||n.includes("grain storage")||n.includes("warehouse storage")||n.includes("moving and storage")||n.includes("u-haul")||n.includes("uhaul")||n.includes("records storage")||n.includes("pool storage")||n.includes("luggage storage"))) continue
       const signals = { taxDelinquency: true, occupancyPct: null, rentBelowMarket: false }
       leads.push({
         id: generateLeadId(),
-        facilityName: cells[1] || cells[0] || 'Harris County Storage Property',
-        address: cells[2] || '',
+        facilityName: rec.Name || 'Harris County Storage Property',
+        address: rec.Address || '',
         city: 'Houston',
         state: 'TX',
-        ownerName: cells[0] || '',
+        ownerName: rec.Name || '',
         source: 'countytax_harris',
-        sourceUrl: 'https://public.hcad.org/records/quicksearch.asp',
+        sourceUrl: 'https://www.hctax.net/Property/DelinquentTax',
         distressSignals: signals,
         score: scoreLead(signals),
         status: 'new',
         foundAt: new Date().toISOString(),
         lastUpdated: new Date().toISOString(),
-        notes: 'Harris County TX tax delinquency signal',
+        notes: `Harris County TX tax delinquency � account ${rec.Account || ''}`,
       })
     }
     log('CountyTax', `Harris County: ${leads.length - beforeCount} leads`)
   } catch (err) {
     log('CountyTax', `Harris County error: ${err.message}`)
-  } finally {
-    if (page2) await page2.close().catch(() => {})
   }
 
   // Franklin County OH (Columbus)
