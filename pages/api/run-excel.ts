@@ -298,6 +298,17 @@ interface RunExcelInputs {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!requireAuth(req, res)) return
+
+  // DISABLED 2026-09-22: this route loads the OLD v3 workbook, which has six
+  // confirmed calculation defects (zero-loan debt sizing, LTV used as interest
+  // rate, orphaned expansion capex, double-counted expansion revenue, dead
+  // disposition fee, non-accruing pref) and has no GP/LP waterfall, so it
+  // cannot produce a true LP IRR. Set MODEL_DISABLED=false only when this is
+  // replaced by the new TypeScript engine ported from the current YEM model.
+  const MODEL_DISABLED: boolean = true
+  if (MODEL_DISABLED) {
+    return res.status(503).json({ error: 'Excel model temporarily disabled', detail: 'The underwriting model is being rebuilt. The previous workbook produced incorrect returns and has been taken offline to prevent bad numbers reaching a deal. Use the current YEM model directly until the new engine ships.' })
+  }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const t0 = Date.now()
