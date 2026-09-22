@@ -6,7 +6,7 @@ import {
   SOURCE_LABELS, STATUS_LABELS, getLeadTier, generateLeadId, scoreLead,
   calculateStage1Score, formatAskingPrice, Stage1Component, AvailabilityStatus,
 } from '@/lib/leadsData'
-import { loadLeads, upsertLeads, updateLeadStatus, deleteLead } from '@/lib/leadsStore'
+import { loadLeads, refreshLeads, upsertLeads, updateLeadStatus, deleteLead } from '@/lib/leadsStore'
 import DealScoreBadge from '@/components/DealScoreBadge'
 
 // ─── Small badges / chips ──────────────────────────────────────────────────────
@@ -881,7 +881,7 @@ function LeadsContent() {
   const [enrichResult, setEnrichResult] = useState('')
 
   useEffect(() => {
-    setLeads(loadLeads())
+    void refreshLeads().then(setLeads)
     // Check if Apollo is enabled
     fetch('/api/enrich-contact', {
       method: 'POST',

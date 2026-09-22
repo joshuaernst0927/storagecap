@@ -1,37 +1,61 @@
 import { Lead } from './leadsData'
 
-const LEADS_KEY = 'yem_leads'
+// Backed by Postgres via /api/properties.
+// A small in-memory cache keeps the synchronous call sites working:
+// refreshLeads() fills it, loadLeads() reads it.
 
-export function loadLeads(): Lead[] {
+let cache: Lead[] = []
+let loaded = false
+
+async function api(body: any): Promise<any> {
+  const res = await fetch('/api/properties', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error('api ' + res.status)
+  return res.json()
+}
+
+/** Fetch all properties from the database into the cache. */
+export async function refreshLeads(): Promise<Lead[]> {
   if (typeof window === 'undefined') return []
   try {
-    const raw = localStorage.getItem(LEADS_KEY)
-    if (!raw) return []
-    return JSON.parse(raw) as Lead[]
-  } catch {
-    return []
+    const res = await fetch('/api/properties')
+    if (!res.ok) throw new Error('api ' + res.status)
+    const data = await res.json()
+    cache = Array.isArray(data.leads) ? data.leads : []
+    loaded = true
+    return cache
+  } catch (e) {
+    console.error('refreshLeads failed:', e)
+    return cache
   }
+}
+
+export function loadLeads(): Lead[] {
+  return cache
+}
+
+export function isLoaded(): boolean {
+  return loaded
 }
 
 export function saveLeads(leads: Lead[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(LEADS_KEY, JSON.stringify(leads))
+  cache = leads
+  void api({ action: 'upsertMany', leads }).catch(e => console.error('saveLeads failed:', e))
 }
 
 export function upsertLead(lead: Lead): void {
-  const leads = loadLeads()
-  const idx = leads.findIndex(l => l.id === lead.id)
-  if (idx >= 0) {
-    leads[idx] = { ...lead, lastUpdated: new Date().toISOString() }
-  } else {
-    leads.unshift(lead)
-  }
-  saveLeads(leads)
+  const idx = cache.findIndex(l => l.id === lead.id)
+  const next = { ...lead, lastUpdated: new Date().toISOString() }
+  if (idx >= 0) cache[idx] = next
+  else cache.unshift(next)
+  void api({ action: 'upsert', lead: next }).catch(e => console.error('upsertLead failed:', e))
 }
 
 export function upsertLeads(incoming: Lead[]): { added: number; updated: number } {
-  const existing = loadLeads()
-  const map = new Map(existing.map(l => [l.id, l]))
+  const map = new Map(cache.map(l => [l.id, l]))
   let added = 0
   let updated = 0
 
@@ -45,24 +69,27 @@ export function upsertLeads(incoming: Lead[]): { added: number; updated: number 
     }
   }
 
-  saveLeads(Array.from(map.values()))
+  cache = Array.from(map.values())
+  void api({ action: 'upsertMany', leads: incoming }).catch(e => console.error('upsertLeads failed:', e))
   return { added, updated }
 }
 
 export function updateLeadStatus(id: string, updates: Partial<Lead>): void {
-  const leads = loadLeads()
-  const idx = leads.findIndex(l => l.id === id)
+  const idx = cache.findIndex(l => l.id === id)
   if (idx >= 0) {
-    leads[idx] = { ...leads[idx], ...updates, lastUpdated: new Date().toISOString() }
-    saveLeads(leads)
+    cache[idx] = { ...cache[idx], ...updates, lastUpdated: new Date().toISOString() }
   }
+  void api({ action: 'update', id, updates }).catch(e => console.error('updateLeadStatus failed:', e))
 }
 
 export function deleteLead(id: string): void {
-  const leads = loadLeads().filter(l => l.id !== id)
-  saveLeads(leads)
+  cache = cache.filter(l => l.id !== id)
+  void api({ action: 'delete', id }).catch(e => console.error('deleteLead failed:', e))
 }
 
 export function clearAllLeads(): void {
-  if (typeof window !== 'undefined') localStorage.removeItem(LEADS_KEY)
+  const ids = cache.map(l => l.id)
+  cache = []
+  void Promise.all(ids.map(id => api({ action: 'delete', id })))
+    .catch(e => console.error('clearAllLeads failed:', e))
 }
