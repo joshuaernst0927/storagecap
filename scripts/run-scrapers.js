@@ -224,6 +224,7 @@ async function scanCourtListener() {
         const caseName = d.caseName || ''
         if (!/storage/i.test(caseName)) continue
         if (!isSelfStorage(caseName)) continue
+        if (/extra space storage|public storage|cubesmart|life storage|u-haul|national storage affiliates|simply self storage/i.test(caseName)) continue
         if (d.dateFiled && d.dateFiled < filedAfter) continue
 
         const state    = COURT_STATE[courtId.slice(0, 2)] || 'US'
