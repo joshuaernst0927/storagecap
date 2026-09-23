@@ -2,6 +2,7 @@ import { matchCollegeTown } from './collegeTowns'
 
 export type LeadSource =
   | 'county-tax'
+  | 'countytax_harris'
   | 'fire-marshal'
   | 'ucc-lien'
   | 'lis-pendens'
@@ -16,6 +17,31 @@ export type LeadSource =
   | 'long-term-owner'
   | 'out-of-state-owner'
   | 'manual'
+  | 'bizquest'
+  | 'showcase'
+  | 'sba_default'
+  | 'opencorporates'
+  | 'sunbiz'
+  | 'pacer_rss'
+  | 'countytax_franklin_oh'
+  | 'countytax_davidson_tn'
+  | 'countytax_mecklenburg_nc'
+  | 'countytax_marion_in'
+  | 'lispendens_hillsborough'
+  | 'lispendens_harris'
+  | 'lispendens_cuyahoga_oh'
+  | 'lispendens_davidson_tn'
+  | 'lispendens_mecklenburg_nc'
+  | 'lispendens_marion_in'
+  | 'ucc_texas'
+  | 'ucc_florida'
+  | 'ucc_nc'
+  | 'sos_florida'
+  | 'sos_texas'
+  | 'sos_georgia'
+  | 'sos_ohio'
+  | 'sos_nc'
+  | 'sos_indiana'
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'added-to-pipeline' | 'dead'
 
@@ -86,6 +112,7 @@ export interface Lead {
 
 export const SOURCE_LABELS: Record<LeadSource, string> = {
   'county-tax': 'County Tax',
+  'countytax_harris': 'Harris County Tax',
   'fire-marshal': 'Fire Marshal',
   'ucc-lien': 'UCC Lien',
   'lis-pendens': 'Lis Pendens',
@@ -100,6 +127,31 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   'long-term-owner': 'Long-Term Owner',
   'out-of-state-owner': 'Out-of-State Owner',
   'manual': 'Manual Entry',
+  'bizquest': 'BizQuest',
+  'showcase': 'Showcase',
+  'sba_default': 'SBA Default',
+  'opencorporates': 'OpenCorporates',
+  'sunbiz': 'Sunbiz',
+  'pacer_rss': 'PACER',
+  'countytax_franklin_oh': 'Franklin County Tax (OH)',
+  'countytax_davidson_tn': 'Davidson County Tax (TN)',
+  'countytax_mecklenburg_nc': 'Mecklenburg County Tax (NC)',
+  'countytax_marion_in': 'Marion County Tax (IN)',
+  'lispendens_hillsborough': 'Lis Pendens (Hillsborough)',
+  'lispendens_harris': 'Lis Pendens (Harris)',
+  'lispendens_cuyahoga_oh': 'Lis Pendens (Cuyahoga, OH)',
+  'lispendens_davidson_tn': 'Lis Pendens (Davidson, TN)',
+  'lispendens_mecklenburg_nc': 'Lis Pendens (Mecklenburg, NC)',
+  'lispendens_marion_in': 'Lis Pendens (Marion, IN)',
+  'ucc_texas': 'UCC Lien (TX)',
+  'ucc_florida': 'UCC Lien (FL)',
+  'ucc_nc': 'UCC Lien (NC)',
+  'sos_florida': 'SOS Dissolution (FL)',
+  'sos_texas': 'SOS Dissolution (TX)',
+  'sos_georgia': 'SOS Dissolution (GA)',
+  'sos_ohio': 'SOS Dissolution (OH)',
+  'sos_nc': 'SOS Dissolution (NC)',
+  'sos_indiana': 'SOS Dissolution (IN)',
 }
 
 export const STATUS_LABELS: Record<LeadStatus, string> = {
