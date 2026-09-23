@@ -109,7 +109,7 @@ function isSelfStorage(text) {
   const rejects = ['cold storage', 'data storage', 'wine storage',
     'document storage', 'file storage', 'grain storage',
     'warehouse storage', 'moving and storage', 'u-haul', 'uhaul',
-    'records storage', 'pool storage', 'luggage storage']
+    'records storage', 'pool storage', 'luggage storage', 'towing', 'tow truck']
   const lower = (text || '').toLowerCase()
   const hasHit = hits.some(h => lower.includes(h))
   const hasReject = rejects.some(r => lower.includes(r))
@@ -1182,7 +1182,7 @@ async function scanPACERRSS() {
         '|u-?haul|records?[\\s-]stor|pool[\\s-]stor|luggage[\\s-]stor' +
         '|furniture[\\s-]stor|fine\\s+art|blood\\s+bank|stem\\s+cell' +
         '|restore|restor|history|histor|pastoral|custodian|vendor|monitor' +
-        '|restoration|depositor|directory',
+        '|restoration|depositor|directory|towing|tow\\s+truck',
         'i'
       )
 
