@@ -7,6 +7,7 @@ import {
   calculateStage1Score, formatAskingPrice, Stage1Component, AvailabilityStatus,
 } from '@/lib/leadsData'
 import { loadLeads, refreshLeads, upsertLeads, updateLeadStatus, deleteLead } from '@/lib/leadsStore'
+import { enrichCandidates, hasRealContact, skipReasonFor } from '@/lib/apolloEligibility'
 import DealScoreBadge from '@/components/DealScoreBadge'
 
 // ─── Small badges / chips ──────────────────────────────────────────────────────
@@ -111,7 +112,7 @@ function ContactSection({
   const [enriching, setEnriching] = useState(false)
   const [enrichError, setEnrichError] = useState('')
 
-  const hasContact = !!(ci.phone || ci.email || ci.mailingAddress)
+  const hasContact = hasRealContact(ci)
 
   const save = () => {
     onUpdate(lead.id, { contactInfo: { ...form, enrichedBy: form.enrichedBy || 'manual' } })
@@ -135,8 +136,14 @@ function ContactSection({
       const data = await res.json()
       if (data.noKey) {
         setEnrichError('Add APOLLO_API_KEY to your environment variables to enable auto-enrichment.')
+      } else if (data.capReached) {
+        setEnrichError(`Monthly Apollo cap reached (${data.used}/${data.cap}). No credit was spent.`)
+      } else if (data.skipped === 'no-owner-name') {
+        setEnrichError('This lead has no owner name to look up. No credit was spent.')
+      } else if (data.skipped === 'not-a-person-name') {
+        setEnrichError(`"${lead.ownerName}" looks like a company or placeholder, not a person. Apollo's people lookup cannot match it, so no credit was spent.`)
       } else if (data.notFound) {
-        setEnrichError('No match found in Apollo for this contact.')
+        setEnrichError(`No match found in Apollo. ${data.remaining ?? 0} credit(s) left this month.`)
       } else if (data.contact) {
         const merged: ContactInfo = { ...ci, ...data.contact }
         setForm(merged)
@@ -206,10 +213,11 @@ function ContactSection({
               {!hasContact && (
                 <button
                   onClick={enrich}
-                  disabled={enriching}
+                  disabled={enriching || !apolloEnabled}
+                  title={!apolloEnabled ? 'APOLLO_API_KEY is not configured' : skipReasonFor(lead) === 'not-a-person-name' ? 'Owner name looks like a company — Apollo will not be called' : 'Look this owner up in Apollo (uses 1 credit on a match)'}
                   className="text-xs uppercase tracking-widest text-[#1B2B5E] hover:text-gold border border-dark-border hover:border-gold/50 px-3 py-1 transition-colors disabled:opacity-50"
                 >
-                  {enriching ? 'Enriching...' : apolloEnabled ? 'Enrich Contact' : 'Enrich Contact'}
+                  {enriching ? 'Enriching...' : 'Enrich Contact'}
                 </button>
               )}
               <button
@@ -252,7 +260,7 @@ function ContactSection({
           )}
           {!hasContact && !ci.linkedIn && (
             <div className="text-sm text-dark-muted italic py-2">
-              No contact info yet. Click &ldquo;Edit&rdquo; to add manually or &ldquo;Enrich Contact&rdquo; to look up from CourtListener.
+              No contact info yet. Click &ldquo;Edit&rdquo; to add manually or &ldquo;Enrich Contact&rdquo; to look this owner up in Apollo.
             </div>
           )}
           {ci.enrichedAt && (
@@ -879,19 +887,25 @@ function LeadsContent() {
   const [apolloEnabled, setApolloEnabled] = useState(false)
   const [enrichingAll, setEnrichingAll] = useState(false)
   const [enrichResult, setEnrichResult] = useState('')
+  const [credits, setCredits] = useState({ used: 0, cap: 0, remaining: 0 })
+
+  const loadCredits = useCallback(async () => {
+    try {
+      const d = await fetch('/api/enrich-contact').then(r => r.json())
+      setApolloEnabled(!!d.hasKey)
+      setCredits({ used: d.used ?? 0, cap: d.cap ?? 0, remaining: d.remaining ?? 0 })
+      return d
+    } catch {
+      return null
+    }
+  }, [])
 
   useEffect(() => {
     void refreshLeads().then(setLeads)
-    // Check if Apollo is enabled
-    fetch('/api/enrich-contact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ownerName: 'test', city: 'test', state: 'TX' }),
-    })
-      .then(r => r.json())
-      .then(d => { if (!d.noKey) setApolloEnabled(true) })
-      .catch(() => {})
-  }, [])
+    // GET only — reports the monthly cap status. It never reaches Apollo and
+    // never spends a credit.
+    void loadCredits()
+  }, [loadCredits])
 
   const refresh = useCallback(() => {
     const updated = loadLeads()
@@ -931,41 +945,103 @@ function LeadsContent() {
     refresh()
   }
 
+  // Apollo enrichment for every source. The server enforces a hard monthly
+  // credit cap; this loop also stops locally the moment the cap is reported,
+  // and always reports how many leads were left unattempted.
   const enrichAllContacts = async () => {
+    const candidates = enrichCandidates(leads)
+
+    const status = await loadCredits()
+    if (!status) {
+      setEnrichResult('Could not read Apollo credit status — nothing was attempted.')
+      return
+    }
+    if (!status.hasKey) {
+      setEnrichResult('APOLLO_API_KEY is not configured — nothing was attempted, no credits spent.')
+      return
+    }
+    if (candidates.length === 0) {
+      setEnrichResult('No leads qualify for an Apollo lookup — nothing was attempted.')
+      return
+    }
+
+    const budget = Math.min(candidates.length, status.remaining ?? 0)
+    const confirmed = window.confirm(
+      `Enrich contacts via Apollo
+
+` +
+      `${candidates.length} lead(s) qualify for a lookup.
+` +
+      `${status.used} of ${status.cap} credits used this month — ${status.remaining} remaining.
+
+` +
+      (candidates.length > (status.remaining ?? 0)
+        ? `Only ${budget} will run; the cap will stop the rest.`
+        : `All ${budget} will run, within the monthly cap.`) +
+      `
+
+Proceed?`
+    )
+    if (!confirmed) return
+
     setEnrichingAll(true)
     setEnrichResult('')
-    const toEnrich = leads.filter(l =>
-      l.source === 'courtlistener' &&
-      !l.contactInfo?.mailingAddress &&
-      !l.contactInfo?.phone
-    )
-    let count = 0
-    for (let i = 0; i < toEnrich.length; i++) {
-      if (i > 0) await new Promise(r => setTimeout(r, 14000))
-      const lead = toEnrich[i]
+
+    let enriched = 0
+    let notFound = 0
+    let failed = 0
+    let attempted = 0
+    let remaining = status.remaining ?? 0
+    let stoppedByCap = false
+    let processed = 0
+
+    for (const lead of candidates) {
+      if (remaining <= 0) { stoppedByCap = true; break }
+      if (processed > 0) await new Promise(r => setTimeout(r, 1200))
+
       try {
-        const res = await fetch('/api/enrich-leads', {
+        const res = await fetch('/api/enrich-contact', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ leadId: lead.id, sourceUrl: lead.sourceUrl }),
+          body: JSON.stringify({
+            ownerName: lead.ownerName,
+            ownerEntity: lead.ownerEntity,
+            city: lead.city,
+            state: lead.state,
+          }),
         })
         const data = await res.json()
-        if (data.enriched === 1 && data.contactInfo) {
-          const updated: Lead = {
-            ...lead,
-            contactInfo: data.contactInfo,
-            notes: data.attyNote
-              ? `${lead.notes ? lead.notes + ' · ' : ''}${data.attyNote}`
-              : lead.notes,
-            lastUpdated: new Date().toISOString(),
-          }
-          upsertLeads([updated])
-          refresh()
-          count++
+
+        if (data.capReached) { stoppedByCap = true; remaining = 0; break }
+        if (typeof data.remaining === 'number') remaining = data.remaining
+
+        attempted++
+        if (data.contact) {
+          handleUpdate(lead.id, {
+            contactInfo: { ...(lead.contactInfo || {}), ...data.contact },
+          })
+          enriched++
+        } else if (data.notFound) {
+          notFound++
+        } else if (!data.skipped) {
+          failed++
         }
-      } catch {}
+      } catch {
+        attempted++
+        failed++
+      }
+      processed++
     }
-    setEnrichResult(`Enriched ${count} of ${toEnrich.length} leads`)
+
+    const unattempted = candidates.length - processed
+    setEnrichResult(
+      `Enriched ${enriched} of ${attempted} attempted` +
+      (notFound ? ` · ${notFound} no match` : '') +
+      (failed ? ` · ${failed} failed` : '') +
+      (stoppedByCap ? ` · STOPPED AT MONTHLY CAP, ${unattempted} lead(s) skipped` : '') +
+      ` · ${remaining} credit(s) left this month`
+    )
+    await loadCredits()
     setEnrichingAll(false)
   }
 
@@ -1069,25 +1145,34 @@ function LeadsContent() {
           {/* Scan bar */}
           <ScanBar onScanDone={handleScanDone} />
 
-          {/* Enrich bar — shown when CL leads have no contact info */}
-          {leads.some(l => l.source === 'courtlistener' && !l.contactInfo?.mailingAddress && !l.contactInfo?.phone) && (
-            <div className="flex items-center gap-4 bg-dark-surface border border-dark-border px-5 py-3">
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${enrichingAll ? 'bg-gold animate-pulse' : enrichResult ? 'bg-green-500' : 'bg-dark-border'}`} />
-                <span className="text-dark-muted text-xs uppercase tracking-widest">
-                  {enrichingAll ? 'Enriching contacts from CourtListener...'
-                    : enrichResult || 'CourtListener leads have unenriched contacts'}
-                </span>
+          {/* Enrich bar — Apollo, all sources, capped */}
+          {leads.some(l => !hasRealContact(l.contactInfo)) && (() => {
+            const candidateCount = enrichCandidates(leads).length
+            const noContactCount = leads.filter(l => !hasRealContact(l.contactInfo)).length
+            return (
+              <div className="flex items-center gap-4 bg-dark-surface border border-dark-border px-5 py-3">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${enrichingAll ? 'bg-gold animate-pulse' : enrichResult ? 'bg-green-500' : 'bg-dark-border'}`} />
+                  <span className="text-dark-muted text-xs uppercase tracking-widest">
+                    {enrichingAll ? 'Enriching contacts via Apollo...'
+                      : enrichResult
+                      || (!apolloEnabled ? 'Apollo key not configured — enrichment disabled'
+                      : candidateCount > 0
+                        ? `${candidateCount} of ${noContactCount} lead(s) ready for Apollo · ${credits.remaining} of ${credits.cap} credits left this month`
+                        : `${noContactCount} lead(s) lack contact info, but none have a person name to look up`)}
+                  </span>
+                </div>
+                <button
+                  onClick={enrichAllContacts}
+                  disabled={enrichingAll || !apolloEnabled || candidateCount === 0 || credits.remaining <= 0}
+                  className="ml-auto btn-navy text-xs py-1.5 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={candidateCount === 0 ? 'No lead has an owner name Apollo can match' : `Attempt up to ${Math.min(candidateCount, credits.remaining)} lookups`}
+                >
+                  {enrichingAll ? 'Enriching...' : `Enrich Contacts${candidateCount ? ` (${Math.min(candidateCount, credits.remaining)})` : ''}`}
+                </button>
               </div>
-              <button
-                onClick={enrichAllContacts}
-                disabled={enrichingAll}
-                className="ml-auto btn-navy text-xs py-1.5 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {enrichingAll ? 'Enriching...' : 'Enrich Contacts'}
-              </button>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-3">
